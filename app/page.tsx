@@ -1,25 +1,18 @@
-'use client'
+"use client";
 
-import { useIsAuthenticated } from '@azure/msal-react'
-import MicrosoftLoginButton from '@/components/auth/MicrosoftLoginButton'
-import Image from 'next/image'
+import { useIsAuthenticated } from "@azure/msal-react";
+import MicrosoftLoginButton from "@/components/auth/MicrosoftLoginButton";
+import Image from "next/image";
+import { useRouter } from "next/navigation"; // Import useRouter
 
 export default function LoginPage() {
-  const isAuthenticated = useIsAuthenticated()
+  const isAuthenticated = useIsAuthenticated();
+  const router = useRouter(); // Initialize useRouter
 
+  // Redirect to /dashboard if authenticated
   if (isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-            Welcome to Asset Tracking!
-          </h1>
-          <p className="text-gray-600">
-            You are successfully logged in with Microsoft.
-          </p>
-        </div>
-      </div>
-    )
+    router.push("/dashboard"); // Programmatic navigation to /dashboard
+    return null; // Return null while redirecting (prevents rendering)
   }
 
   return (
@@ -63,19 +56,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-// export default function HomePage() {
-//   return (
-//     <main className="min-h-screen flex items-center justify-center bg-gray-100">
-//       <div className="text-center">
-//         <h1 className="h-16 text-3xl font-bold mb-4 text-shadow-lg" >Welcome to Asset Tracking</h1>
-//         <a
-//           href="/scan"
-//           className="px-6 py-3 bg-red-600 text-white rounded-lg shadow hover:bg-red-700"
-//         >
-//           Go to Scanner
-//         </a>
-//       </div>
-//     </main>
-//   );
-// }
