@@ -3,7 +3,7 @@ import React from 'react'
 const page = () => {
   return (
     <div>
-            {/* Main content */}
+      {/* Main content */}
       <div className='flex-1 p-6 bg-gray-50 md:pl-60'>
         <p className="text font-bold">Admin Dashboard</p>
 
