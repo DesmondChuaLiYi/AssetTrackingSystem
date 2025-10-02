@@ -1,4 +1,4 @@
-// File: C:\repo\AssetTracking\app\layout.tsx
+// File: C:\Users\USER\Documents\swin\Swin_sem3\(COS40005) Computing Technology PrtA\newFyp\AssetTracking\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
