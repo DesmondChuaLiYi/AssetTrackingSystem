@@ -140,8 +140,8 @@ export default function Dashboard() {
           <motion.div
             className={`sidebar bg-white shadow-lg flex flex-col z-40 overflow-hidden ${
               isMobile
-                ? "fixed top-0 left-0 w-full h-[calc(100%-64px)] p-4 pt-6"
-                : "min-h-screen w-64 p-4"
+                ? "fixed top-0 left-0 w-full h-[calc(100%-64px)] p-4 pt-6" // mobile view
+                : "fixed top-0 left-0 w-64 h-full p-3" // desktop view
             }`}
             variants={sidebarVariants}
             initial={isMobile ? "mobileClosed" : "closed"}
@@ -409,27 +409,33 @@ export default function Dashboard() {
         <main className="p-6 flex-grow">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
           {/* Top row of small placeholder boxes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center text-gray-500">
-              Asset Count Placeholder
+          <div className="flex-1 bg-white border border-gray-200 p-4 rounded-lg shadow">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div className="bg-white border border-gray-200 rounded-lg shadow h-32 flex items-center justify-center text-gray-500">
+                Asset Count Placeholder
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg shadow h-32 flex items-center justify-center text-gray-500">
+                Department Placeholder
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg shadow h-32 flex items-center justify-center text-gray-500">
+                Staff Placeholder
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg shadow h-32 flex items-center justify-center text-gray-500">
+                Location Placeholder
+              </div>
             </div>
-            <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center text-gray-500">
-              Department Placeholder
-            </div>
-            <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center text-gray-500">
-              Staff Placeholder
-            </div>
-            <div className="bg-gray-200 rounded-lg h-32 flex items-center justify-center text-gray-500">
-              Location Placeholder
-            </div>
-          </div>
-          {/* Bottom row for graph placeholders */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-gray-500">
-              Graph Placeholder 1
-            </div>
-            <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center text-gray-500">
-              Graph Placeholder 2
+            {/* Bottom row for graph placeholders */}
+            <div className="w-full flex justify-center mb-6">
+              <div className="bg-white rounded-lg flex flex-col items-center justify-center max-w-xl lg:col-span-2 min-h-[200px] p-4 border">
+                <p className="flex-1 p-1 pb-2 font-bold text-xl">Total Assets</p>
+                <img 
+                  className="w-full h-full object-contain rounded-lg"
+                  src='https://cdn.corporatefinanceinstitute.com/assets/line-graph.jpg'>
+                </img>  
+              </div>
+              {/* <div className="bg-white border border-gray-300 rounded-lg h-32 flex items-center justify-center text-gray-500">
+                Graph Placeholder 2
+              </div> */}
             </div>
           </div>
         </main>
