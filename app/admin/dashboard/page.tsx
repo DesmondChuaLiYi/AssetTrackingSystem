@@ -3,13 +3,13 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
+import LogoutButton from "@/components/LogoutButton";
 
 // Import all required Heroicons
 import {
   Bars3Icon,
   UserCircleIcon,
   CogIcon,
-  ArrowRightOnRectangleIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
   MapPinIcon,
@@ -49,7 +49,7 @@ const sidebarItems = [
 const profileItems = [
   { name: "My Profile", icon: UserCircleIcon, href: "/profile" },
   { name: "Settings", icon: CogIcon, href: "/settings" },
-  { name: "Log Out", icon: ArrowRightOnRectangleIcon, href: "/logout" },
+  { name: "Log Out", icon: UserCircleIcon, href: "/logout" }, // Icon not used, LogoutButton has its own
 ];
 
 // Define animation variants
@@ -141,7 +141,7 @@ export default function Dashboard() {
             className={`sidebar bg-white shadow-lg flex flex-col z-40 overflow-hidden ${
               isMobile
                 ? "fixed top-0 left-0 w-full h-[calc(100%-64px)] p-4 pt-6"
-                : "min-h-screen w-64 p-4"
+                : "fixed left-0 top-0 min-h-screen w-64 p-4"
             }`}
             variants={sidebarVariants}
             initial={isMobile ? "mobileClosed" : "closed"}
@@ -260,21 +260,11 @@ export default function Dashboard() {
                 <CogIcon className="h-5 w-5 mr-3 flex-shrink-0" />
                 Settings
               </a>
-              <a
-                href="/logout"
-                onMouseEnter={() => setHoveredItem("Log Out")}
-                onMouseLeave={() => setHoveredItem(null)}
-                className={`flex items-center p-3 rounded-lg transition-all duration-200 ease-in-out ${
-                  activeItem === "/logout"
-                    ? "bg-red-600 text-white shadow-md"
-                    : hoveredItem === "Log Out"
-                    ? "bg-red-50 text-red-600"
-                    : "text-gray-700 hover:bg-red-50 hover:text-red-600"
-                }`}
-              >
-                <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-                Log Out
-              </a>
+              <LogoutButton
+                className="flex items-center p-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 w-full text-left"
+                showIcon={true}
+                text="Log Out"
+              />
             </div>
 
             {/* Profile for Mobile */}
@@ -365,16 +355,25 @@ export default function Dashboard() {
                   transition={{ duration: 0.2 }}
                   className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg"
                 >
-                  {profileItems.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600"
-                    >
-                      <item.icon className="h-5 w-5 mr-2" />
-                      {item.name}
-                    </a>
-                  ))}
+                  {profileItems.map((item) =>
+                    item.name === 'Log Out' ? (
+                      <LogoutButton
+                        key={item.name}
+                        className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600 w-full text-left"
+                        showIcon={true}
+                        text="Log Out"
+                      />
+                    ) : (
+                      <a
+                        key={item.name}
+                        href={item.href}
+                        className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <item.icon className="h-5 w-5 mr-2" />
+                        {item.name}
+                      </a>
+                    )
+                  )}
                 </motion.div>
               )}
             </div>

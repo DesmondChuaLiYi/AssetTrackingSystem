@@ -9,9 +9,9 @@ export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
 
-  // Redirect to /dashboard if authenticated
+  // Redirect to /admin/dashboard if authenticated
   if (isAuthenticated) {
-    router.push("/dashboard");
+    router.push("/admin/dashboard");
     return null;
   }
 
