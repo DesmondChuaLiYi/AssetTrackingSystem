@@ -48,10 +48,8 @@ export default function LoginPage() {
           console.error('Error initializing session:', error);
           setIsInitializing(false);
         }
-      } else if (isAuthenticated && session) {
-        // Session already exists, just redirect
-        router.push("/admin/dashboard");
       }
+      // Note: Redirect for existing session is handled in the render logic below
     };
 
     initializeSession();
@@ -68,8 +66,9 @@ export default function LoginPage() {
     );
   }
 
-  // Don't show login page if already authenticated
-  if (isAuthenticated && session) {
+  // Redirect to dashboard if already authenticated with session
+  if (isAuthenticated && session && !isInitializing) {
+    router.replace("/admin/dashboard");
     return null;
   }
 

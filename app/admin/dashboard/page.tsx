@@ -42,7 +42,7 @@ const sidebarItems = [
     name: "Staff",
     icon: UsersIcon,
     href: "/staff",
-    dropdown: ["Employees", "Roles", "Attendance"],
+    dropdown: ["Add Staff", "Employees", "Roles", "Attendance"],
   },
 ];
 
@@ -230,7 +230,7 @@ export default function Dashboard() {
                         {item.dropdown.map((subItem) => (
                           <a
                             key={subItem}
-                            href={`${item.href}/${subItem.toLowerCase()}`}
+                            href={`${item.href}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
                             className="block p-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-all duration-200 ease-in-out"
                           >
                             {subItem}
