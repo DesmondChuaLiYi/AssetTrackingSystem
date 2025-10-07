@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence, Variants } from "framer-motion";
+import LogoutButton from "@/components/LogoutButton";
 
 // Import all required Heroicons
 import {
@@ -299,6 +300,13 @@ export default function Dashboard() {
                 <CogIcon className="h-5 w-5 mr-3 flex-shrink-0" />
                 Settings
               </a>
+              // Testing LogoutButton : Start
+              <LogoutButton
+                className="flex items-center p-3 rounded-lg transition-all duration-200 ease-in-out text-gray-700 hover:bg-red-50 hover:text-red-600 w-full text-left"
+                showIcon={true}
+                text="Log Out"
+              />
+              // Testing LogoutButton : End
               <a
                 href="/logout"
                 onMouseEnter={() => setHoveredItem("Log Out")}
@@ -404,16 +412,27 @@ export default function Dashboard() {
                   transition={{ duration: 0.2 }}
                   className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg"
                 >
-                  {profileItems.map((item) => (
-                    <a
-                      key={item.name}
-                      href={item.href}
-                      className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600"
-                    >
-                      <item.icon className="h-5 w-5 mr-2" />
-                      {item.name}
-                    </a>
-                  ))}
+                  // Changed by Desmond @ 7 Oct 25
+                  {profileItems.map((item) =>
+                    item.name === 'Log Out' ? (
+                      <LogoutButton
+                        key={item.name}
+                        className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600 w-full text-left"
+                        showIcon={true}
+                        text="Log Out"
+                      />
+                    ) : (
+                      <a
+                        key={item.name}
+                        href={item.href}
+                        className="flex items-center p-2 text-gray-700 hover:bg-red-100 hover:text-red-600"
+                      >
+                        <item.icon className="h-5 w-5 mr-2" />
+                        {item.name}
+                      </a>
+                    )
+                  )}
+                  // End of Changed by Desmond @ 7 Oct 25
                 </motion.div>
               )}
             </div>
