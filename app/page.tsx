@@ -13,17 +13,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { session, startSession } = useSession();
   const [isInitializing, setIsInitializing] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  // Ensure component is mounted before any navigation
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Initialize session when user logs in with Microsoft
   useEffect(() => {
-    if (!mounted) return; // Don't run until component is mounted
-
     const initializeSession = async () => {
       if (isAuthenticated && accounts.length > 0 && !session && !isInitializing) {
         setIsInitializing(true);
@@ -35,22 +27,26 @@ export default function LoginPage() {
           // Fetch staff data from database
           const response = await fetch('/api/staff/get-by-microsoft-id', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ microsoftUserId }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ microsoftUserId })
           });
 
-          if (response.ok) {
-            const staffData = await response.json();
-            await startSession(staffData, microsoftUserId);
-            
-            // Use setTimeout to defer navigation to next tick
-            setTimeout(() => {
-              router.push('/admin/dashboard');
-            }, 0);
+          const data = await response.json();
+
+          if (data.success && data.staff) {
+            // Create session with staff data
+            await startSession(data.staff, microsoftUserId);
+            router.push("/admin/dashboard");
           } else {
-            console.error('Failed to fetch staff data');
+            // Staff not found - show error with Microsoft user ID
+            console.warn('Staff not registered in database');
+            console.log('Your Microsoft User ID:', microsoftUserId);
+            alert(`Your account is not registered. Please contact administrator.\n\nYour Microsoft User ID:
+          ${microsoftUserId}\n\n(Check browser console for details)`);
+
+            // Log out from Microsoft to prevent infinite loop
+            await instance.logoutPopup();
+
             setIsInitializing(false);
           }
         } catch (error) {
@@ -58,63 +54,67 @@ export default function LoginPage() {
           setIsInitializing(false);
         }
       }
+      // Note: Redirect for existing session is handled in the render logic below
     };
 
     initializeSession();
-  }, [isAuthenticated, accounts, session, isInitializing, startSession, router, mounted]);
+  }, [isAuthenticated, accounts, session, startSession, router, isInitializing]);
 
-  // Redirect if already has session
-  useEffect(() => {
-    if (mounted && session && !isInitializing) {
-      setTimeout(() => {
-        router.push('/admin/dashboard');
-      }, 0);
-    }
-  }, [session, router, mounted, isInitializing]);
+  // Show loading if authenticated but initializing session
+  if (isAuthenticated && isInitializing) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Don't render anything until mounted to prevent hydration issues
-  if (!mounted) {
+  // Redirect to dashboard if already authenticated with session
+  if (isAuthenticated && session && !isInitializing) {
+    router.replace("/admin/dashboard");
     return null;
   }
 
-  // Show loading state during initialization
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login page if not authenticated or no session
-  if (!isAuthenticated || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-2xl">
-          <div className="text-center">
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+        {/* Logo and Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-6">
             <Image
               src="/logo-long-full.svg"
-              alt="Swinburne Logo"
-              width={300}
-              height={80}
-              className="mx-auto mb-8"
+              alt="Swinburne University of Technology"
+              width={180}
+              height={60}
+              priority
+              className="object-contain"
             />
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Asset Tracking System
-            </h2>
-            <p className="text-gray-600 mb-8">
-              Sign in with your Microsoft account to continue
+          </div>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            Asset Tracking System
+          </h1>
+          <p className="text-gray-600 text-sm">IT Asset Management</p>
+        </div>
+
+        {/* Microsoft Login */}
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-4">
+              Sign in with your organization account
             </p>
           </div>
+
           <MicrosoftLoginButton />
+
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Secure authentication powered by Microsoft Azure AD
+            </p>
+          </div>
         </div>
       </div>
-    );
-  }
-
-  // This should not be reached, but just in case
-  return null;
+    </div>
+  );
 }
