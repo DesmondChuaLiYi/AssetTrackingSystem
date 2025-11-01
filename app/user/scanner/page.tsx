@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; // Make sure this path is correct
+import { supabase } from '@/lib/supabase';
 
 // Import all your content components
-import ScannerContent from '@/components/scanner/ScannerContext';
+import ScannerContent from '@/components/scanner/ScannerContext'; // Make sure this path is correct
 import SuccessContent from '@/components/scanner/SuccessContent';
-import ConfirmationContent from '@/components/scanner/ConfirmationContent'; // We'll create this next
+import ConfirmationContent from '@/components/scanner/ConfirmationContent';
 
 import { Package, Users, MapPin, Building2 } from 'lucide-react';
 
@@ -24,32 +24,25 @@ export default function ScannerPage() {
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
   
-  // NEW State Management
-  // 'scanning', 'confirmation', or 'success'
   const [pageState, setPageState] = useState('scanning'); 
   const [scannedItem, setScannedItem] = useState<any>(null);
   const [submittedData, setSubmittedData] = useState<any>(null);
 
   const config = configs[type] || configs.asset;
 
-  // On page load (or if 'type' changes), reset to the scanning state
   useEffect(() => {
     setPageState('scanning');
     setScannedItem(null);
     setSubmittedData(null);
   }, [type]);
 
-  // Called from ScannerContent after one scan
   const handleItemScanned = async (item: any) => {
-    setScannedItem(item); // Always save the scanned item
+    setScannedItem(item); 
 
-    // CASE 1: The scan is for an ASSET
     if (type === 'asset') {
-      setPageState('confirmation'); // Go to confirmation page
+      setPageState('confirmation'); 
     
-    // CASE 2: The scan is for anything ELSE (Staff, Location, etc.)
     } else {
-      // Just insert the scan and go to success
       const dataToInsert = [{
         [config.idColumn]: item.code,
         created_at: new Date().toISOString(),
@@ -60,7 +53,7 @@ export default function ScannerPage() {
         if (error) throw error;
         
         setSubmittedData({ items: [item], page: type });
-        setPageState('success'); // Go to success page
+        setPageState('success'); 
         
       } catch (e: any) {
         alert(`Error saving to ${type}: ${e.message}`);
@@ -68,7 +61,7 @@ export default function ScannerPage() {
     }
   };
   
-  // Called from ConfirmationContent
+  // This is for UPDATING an existing asset
   const handleAssetUpdate = async (newStatus: string) => {
     if (!scannedItem || type !== 'asset') {
       alert("Error: No asset found to update.");
@@ -84,12 +77,46 @@ export default function ScannerPage() {
       if (error) throw error;
       
       setSubmittedData({ items: [scannedItem], page: type });
-      setPageState('success'); // Go to success page
+      setPageState('success');
 
     } catch (e: any) {
       alert(`Error updating asset: ${e.message}`);
     }
   };
+
+  // --- NEW FUNCTION ---
+  // This is for CREATING a new asset
+  const handleAssetCreate = async (newData: { name: string, description: string, status: string }) => {
+    if (!scannedItem || type !== 'asset') {
+      alert("Error: No asset ID to create.");
+      return;
+    }
+
+    try {
+      // Prepare the new asset data
+      const dataToInsert = {
+        asset_id: scannedItem.code, // The scanned code is the new ID
+        name: newData.name,
+        description: newData.description,
+        status: newData.status,
+        created_at: new Date().toISOString(),
+        // You may need to add other default fields, e.g., location_id: null
+      };
+
+      const { error } = await supabase
+        .from('asset')
+        .insert(dataToInsert);
+
+      if (error) throw error;
+      
+      setSubmittedData({ items: [scannedItem], page: type });
+      setPageState('success');
+
+    } catch (e: any) {
+      alert(`Error creating new asset: ${e.message}`);
+    }
+  };
+  // --- END NEW FUNCTION ---
 
   // Render the correct component based on state
   if (pageState === 'success') {
@@ -107,7 +134,8 @@ export default function ScannerPage() {
         item={scannedItem}
         tableName={type}
         onBack={() => setPageState('scanning')} // Go back to scanning
-        onSubmit={handleAssetUpdate}
+        onSubmit={handleAssetUpdate} // For editing
+        onCreate={handleAssetCreate} // <-- PASS THE NEW PROP
       />
     );
   }
@@ -116,7 +144,6 @@ export default function ScannerPage() {
   return (
     <ScannerContent
       {...config}
-      // Pass the correct props
       onItemScanned={handleItemScanned}
       onBack={() => window.location.href = '/user/dashboard'} // Or wherever "Home" is
     />
