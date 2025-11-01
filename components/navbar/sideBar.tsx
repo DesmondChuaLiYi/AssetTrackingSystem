@@ -40,7 +40,7 @@ const adminModules = [
     name: 'Staff',
     icon: UsersIcon,
     href: '/admin/staff',
-    dropdown: ['addStaff', 'Roles', 'Attendance'],
+    dropdown: ['List', 'Roles', 'Attendance'],
   },
 ];
 
@@ -124,7 +124,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                       ? 'bg-red-600 text-white shadow-md'
                       : hoveredItem === item.name
                       ? 'bg-red-50 text-red-600'
-                      : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                      : 'text-black-700 hover:bg-red-50 hover:text-red-600'
                   }`}
                 >
                   <item.icon className="h-5 w-5 mr-3 flex-shrink-0" />
@@ -143,7 +143,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                       ? 'bg-red-600 text-white shadow-md'
                       : hoveredItem === item.name
                       ? 'bg-red-50 text-red-600'
-                      : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                      : 'text-black-700 hover:bg-red-50 hover:text-red-600'
                   }`}
                 >
                   <item.icon className="h-5 w-5 mr-3 flex-shrink-0" />
@@ -173,7 +173,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                         className={`block p-2 text-sm rounded transition-all duration-200 ease-in-out ${
                           pathname === `${item.href}/${subItem}`
                             ? 'text-red-600 bg-red-50 font-medium'
-                            : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                            : 'text-black-600 hover:text-red-600 hover:bg-red-50'
                         }`}
                       >
                         {subItem}
@@ -251,7 +251,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                   ? 'bg-red-600 text-white shadow-md'
                   : hoveredItem === 'Settings'
                   ? 'bg-red-50 text-red-600'
-                  : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                  : 'text-black-700 hover:bg-red-50 hover:text-red-600'
               }`}
             >
               <CogIcon className="h-5 w-5 mr-3 flex-shrink-0" />
@@ -263,7 +263,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                   ? 'bg-red-600 text-white shadow-md'
                   : hoveredItem === 'Log Out'
                   ? 'bg-red-50 text-red-600'
-                  : 'text-gray-700 hover:bg-red-50 hover:text-red-600'
+                  : 'text-black-700 hover:bg-red-50 hover:text-red-600'
               }`}
               showIcon={true}
               text="Sign Out"
