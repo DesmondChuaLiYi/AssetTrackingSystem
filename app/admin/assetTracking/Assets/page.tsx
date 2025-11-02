@@ -156,95 +156,214 @@ export default function AssetsPage() {
     if (res.ok) { alert('Saved'); setShowModal(false); loadAssets() } else alert('Failed')
   }
 
-  // === FIXED PDF EXPORT ===
   const handleExportPDF = async () => {
     if (typeof window === 'undefined') return
 
     try {
-      // 1. Import autoTable first
-      const { default: autoTable } = await import('jspdf-autotable')
-      // 2. Then jsPDF
-      const { default: jsPDF } = await import('jspdf')
+      // Always fetch all records for PDF export
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '999999', // Get all records
+        sortBy,
+        sortOrder,
+        ...(searchTerm && { search: searchTerm, searchField }),
+        ...(conditionFilter && { condition: conditionFilter })
+      })
+      
+      let dataToExport = assets
+      let totalRecords = totalItems
+      
+      const res = await fetch(`/api/assets?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        dataToExport = data.data
+        totalRecords = data.totalItems
+      }
 
-      // 3. Create doc and attach autoTable
-      const doc: any = new jsPDF('landscape')
-      doc.autoTable = autoTable
+      // Import jsPDF first
+      const jsPDFModule = await import('jspdf')
+      const jsPDF = jsPDFModule.default
+      
+      // Import autoTable - this extends jsPDF prototype
+      const autoTableModule = await import('jspdf-autotable')
+      const autoTable = autoTableModule.default
+      
+      // Create document
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      })
 
-      // Header
+      // Add header
       doc.setFontSize(18)
-      doc.text('Asset Management System', 14, 20)
+      doc.text('Asset Tracking System', 14, 20)
+      
       doc.setFontSize(14)
       doc.text('Asset Listing Report', 14, 30)
 
-      // Metadata
-      let y = 40
+      // Add metadata
+      let yPosition = 40
       doc.setFontSize(10)
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, y); y += 6
-      doc.text(`Total Assets: ${totalItems}`, 14, y); y += 6
-      doc.text(`Page: ${currentPage} / ${totalPages}`, 14, y); y += 6
-      if (searchTerm) { doc.text(`Search: ${searchField} = "${searchTerm}"`, 14, y); y += 6 }
-      if (conditionFilter) { doc.text(`Condition: ${conditionFilter}`, 14, y); y += 6 }
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, yPosition)
+      yPosition += 6
+      doc.text(`Total Assets: ${totalRecords}`, 14, yPosition)
+      yPosition += 6
+      doc.text(`Report Type: Complete Asset List`, 14, yPosition)
+      yPosition += 6
+      
+      if (searchTerm) {
+        doc.text(`Search Filter: ${searchField} = "${searchTerm}"`, 14, yPosition)
+        yPosition += 6
+      }
+      
+      if (conditionFilter) {
+        doc.text(`Condition Filter: ${conditionFilter}`, 14, yPosition)
+        yPosition += 6
+      }
 
-      // Table
-      const tableData = assets.map(a => [
-        a.asset_id,
-        a.name,
-        a.model,
-        a.category,
-        a.condition,
-        a.location?.name || 'N/A',
-        a.department?.name || 'N/A',
-        new Date(a.created_dt).toLocaleDateString()
+      // Prepare table data
+      const tableColumn = [
+        'No.',
+        'Asset ID',
+        'Name',
+        'Model',
+        'Category',
+        'Condition',
+        'Location',
+        'Department'
+      ]
+
+      const tableRows = dataToExport.map((asset, index) => [
+        (index + 1).toString(),
+        asset.asset_id || '',
+        asset.name || '',
+        asset.model || '',
+        asset.category || '',
+        asset.condition || '',
+        asset.location?.name || 'N/A',
+        asset.department?.name || 'N/A'
       ])
 
-      doc.autoTable({
-        head: [['ID', 'Name', 'Model', 'Category', 'Condition', 'Location', 'Department', 'Created']],
-        body: tableData,
-        startY: y,
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [220, 38, 38], textColor: 255 },
-        alternateRowStyles: { fillColor: [254, 242, 242] },
+      // Generate table using autoTable
+      autoTable(doc, {
+        startY: yPosition + 5,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [220, 38, 38], // Red color to match your theme
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          overflow: 'linebreak'
+        },
         columnStyles: {
-          0: { cellWidth: 25 }, 1: { cellWidth: 40 }, 2: { cellWidth: 35 },
-          3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 35 },
-          6: { cellWidth: 35 }, 7: { cellWidth: 25 }
+          0: { cellWidth: 12 }, // No.
+          1: { cellWidth: 23 }, // Asset ID
+          2: { cellWidth: 38 }, // Name
+          3: { cellWidth: 32 }, // Model
+          4: { cellWidth: 28 }, // Category
+          5: { cellWidth: 23 }, // Condition
+          6: { cellWidth: 33 }, // Location
+          7: { cellWidth: 33 }  // Department
+        },
+        margin: { top: 10, bottom: 20 },
+        didDrawPage: function(data: any) {
+          // Add page numbers to footer
+          const pageSize = doc.internal.pageSize
+          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
+          const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth()
+          
+          doc.setFontSize(8)
+          doc.setTextColor(128)
+          
+          const currentPageNum = (doc as any).internal.getCurrentPageInfo().pageNumber
+          const footerText = `Page ${currentPageNum}`
+          
+          doc.text(
+            footerText,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: 'center' }
+          )
+          
+          // Add timestamp
+          doc.text(
+            `Generated: ${new Date().toLocaleString()}`,
+            14,
+            pageHeight - 10
+          )
         }
       })
 
-      // Footer
-      const pageCount = doc.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFontSize(8)
-        doc.text(`Page ${i} of ${pageCount}`, 280, 200, { align: 'right' })
-      }
-
-      doc.save(`assets-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+      // Save the PDF with timestamp
+      const fileName = `asset-report-${new Date().toISOString().slice(0, 10)}.pdf`
+      doc.save(fileName)
+      
+      console.log('PDF generated successfully:', fileName)
     } catch (error) {
-      console.error('PDF Error:', error)
-      alert('Failed to generate PDF')
+      console.error('PDF generation failed:', error)
+      alert('Failed to generate PDF. Error: ' + (error as Error).message)
     }
   }
 
-  const handleExportCSV = () => {
-    const headers = ['Asset ID', 'Name', 'Model', 'Category', 'Condition', 'Location', 'Department']
-    const rows = assets.map(a => [
-      a.asset_id,
-      `"${a.name}"`,
-      `"${a.model}"`,
-      `"${a.category}"`,
-      a.condition,
-      `"${a.location?.name || 'N/A'}"`,
-      `"${a.department?.name || 'N/A'}"`
-    ])
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `assets_${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
+  const handleExportCSV = async () => {
+    try {
+      // Always fetch all records for CSV export
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '999999',
+        sortBy,
+        sortOrder,
+        ...(searchTerm && { search: searchTerm, searchField }),
+        ...(conditionFilter && { condition: conditionFilter })
+      })
+      
+      const res = await fetch(`/api/assets?${params}`)
+      
+      if (!res.ok) {
+        throw new Error('Failed to fetch assets data')
+      }
+      
+      const data = await res.json()
+      const dataToExport = data.data || []
+      
+      if (dataToExport.length === 0) {
+        alert('No data to export')
+        return
+      }
+      
+      const headers = ['No.', 'Asset ID', 'Name', 'Model', 'Category', 'Condition', 'Location', 'Department']
+      const rows = dataToExport.map((a: Asset, index: number) => [
+        index + 1,
+        a.asset_id,
+        `"${a.name}"`,
+        `"${a.model}"`,
+        `"${a.category}"`,
+        a.condition,
+        `"${a.location?.name || 'N/A'}"`,
+        `"${a.department?.name || 'N/A'}"`
+      ])
+      const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `assets-${new Date().toISOString().slice(0, 10)}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+      
+      console.log(`CSV export successful: ${dataToExport.length} records exported`)
+    } catch (error) {
+      console.error('CSV export failed:', error)
+      alert('Failed to export CSV: ' + (error as Error).message)
+    }
   }
 
   if (!mounted || !session) {

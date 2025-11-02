@@ -19,7 +19,7 @@ interface DataTableProps {
   onSearchChange?: (term: string) => void
   onSearch?: () => void
   onReset?: () => void
-  onExportPDF?: () => void
+  onExportPDF?: (exportAll?: boolean) => void
   onExportCSV?: () => void
   onAdd?: () => void
   addButtonText?: string
@@ -74,6 +74,7 @@ export default function DataTable({
   actions
 }: DataTableProps) {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   useEffect(() => setLocalSearchTerm(searchTerm), [searchTerm])
 
@@ -84,6 +85,15 @@ export default function DataTable({
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') onSearch?.()
+  }
+
+  const handleExportSelection = (type: 'pdf' | 'csv') => {
+    if (type === 'pdf') {
+      onExportPDF?.() // Always export all records
+    } else if (type === 'csv') {
+      onExportCSV?.() // Always export all records
+    }
+    setShowExportMenu(false)
   }
 
   const renderPagination = () => {
@@ -189,19 +199,39 @@ export default function DataTable({
 
             {showExportButtons && (
               <div className="relative">
-                <select
-                  onChange={e => {
-                    if (e.target.value === 'pdf') onExportPDF?.()
-                    else if (e.target.value === 'csv') onExportCSV?.()
-                    e.target.value = ''
-                  }}
-                  className="appearance-none bg-white border rounded-md px-4 py-2 pr-8 text-sm"
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="flex items-center gap-2 bg-white border rounded-md px-4 py-2 text-sm hover:bg-gray-50"
                 >
-                  <option value="">Print</option>
-                  <option value="pdf">Export to PDF</option>
-                  <option value="csv">Export to CSV</option>
-                </select>
-                <DocumentArrowDownIcon className="absolute right-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <DocumentArrowDownIcon className="h-4 w-4 text-gray-400" />
+                  Print
+                  <ChevronDownIcon className="h-4 w-4 text-gray-400" />
+                </button>
+                
+                {showExportMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowExportMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-20">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleExportSelection('pdf')}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Export to PDF
+                        </button>
+                        <button
+                          onClick={() => handleExportSelection('csv')}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          Export to CSV
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
