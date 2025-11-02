@@ -10,12 +10,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
     const searchField = searchParams.get('searchField') || 'name'
+    const condition = searchParams.get('condition') || ''
     const sortBy = searchParams.get('sortBy') || 'created_dt'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    const start = (page - 1) * limit
-
-    // Build query with search
     let query = supabase
       .from('asset')
       .select(`
@@ -24,27 +22,32 @@ export async function GET(request: NextRequest) {
         department:department_id(name)
       `, { count: 'exact' })
 
-    // Add search filter
+    // Apply condition filter
+    if (condition) {
+      query = query.eq('condition', condition)
+    }
+
+    // Apply search filter
     if (search) {
-      if (searchField === 'asset_id') {
-        query = query.ilike('asset_id', `%${search}%`)
-      } else if (searchField === 'name') {
-        query = query.ilike('name', `%${search}%`)
-      }
+      query = query.ilike(searchField, `%${search}%`)
     }
 
     // Add sorting
     query = query.order(sortBy, { ascending: sortOrder === 'asc' })
 
-    // Add pagination
-    const { data, error, count } = await query.range(start, start + limit - 1)
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
 
     if (error) throw error
 
+    const totalPages = Math.ceil((count || 0) / limit)
+
     return NextResponse.json({
       data: data || [],
-      page,
-      limit,
       totalItems: count || 0,
       totalPages: Math.ceil((count || 0) / limit)
     })

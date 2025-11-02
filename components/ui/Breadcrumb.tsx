@@ -7,6 +7,7 @@ import { ChevronRightIcon, HomeIcon } from '@heroicons/react/24/outline'
 interface BreadcrumbItem {
   label: string
   href: string
+  isClickable?: boolean
 }
 
 interface BreadcrumbProps {
@@ -21,7 +22,7 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
 
     const pathSegments = pathname.split('/').filter(segment => segment !== '')
     const breadcrumbs: BreadcrumbItem[] = [
-      { label: 'Home', href: '/admin/dashboard' }
+      { label: 'Home', href: '/admin/dashboard', isClickable: true }
     ]
 
     let currentPath = ''
@@ -47,9 +48,14 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
         label = labelMap[segment]
       }
 
+      // Determine if item should be clickable
+      const isClickable = index === pathSegments.length - 1 ? false : 
+        !['assetTracking'].includes(segment) // Asset Tracking is not clickable
+
       breadcrumbs.push({
         label,
-        href: currentPath
+        href: currentPath,
+        isClickable: false
       })
     })
 
@@ -69,7 +75,7 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
             {index === 0 ? (
               <Link
                 href={item.href}
-                className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
+                className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-600 transition-colors"
               >
                 <HomeIcon className="w-4 h-4 mr-2" />
                 {item.label}
@@ -78,13 +84,17 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
               <span className="text-sm font-medium text-gray-500">
                 {item.label}
               </span>
-            ) : (
+            ) : item.isClickable ? (
               <Link
                 href={item.href}
-                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
               >
                 {item.label}
               </Link>
+            ) : (
+              <span className="text-sm font-medium text-gray-500 cursor-not-allowed">
+                {item.label}
+              </span>
             )}
           </li>
         ))}
