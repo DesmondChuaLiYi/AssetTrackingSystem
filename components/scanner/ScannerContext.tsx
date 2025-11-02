@@ -4,23 +4,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
-  ShoppingCart, X, Trash2, QrCode, Barcode,
-  CheckCircle, ChevronLeft, ChevronRight
+  QrCode, Barcode,
+  ChevronLeft
 } from 'lucide-react';
 
 export default function ScannerContent({
   title,
   description,
   icon: Icon,
-  onSubmit,
+  onItemScanned, // <-- MODIFIED: Prop name changed
+  onBack, // <-- NEW: Prop for "Back" button
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
-  onSubmit: (items: any[]) => Promise<void>;
+  onItemScanned: (item: any) => Promise<void>; // <-- MODIFIED
+  onBack: () => void; // <-- NEW
 }) {
-  const [cartItems, setCartItems] = useState<any[]>([]);
-  const [showCart, setShowCart] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
 
@@ -46,30 +46,31 @@ export default function ScannerContent({
           const scanner = new Html5Qrcode(scannerRegionId);
           scannerRef.current = scanner;
 
-          const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+          const config = { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
 
           const onScanSuccess = (decodedText: string) => {
-            scanner.pause(true);
+            // --- SINGLE SCAN LOGIC ---
+            stopScanning(); // Stop immediately
+            
             const newItem = {
               id: Date.now(),
               code: decodedText,
               time: new Date().toLocaleTimeString(),
               name: `${title.split(" ")[0]} - ${decodedText}`,
             };
-            setCartItems(prev => [...prev, newItem]);
-            setShowCart(true);
 
             const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGgU+mtn0xG8qBSuBzvLZiTYIGWe77OWfTRAMUKnj7K5iHAY5j9n0xXksBS");
             audio.play().catch(() => {});
 
-            setTimeout(() => scannerRef.current?.resume(), 800);
+            // Tell the parent component about the scan
+            onItemScanned(newItem);
           };
 
           await (scanner as any).start(
             { facingMode: "environment" },
             config,
             onScanSuccess,
-            () => {}
+            () => {} // Failure callback (ignore)
           );
         } catch (error: any) {
           setScannerError(error.message || "Camera access denied.");
@@ -80,24 +81,24 @@ export default function ScannerContent({
     }
 
     return () => {
-      safeStopAndClear(scannerRef.current);
+      const inst = scannerRef.current;
       scannerRef.current = null;
+      safeStopAndClear(inst);
     };
-  }, [isScanning, title]);
+  }, [isScanning, title, onItemScanned]);
 
   const handleStartClick = () => { setScannerError(null); setIsScanning(true); };
   const stopScanning = () => setIsScanning(false);
-  const removeItem = (id: number) => setCartItems(prev => prev.filter(i => i.id !== id));
 
-  const handleConfirm = async () => {
-    if (cartItems.length === 0) return alert("Scan at least one item.");
+  const handleBack = () => {
     if (isScanning) stopScanning();
-    await onSubmit(cartItems);
+    onBack(); // Call the prop
   };
 
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-4xl mx-auto">
+        {/* Header card (no cart) */}
         <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-red-700 to-red-500 text-white">
             <div className="flex items-center justify-between">
@@ -108,14 +109,11 @@ export default function ScannerContent({
                   <p className="text-sm text-red-100">{description}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-red-100">Scanned Items</p>
-                <p className="text-3xl font-bold">{cartItems.length}</p>
-              </div>
             </div>
           </div>
         </div>
 
+        {/* Scanner Area */}
         <div className="bg-white rounded-lg shadow-md mb-6">
           <div className="p-6 lg:p-8">
             {!isScanning ? (
@@ -155,81 +153,23 @@ export default function ScannerContent({
                 <li>• Ensure good lighting conditions</li>
                 <li>• Hold device steady</li>
                 <li>• Keep code centered in frame</li>
-                <li>• Works with both QR codes and barcodes</li>
               </ul>
             </div>
           </div>
         </div>
 
-        {showCart && cartItems.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md mb-6">
-            <div className="px-6 py-4 bg-gray-50 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5" />
-                Scanned Items Cart ({cartItems.length})
-              </h2>
-              <button onClick={() => setShowCart(false)} className="text-gray-500 hover:text-red-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 border-b hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                      <Icon className="w-6 h-6 text-red-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-gray-500 font-mono">{item.code}</p>
-                      <p className="text-xs text-gray-400">{item.time}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="px-6 py-4 bg-gray-50 border-t">
-              <button
-                onClick={handleConfirm}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md"
-              >
-                <CheckCircle className="w-5 h-5" />
-                Confirm & Submit ({cartItems.length} items)
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Cart and Submit buttons REMOVED */}
 
+        {/* Footer (Back button only) */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="px-4 lg:px-6 py-4 bg-gray-50">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => window.history.back()}
+                onClick={handleBack} // Use the new handler
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-md"
               >
                 <ChevronLeft className="w-5 h-5" />
                 Back to Home
-              </button>
-              <span className="text-sm text-gray-600">
-                {cartItems.length > 0 ? `${cartItems.length} items in cart` : "Scan items to continue"}
-              </span>
-              <button
-                onClick={handleConfirm}
-                disabled={cartItems.length === 0}
-                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium shadow-md ${
-                  cartItems.length > 0
-                    ? "bg-red-600 text-white hover:bg-red-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                Submit
-                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>

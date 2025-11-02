@@ -39,6 +39,8 @@ const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
+    maxAge: 15 * 60, // 15 minutes idle timeout (in seconds)
+    updateAge: 5 * 60, // Refresh session every 5 minutes when active (in seconds)
   },
   useSecureCookies: false, // Set to false for localhost
   debug: true, // Enable debug mode to see what's happening
