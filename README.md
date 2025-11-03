@@ -74,6 +74,107 @@ npm run dev
 
 The application will be available at `http://localhost:3000`
 
+## Mobile Testing with ngrok
+
+For testing the application on mobile devices or sharing with teammates, use ngrok to create a public URL that tunnels to your localhost.
+
+### Prerequisites
+
+1. **Download ngrok**: https://ngrok.com/download
+2. **Sign up** for a free ngrok account: https://dashboard.ngrok.com/signup
+3. **Get your authtoken**: https://dashboard.ngrok.com/get-started/your-authtoken
+
+### Setup (One-time)
+
+1. **Extract ngrok.exe** to the project folder:
+   ```
+   D:\COS40005\FYP\AssetTracking\ngrok.exe
+   ```
+
+2. **Authenticate ngrok** (replace with your actual token):
+   ```bash
+   ./ngrok.exe config add-authtoken YOUR_AUTHTOKEN_HERE
+   ```
+
+### Running ngrok
+
+1. **Start your dev server** (in one terminal):
+   ```bash
+   npm run dev
+   ```
+
+2. **Start ngrok** (in a separate terminal):
+   ```bash
+   ./ngrok.exe http 3000
+   ```
+
+3. **Copy the URL** from the ngrok output. It will look like:
+   ```
+   Forwarding: https://abc-def-ghi.ngrok-free.dev -> http://localhost:3000
+   ```
+
+### Configuration
+
+#### 1. Update `.env.local`:
+
+Change the `NEXTAUTH_URL` to your ngrok URL:
+
+```env
+# BEFORE (for localhost testing)
+NEXTAUTH_URL=http://localhost:3000
+
+# AFTER (for mobile/ngrok testing)
+NEXTAUTH_URL=https://abc-def-ghi.ngrok-free.dev
+```
+
+**⚠️ IMPORTANT**: Remember to change it back to `localhost:3000` when done with mobile testing!
+
+#### 2. Add Redirect URI to Azure AD:
+
+1. Go to **Azure Portal** → **App Registrations**
+2. Select your app
+3. Go to **Authentication**
+4. Under **Redirect URIs**, click **"+ Add a URI"**
+5. Add: `https://abc-def-ghi.ngrok-free.dev/api/auth/callback/azure-ad`
+6. Click **Save**
+
+#### 3. Restart your dev server:
+
+```bash
+# Stop the server (Ctrl + C)
+npm run dev
+```
+
+### Testing
+
+- **On your phone**: Open `https://abc-def-ghi.ngrok-free.dev`
+- **Share with teammates**: Send them the ngrok URL
+- **Everyone sees your localhost**: Any code changes you make will be visible to everyone through the ngrok URL
+
+### Important Notes
+
+✅ **ngrok keeps running** - Don't close the ngrok terminal window
+✅ **URL stays the same** - As long as ngrok is running, the URL doesn't change
+❌ **URL changes when you restart ngrok** - You'll need to update `.env.local` and Azure AD again
+✅ **Works from anywhere** - Teammates don't need to be on the same WiFi
+⚠️ **Your computer must be on** - For teammates to access the URL
+
+### Stopping ngrok
+
+When done with mobile testing:
+
+1. **Stop ngrok**: Press `Ctrl + C` in the ngrok terminal
+2. **Revert `.env.local`** back to:
+   ```env
+   NEXTAUTH_URL=http://localhost:3000
+   ```
+3. **Restart dev server**: `npm run dev`
+4. **(Optional) Remove ngrok URL from Azure AD** if you won't use it for a while
+
+### For Normal Development (Without Mobile Testing)
+
+Just use `localhost:3000` - you don't need ngrok at all! Only use ngrok when you specifically need to test on mobile devices or share with remote teammates.
+
 ## Build for Production
 
 ```bash

@@ -36,3 +36,4 @@ CLAUDE.md
 *.cpp
 include/
 FETCH_HEAD  
+ngrok.exe
