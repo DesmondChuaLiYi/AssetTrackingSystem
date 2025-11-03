@@ -12,14 +12,16 @@ export default function ScannerContent({
   title,
   description,
   icon: Icon,
-  onItemScanned, // <-- MODIFIED: Prop name changed
-  onBack, // <-- NEW: Prop for "Back" button
+  onItemScanned,
+  onBack,
+  parentScan, // <-- ADD THIS LINE
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
-  onItemScanned: (item: any) => Promise<void>; // <-- MODIFIED
-  onBack: () => void; // <-- NEW
+  onItemScanned: (item: any) => Promise<void>;
+  onBack: () => void;
+  parentScan: { type: string, id: string, name: string } | null; // <-- ADD THIS LINE
 }) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
