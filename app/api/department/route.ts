@@ -112,7 +112,7 @@ export async function PUT() {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const id = searchParams.get('department_id')
 
     if (!id) {
       return NextResponse.json(

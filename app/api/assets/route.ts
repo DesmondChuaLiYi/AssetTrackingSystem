@@ -156,7 +156,11 @@ export async function PUT(request: NextRequest) {
       .from('asset')
       .update(updateObject)
       .eq('asset_id', asset_id)
-      .select()
+      .select(`
+        *,
+        location:location_id(name, description),
+        department:department_id(name)
+      `)
 
     if (error) {
       console.error('Supabase update error:', error)

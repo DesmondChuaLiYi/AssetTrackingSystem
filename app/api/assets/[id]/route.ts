@@ -36,7 +36,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       .from('asset')
       .update(updateData)
       .eq('asset_id', params.id)
-      .select()
+      .select(`
+        *,
+        location:location_id(location_id, name),
+        department:department_id(department_id, name)
+      `)
       .single()
 
     if (error) {

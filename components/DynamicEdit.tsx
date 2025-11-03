@@ -81,60 +81,21 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       field.type === 'select' && !field.options && field.key.endsWith('_id')
     )
   
-    for (const field of selectFields) {
-      try {
-        let endpoint = ''
-        if (field.key === 'location_id') endpoint = '/api/location'
-        else if (field.key === 'department_id') endpoint = '/api/department'
-        
-        if (endpoint) {
-          const response = await fetch(`${endpoint}?page=1&limit=1000`)
-          const data = await response.json()
-          
-          const items = data.data || []
-          const formattedItems = items.map((item: any) => ({
-            value: item.location_id || item.department_id,
-            label: item.name
-          }))
-          setRelatedData(prev => ({
-            ...prev,
-            [field.key]: formattedItems
-          }))
-        }
-      } catch (error) {
-        console.error(`Error loading ${field.key} data:`, error)
-      }
-    }
-  }
-
-  const handleInputChange = (key: string, value: any) => {
-    setFormData((prev: { [key: string]: any }) => ({ ...prev, [key]: value }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
     try {
-      const response = await fetch(`${config.apiEndpoint}/${recordId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      const result = await response.json()
+      // Fetch locations
+      const locationsRes = await fetch('/api/location?page=1&limit=1000')
+      const locationsData = await locationsRes.json()
       
-      if (result.success) {
-        alert(`${config.entityDisplayNameSingular} updated successfully!`)
-        router.push(config.backUrl)
-      } else {
-        alert(`Error: ${result.error}`)
-      }
+      // Fetch departments
+      const departmentsRes = await fetch('/api/department?page=1&limit=1000')
+      const departmentsData = await departmentsRes.json()
+      
+      setRelatedData({
+        location_id: locationsData.data || [],
+        department_id: departmentsData.data || []
+      })
     } catch (error) {
-      console.error('Error updating record:', error)
-      alert('Failed to update record. Please try again.')
-    } finally {
-      setLoading(false)
+      console.error('Error loading related data:', error)
     }
   }
 
@@ -145,12 +106,27 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
   
     if (field.type === 'select') {
       let options = field.options || []
-  
-      if (field.key.endsWith('_id') && relatedData[field.key]) {
-        options = relatedData[field.key].map(item => ({
-          value: item.location_id || item.department_id,
-          label: item.name
-        }))
+      
+      // For location_id field, use locations from relatedData
+      if (field.key === 'location_id' && relatedData.location_id?.length > 0) {
+        options = [
+          { value: '', label: 'Select Location' },
+          ...relatedData.location_id.map(location => ({
+            value: location.location_id,
+            label: location.name
+          }))
+        ]
+      }
+      
+      // For department_id field, use departments from relatedData
+      if (field.key === 'department_id' && relatedData.department_id?.length > 0) {
+        options = [
+          { value: '', label: 'Select Department' },
+          ...relatedData.department_id.map(department => ({
+            value: department.department_id,
+            label: department.name
+          }))
+        ]
       }
   
       return (
@@ -163,7 +139,6 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
           }`}
           required={field.required}
         >
-          <option value="">Select {field.label}</option>
           {options.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -203,6 +178,67 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       />
     )
   }
+
+  const handleInputChange = (key: string, value: any) => {
+    setFormData((prev: { [key: string]: any }) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      // Clean up the data before sending
+      const cleanedData = { ...formData }
+      
+      // Remove nested objects
+      delete cleanedData.location
+      delete cleanedData.department
+      
+      // Ensure proper typing for IDs
+      if (cleanedData.location_id === '') {
+        cleanedData.location_id = null
+      } else if (cleanedData.location_id) {
+        // Ensure location_id is a valid UUID
+        try {
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+          if (!uuidRegex.test(cleanedData.location_id)) {
+            throw new Error('Invalid location_id format')
+          }
+        } catch (error) {
+          console.error('Invalid location_id:', error)
+          alert('Invalid location ID format')
+          return
+        }
+      }
+
+      // Handle department_id (string type)
+      if (cleanedData.department_id === '') {
+        cleanedData.department_id = null
+      }
+
+      const response = await fetch(`${config.apiEndpoint}/${recordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cleanedData)
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`${config.entityDisplayNameSingular} updated successfully!`)
+        router.push(config.backUrl)
+      } else {
+        alert(`Error: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error updating record:', error)
+      alert('Failed to update record. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+}
 
   const breadcrumbItems = [
     { label: 'Home', href: '/admin/dashboard', isClickable: true },

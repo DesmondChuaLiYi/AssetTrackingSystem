@@ -33,8 +33,8 @@ const editAssetConfig = {
         { value: 'Spoiled', label: 'Spoiled' }
       ]
     },
-    { key: 'location_id', label: 'Location', type: 'select' as const }, // Made optional by removing required
-    { key: 'department_id', label: 'Department', type: 'select' as const } // Made optional by removing required
+    { key: 'location_id', label: 'Location (Optional)', type: 'select' as const }, // Made optional by removing required
+    { key: 'department_id', label: 'Department (Optional)', type: 'select' as const } // Made optional by removing required
   ]
 }
 
