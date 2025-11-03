@@ -123,15 +123,18 @@ export default function DataTable({
       )
     }
 
+    const startRecord = totalItems > 0 ? ((currentPage - 1) * recordsPerPage) + 1 : 0
+    const endRecord = totalItems > 0 ? Math.min(currentPage * recordsPerPage, totalItems) : 0
+
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white border-t border-gray-200 gap-4">
         <span className="text-sm text-gray-700">
-          Record {((currentPage - 1) * recordsPerPage) + 1} to {Math.min(currentPage * recordsPerPage, totalItems)} of {totalItems}
+          {totalItems > 0 ? `Record ${startRecord} to ${endRecord} of ${totalItems}` : 'No records found'}
         </span>
         <div className="flex gap-1">
           <button 
             onClick={() => onPageChange(Math.max(1, currentPage - 1))} 
-            disabled={currentPage === 1} 
+            disabled={currentPage === 1 || totalPages === 0} 
             className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Previous
@@ -139,7 +142,7 @@ export default function DataTable({
           {pages}
           <button 
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} 
-            disabled={currentPage === totalPages} 
+            disabled={currentPage === totalPages || totalPages === 0} 
             className="px-3 py-2 text-sm bg-white border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Next

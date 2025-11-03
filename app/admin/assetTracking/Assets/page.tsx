@@ -40,10 +40,27 @@ const assetsConfig = {
       )
     },
     { key: 'location', label: 'Location', sortable: false, render: (_: any, row: any) => row.location?.name || 'N/A' },
-    { key: 'department', label: 'Department', sortable: false, render: (_: any, row: any) => row.department?.name || 'N/A' }
+    { key: 'department', label: 'Department', sortable: false, render: (_: any, row: any) => row.department?.name || 'N/A' },
+    { 
+      key: 'created_dt', 
+      label: 'Created Date', 
+      sortable: true,
+      render: (value: string) => new Date(value).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
   ],
   formFields: [
-    { key: 'asset_id', label: 'Asset ID', type: 'text' as const, disabled: true },
+    { 
+      key: 'asset_id', 
+      label: 'Asset ID', 
+      type: 'text' as const, 
+      disabled: false, 
+      required: true,
+      placeholder: 'Enter asset barcode (e.g., from barcode scanner)'
+    },
     { key: 'name', label: 'Name', type: 'text' as const, required: true },
     { key: 'model', label: 'Model', type: 'text' as const, required: true },
     { key: 'description', label: 'Description', type: 'textarea' as const },

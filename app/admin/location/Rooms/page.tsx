@@ -31,13 +31,20 @@ const locationsConfig = {
     { key: 'level', label: 'Level', sortable: true },
     { 
       key: 'created_dt', 
-      label: 'Created', 
+      label: 'Created Dt', 
       sortable: true, 
       render: (v: string) => new Date(v).toLocaleDateString()
     }
   ],
   formFields: [
-    { key: 'location_id', label: 'Location ID', type: 'text' as const, disabled: true },
+    { 
+      key: 'location_id', 
+      label: 'Location ID', 
+      type: 'text' as const, 
+      disabled: false, 
+      required: true,
+      placeholder: 'Enter location QR code (e.g., from QR scanner)'
+    },
     { key: 'name', label: 'Location Name', type: 'text' as const, required: true },
     { key: 'description', label: 'Description', type: 'textarea' as const },
     { key: 'block', label: 'Block', type: 'text' as const },

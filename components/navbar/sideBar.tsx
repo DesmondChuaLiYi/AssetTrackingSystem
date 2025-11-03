@@ -40,12 +40,12 @@ const adminModules = [
     name: 'Staff',
     icon: UsersIcon,
     href: '/admin/staff',
-    dropdown: ['List', 'approvals', 'Roles', 'Attendance'],
+    dropdown: ['List', 'Approvals', 'Roles', 'Attendance'],
   },
 ];
 
 const userModules = [
-  { name: 'Main Menu', icon: HomeIcon, href: '/user' }, // ← clean link
+  { name: 'Main Menu', icon: HomeIcon, href: '/user/dashboard' },
 ];
 
 const sidebarVariants: Variants = {
@@ -79,8 +79,10 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile && !isMobile) setIsOpen(false);
-      else if (!mobile && isMobile) setIsOpen(true);
+      // Only change sidebar state if transitioning between mobile and desktop
+      if (mobile !== isMobile) {
+        setIsOpen(!mobile);
+      }
     };
     handleResize();
     window.addEventListener('resize', handleResize);

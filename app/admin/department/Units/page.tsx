@@ -30,13 +30,20 @@ const departmentsConfig = {
     { key: 'level', label: 'Level', sortable: true },
     { 
       key: 'created_dt', 
-      label: 'Created', 
+      label: 'Created Dt', 
       sortable: true, 
       render: (v: string) => new Date(v).toLocaleDateString()
     }
   ],
   formFields: [
-    { key: 'department_id', label: 'Department ID', type: 'text' as const, disabled: true },
+    { 
+      key: 'department_id', 
+      label: 'Department ID', 
+      type: 'text' as const, 
+      disabled: false, 
+      required: true,
+      placeholder: 'Enter department QR code (e.g., from QR scanner)'
+    },
     { key: 'name', label: 'Department Name', type: 'text' as const, required: true },
     { key: 'block', label: 'Block', type: 'text' as const },
     { key: 'level', label: 'Level', type: 'number' as const }

@@ -29,7 +29,13 @@ export async function GET(request: NextRequest) {
 
     // Apply search filter
     if (search) {
-      query = query.ilike(searchField, `%${search}%`)
+      if (searchField === 'location') {
+        query = query.ilike('location.name', `%${search}%`)
+      } else if (searchField === 'department') {
+        query = query.ilike('department.name', `%${search}%`)
+      } else {
+        query = query.ilike(searchField, `%${search}%`)
+      }
     }
 
     // Add sorting
