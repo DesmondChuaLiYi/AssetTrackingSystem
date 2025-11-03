@@ -10,6 +10,7 @@ interface UserSession {
   departmentId: string | null
   mobileNo: string | null
   microsoftUserId: string | null
+  role: string | null
 }
 
 interface SessionContextType {
@@ -72,9 +73,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           email: staffData.email,
           departmentId: staffData.department_id,
           mobileNo: staffData.mobile_no,
-          microsoftUserId
+          microsoftUserId,
+          role: staffData.role
         }
         setSession(newSession)
+
+        // Set secure cookie for middleware
+        await fetch('/api/sessions/set-cookie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            staffId: staffData.staff_id,
+            role: staffData.role
+          })
+        })
       } else {
         console.error('Failed to start session:', data.error)
       }
@@ -94,6 +106,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           sessionId: session.sessionId,
           staffId: session.staffId
         })
+      })
+
+      // Clear the secure cookie
+      await fetch('/api/sessions/set-cookie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear' })
       })
 
       setSession(null)

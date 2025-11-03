@@ -12,7 +12,7 @@ import LogoutButton from '../LogoutButton';
 import { useSession } from '../SessionProvider';
 
 // Dynamically import Sidebar with SSR disabled
-const Sidebar = dynamic(() => import('./sidebar'), {
+const Sidebar = dynamic(() => import('./sideBar'), {
   ssr: false,
 });
 

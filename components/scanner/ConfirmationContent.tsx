@@ -47,9 +47,9 @@ export default function ConfirmationContent({
   const [error, setError] = useState<string | null>(null);
 
   const statusOptions = [
-    { value: "in use", label: "In Use" },
-    { value: "broken", label: "Broken" },
-    { value: "in store", label: "In Store" },
+    { value: "in use", label: "In-use" },
+    { value: "spoiled", label: "Spoiled" },
+    { value: "in store", label: "In-store" },
   ];
 
   useEffect(() => {

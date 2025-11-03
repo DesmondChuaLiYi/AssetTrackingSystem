@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [selectedChart, setSelectedChart] = useState('assets')
+  // Add a key to force chart re-render
+  const [chartKey, setChartKey] = useState(0)
 
   useEffect(() => {
     setMounted(true)
@@ -56,7 +58,7 @@ export default function DashboardPage() {
         fetch('/api/department'),
         fetch('/api/staff/list'),
         fetch('/api/location')
-      ])
+      ])  
 
       const [assetsData, departmentsData, staffData, locationsData] = await Promise.all([
         assetsRes.json(),
@@ -78,6 +80,14 @@ export default function DashboardPage() {
     }
   }
 
+  // Enhanced refresh function that refreshes everything
+  const handleRefreshAll = async () => {
+    // Refresh stats
+    await fetchDashboardData()
+    // Force chart re-render by updating its key
+    setChartKey(prev => prev + 1)
+  }
+
   // Chart configurations - using SINGULAR table names to match your database
   const chartConfigs = [
     {
@@ -87,7 +97,7 @@ export default function DashboardPage() {
       title: 'Total Assets',
       valueKey: 'count', 
       labelKey: 'category',
-      chartType: 'combo' as const,
+      chartType: 'line' as const,
       color: '#3b82f6',
       icon: '',
       dateKey: 'created_dt'
@@ -136,7 +146,7 @@ export default function DashboardPage() {
       value: stats.totalStaff,
       icon: UsersIcon,
       color: 'bg-purple-500',
-      href: '/admin/staff/List'
+      href: '/admin/staff/addStaff'
     },
     {
       title: 'Locations',
@@ -166,9 +176,9 @@ export default function DashboardPage() {
                 <p className="text-gray-600 mt-1">Welcome back, {session?.name || 'User'}</p>
               </div>
               <button
-                onClick={fetchDashboardData}
+                onClick={handleRefreshAll}
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 transition-all"
               >
                 <ArrowPathIcon className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -206,45 +216,6 @@ export default function DashboardPage() {
             })}
           </div>
 
-          {/* Chart Section with Dropdown */}
-          <div className="w-full flex justify-center mb-6">
-            <div className="bg-white rounded-lg flex flex-col max-w-xl lg:col-span-2 min-h-[400px] p-4 border w-full">
-              {/* Dropdown Selector */}
-              <div className="mb-4 flex justify-between items-center">
-                <p className="font-bold text-xl">Analytics</p>
-                <div className="w-64 ml-4">
-                  <select
-                    value={selectedChart}
-                    onChange={(e) => setSelectedChart(e.target.value)}
-                    className="w-full px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-medium"
-                  >
-                    {chartConfigs.map((chart) => (
-                      <option key={chart.id} value={chart.id}>
-                        {chart.icon} {chart.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Realtime Chart */}
-              {activeChart && (
-                <RealtimeChart 
-                  config={{
-                    tableName: activeChart.tableName,
-                    title: activeChart.title,
-                    valueKey: activeChart.valueKey,
-                    labelKey: activeChart.labelKey,
-                    chartType: activeChart.chartType,
-                    color: activeChart.color,
-                    limit: 200,
-                    dateKey: activeChart.dateKey
-                  }}
-                />
-              )}
-            </div>
-          </div>
-
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -257,7 +228,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mt-1">Manage and track all assets</p>
               </button>
               <button
-                onClick={() => router.push('/admin/staff/List')}
+                onClick={() => router.push('/admin/staff/addStaff')}
                 className="p-4 text-left border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 <h3 className="font-medium text-gray-900">Manage Staff</h3>
@@ -273,15 +244,59 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent Activity Placeholder */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
-            <div className="text-center py-12 text-gray-500">
-              <ComputerDesktopIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>Recent activity tracking will be implemented here</p>
-              <p className="text-sm mt-1">Asset assignments, updates, and system changes</p>
+          {/* Chart Section and Recent Activity - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Chart Section with Dropdown */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {/* Dropdown Selector */}
+              <div className="mb-4 flex justify-between items-center">
+                <p className="font-bold text-xl">Analytics</p>
+                <div className="w-40 sm:w-48">
+                  <select
+                    value={selectedChart}
+                    onChange={(e) => setSelectedChart(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-medium text-sm"
+                  >
+                    {chartConfigs.map((chart) => (
+                      <option key={chart.id} value={chart.id}>
+                        {chart.icon} {chart.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Realtime Chart with key prop for forced re-render */}
+              {activeChart && (
+                <RealtimeChart 
+                  key={`${selectedChart}-${chartKey}`}
+                  config={{
+                    tableName: activeChart.tableName,
+                    title: activeChart.title,
+                    valueKey: activeChart.valueKey,
+                    labelKey: activeChart.labelKey,
+                    chartType: activeChart.chartType,
+                    color: activeChart.color,
+                    limit: 200,
+                    dateKey: activeChart.dateKey
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+              <div className="flex-1 flex items-center justify-center text-center text-gray-500">
+                <div>
+                  <ComputerDesktopIcon className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>Recent activity tracking will be implemented here</p>
+                  <p className="text-sm mt-1">Asset assignments, updates, and system changes</p>
+                </div>
+              </div>
             </div>
           </div>
+
         </div>
       </main>
     </div>
