@@ -1,10 +1,10 @@
 'use client'
 
-import DynamicPage from '@/components/DynamicPage'
+import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
-const assetsConfig = {
+const assetsConfig: DynamicPageConfig = {
   entityName: 'asset',
-  entityDisplayName: 'Asset',
+  entityDisplayName: 'Assets',
   entityDisplayNameSingular: 'Asset',
   apiEndpoint: '/api/assets',
   primaryKey: 'asset_id',
@@ -13,6 +13,8 @@ const assetsConfig = {
   defaultSortBy: 'created_dt',
   showAddButton: true,
   showConditionFilter: true,
+  addUrl: '/admin/assetTracking/addAsset',
+  editUrl: '/admin/assetTracking/editAsset',
   searchFields: [
     { key: 'name', label: 'Asset Name' },
     { key: 'model', label: 'Model' },

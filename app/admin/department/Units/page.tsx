@@ -1,55 +1,38 @@
 'use client'
 
-import DynamicPage from '@/components/DynamicPage'
+import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
-const departmentsConfig = {
+const config: DynamicPageConfig = {
   entityName: 'department',
-  entityDisplayName: 'Department',
+  entityDisplayName: 'Departments',
   entityDisplayNameSingular: 'Department',
   apiEndpoint: '/api/department',
   primaryKey: 'department_id',
-  pageTitle: 'Department',
+  pageTitle: 'Department Management',
   pageDescription: 'Manage organisational departments and units',
   defaultSortBy: 'created_dt',
   showAddButton: true,
   showConditionFilter: false,
-  searchFields: [
-    { key: 'name', label: 'Department Name' },
-    { key: 'department_id', label: 'Department ID' },
-    { key: 'block', label: 'Block' }
-  ],
+  addUrl: '/admin/department/addDepartment',
+  editUrl: '/admin/department/editDepartment',
+  searchFields: [{ key: 'name', label: 'Department Name' }],
   columns: [
-    { 
-      key: 'department_id', 
-      label: 'Department ID', 
-      sortable: true, 
-      render: (v: string) => <span className="font-medium text-gray-900">{v}</span> 
-    },
-    { key: 'name', label: 'Department Name', sortable: true },
-    { key: 'block', label: 'Block', sortable: true },
-    { key: 'level', label: 'Level', sortable: true },
-    { 
-      key: 'created_dt', 
-      label: 'Created Dt', 
-      sortable: true, 
-      render: (v: string) => new Date(v).toLocaleDateString()
-    }
+    { key: 'department_id', label: 'Department ID', sortable: true },
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'description', label: 'Description', sortable: true },
+    { key: 'status', label: 'Status', sortable: true }
   ],
   formFields: [
-    { 
-      key: 'department_id', 
-      label: 'Department ID', 
-      type: 'text' as const, 
-      disabled: false, 
-      required: true,
-      placeholder: 'Enter department QR code (e.g., from QR scanner)'
-    },
-    { key: 'name', label: 'Department Name', type: 'text' as const, required: true },
-    { key: 'block', label: 'Block', type: 'text' as const },
-    { key: 'level', label: 'Level', type: 'number' as const }
+    { key: 'department_id', label: 'Department ID', type: 'text', required: true },
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'description', label: 'Description', type: 'textarea' },
+    { key: 'status', label: 'Status', type: 'select', options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' }
+    ]}
   ]
 }
 
-export default function DepartmentsPage() {
-  return <DynamicPage config={departmentsConfig} />
+export default function DepartmentPage() {
+  return <DynamicPage config={config} />
 }

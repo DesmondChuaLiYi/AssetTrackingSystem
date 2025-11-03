@@ -5,8 +5,9 @@ import { useSession } from '@/components/SessionProvider'
 import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import DataTable from '@/components/ui/DataTable'
+import { configEasing } from 'recharts/types/animation/easing'
 
-interface DynamicPageConfig {
+export interface DynamicPageConfig {
   entityName: string // 'asset', 'location', 'department'
   entityDisplayName: string // 'Assets', 'Locations', 'Departments'
   entityDisplayNameSingular: string // 'Asset', 'Location', 'Department'
@@ -20,6 +21,8 @@ interface DynamicPageConfig {
   defaultSortBy: string
   pageTitle: string
   pageDescription: string
+  addUrl: string // New: URL for add page
+  editUrl: string // New: URL for edit page (will append ID)
 }
 
 interface FormFieldConfig {
@@ -151,15 +154,11 @@ export default function DynamicPage({ config }: DynamicPageProps) {
   }
 
   const handleAdd = () => {
-    setCurrentItem(null)
-    setFormData({})
-    setShowModal(true)
+    router.push(config.addUrl)
   }
 
   const handleEdit = (item: any) => {
-    setCurrentItem(item)
-    setFormData({ ...item })
-    setShowModal(true)
+    router.push(`${config.editUrl}/${item[config.primaryKey]}`)
   }
 
   const handleDelete = async (item: any) => {
@@ -413,6 +412,8 @@ export default function DynamicPage({ config }: DynamicPageProps) {
     )
   }
 
+  // Remove handleSave and renderFormField functions as they're no longer needed
+
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="p-6">
@@ -455,38 +456,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
           />
         </div>
       </main>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Edit {config.entityDisplayNameSingular}</h3>
-            <div className="space-y-4">
-              {config.formFields.map(field => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium text-gray-700">
-                    {field.label} {field.required && '*'}
-                  </label>
-                  {renderFormField(field)}
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button 
-                onClick={() => setShowModal(false)} 
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave} 
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Remove modal JSX */}
     </div>
   )
 }
