@@ -31,6 +31,12 @@ export default function SuccessContent({ scannedCount, scanType }: { scannedCoun
               <p>Condition: <span className="font-bold">Confirmed</span></p>
               <p>Date: <span className="font-bold">{new Date().toLocaleDateString()}</span></p>
               <p>Time: <span className="font-bold">{new Date().toLocaleTimeString()}</span></p>
+              <p>Department: </p>
+              <p>Location: </p>
+              Name
+              condition
+              id
+              
             </div>
           </div>
 

@@ -12,7 +12,7 @@ import {
   Building2, 
 } from "lucide-react";
 
-// (Asset, Location, Department types are unchanged)
+// (Types are unchanged)
 type Asset = {
   asset_id: string;
   name: string;
@@ -20,6 +20,8 @@ type Asset = {
   location_id: string;
   department_id: string;
   condition: string;
+  category: string; // <-- Add category
+  model: string;    // <-- Add model
 };
 type Location = { location_id: string; name: string; };
 type Department = { department_id: string; name: string; };
@@ -34,18 +36,20 @@ export default function ConfirmationContent({
   item: any;
   tableName: string;
   onBack: () => void;
-  // --- MODIFIED: onSubmit now passes more data ---
   onSubmit: (data: {
     condition: string,
     location_id: string | null,
     department_id: string | null
   }) => Promise<void>; 
+  // --- MODIFIED: Add new fields to onCreate ---
   onCreate: (data: { 
     name: string, 
     description: string, 
     condition: string,
     location_id: string | null,
-    department_id: string | null 
+    department_id: string | null,
+    category: string, // <-- NEW
+    model: string     // <-- NEW
   }) => Promise<void>; 
 }) {
   const [mode, setMode] = useState<'loading' | 'editing' | 'registering' | 'error'>('loading');
@@ -55,6 +59,10 @@ export default function ConfirmationContent({
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [condition, setcondition] = useState("in use");
+  
+  // --- NEW: State for new required fields ---
+  const [newCategory, setNewCategory] = useState('');
+  const [newModel, setNewModel] = useState('');
   
   // Dropdown List State
   const [locations, setLocations] = useState<Location[]>([]);
@@ -67,13 +75,13 @@ export default function ConfirmationContent({
   const [error, setError] = useState<string | null>(null);
 
   const conditionOptions = [
-    { value: "in use", label: "In-use" },
-    { value: "spoiled", label: "Spoiled" },
-    { value: "in store", label: "In-store" },
+    { value: "in use", label: "In Use" },
+    { value: "broken", label: "Broken" },
+    { value: "in store", label: "In Store" },
   ];
 
+  // (useEffect is unchanged from our last step)
   useEffect(() => {
-    // --- MODIFIED: This now fetches data for BOTH modes ---
     const fetchDropdownData = async () => {
       try {
         const { data: locData, error: locError } = await supabase
@@ -102,7 +110,7 @@ export default function ConfirmationContent({
       
       setMode('loading');
       setError(null);
-      await fetchDropdownData(); // <-- MODIFIED: Fetch lists immediately
+      await fetchDropdownData(); 
       
       try {
         const { data, error } = await supabase
@@ -121,10 +129,8 @@ export default function ConfirmationContent({
         else if (data) {
           setAssetDetails(data as Asset);
           setcondition(data.condition || "in use");
-          // --- NEW: Pre-populate dropdowns for editing ---
           setSelectedLocation(data.location_id || '');
           setSelectedDepartment(data.department_id || '');
-          // --- END NEW ---
           setMode('editing');
         }
 
@@ -141,15 +147,15 @@ export default function ConfirmationContent({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'editing') {
-      // --- MODIFIED: Pass all edit data back ---
       onSubmit({
         condition,
         location_id: selectedLocation || null,
         department_id: selectedDepartment || null
       });
     } else if (mode === 'registering') {
-      if (!newName) {
-        alert("Asset Name is required.");
+      // --- MODIFIED: Check for new fields ---
+      if (!newName || !newCategory || !newModel) {
+        alert("Please fill in all required fields: Asset Name, Category, and Model.");
         return;
       }
       onCreate({ 
@@ -157,12 +163,14 @@ export default function ConfirmationContent({
         description: newDescription, 
         condition,
         location_id: selectedLocation || null, 
-        department_id: selectedDepartment || null 
+        department_id: selectedDepartment || null,
+        category: newCategory, // <-- NEW
+        model: newModel        // <-- NEW
       });
     }
   };
 
-  // --- NEW: Helper to render dropdowns in BOTH modes ---
+  // (renderDropdownSelectors is unchanged)
   const renderDropdownSelectors = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -204,9 +212,8 @@ export default function ConfirmationContent({
     </div>
   );
 
-  // Helper to render the condition selector (unchanged)
+  // (renderconditionSelector is unchanged)
   const renderconditionSelector = () => (
-    // ... (This function is unchanged)
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
         {mode === 'editing' ? 'Update condition' : 'Set Initial Condition'}
@@ -242,7 +249,6 @@ export default function ConfirmationContent({
     }
 
     if (mode === 'error') {
-      // ... (error UI is unchanged)
       return (
         <div className="p-8">
             <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
@@ -255,12 +261,12 @@ export default function ConfirmationContent({
       );
     }
     
-    // --- MODIFIED: Editing Mode ---
     if (mode === 'editing') {
       return (
         <div className="p-6 lg:p-8 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Asset Details</h3>
+            {/* --- MODIFIED: Show Category and Model --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Name</label>
@@ -270,10 +276,17 @@ export default function ConfirmationContent({
                 <label className="text-sm font-medium text-gray-500">Asset ID</label>
                 <p className="text-lg text-gray-800 font-mono">{assetDetails?.asset_id}</p>
               </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Category</label>
+                <p className="text-lg text-gray-800">{assetDetails?.category || 'N/A'}</p>
+              </div>
+               <div>
+                <label className="text-sm font-medium text-gray-500">Model</label>
+                <p className="text-lg text-gray-800">{assetDetails?.model || 'N/A'}</p>
+              </div>
             </div>
           </div>
 
-          {/* --- NEW: Show dropdowns in edit mode --- */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Update Association</h3>
              {renderDropdownSelectors()}
@@ -284,7 +297,6 @@ export default function ConfirmationContent({
       );
     }
     
-    // --- MODIFIED: Registering Mode ---
     if (mode === 'registering') {
       return (
          <div className="p-6 lg:p-8 space-y-6">
@@ -314,6 +326,36 @@ export default function ConfirmationContent({
                   placeholder="e.g., Dell Latitude 5420"
                 />
               </div>
+
+              {/* --- NEW REQUIRED FIELDS --- */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="assetCategory" className="text-sm font-medium text-gray-700">Category (Required)</label>
+                  <input 
+                    id="assetCategory"
+                    type="text"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    required
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                    placeholder="e.g., Laptop, Furniture"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="assetModel" className="text-sm font-medium text-gray-700">Model (Required)</label>
+                  <input 
+                    id="assetModel"
+                    type="text"
+                    value={newModel}
+                    onChange={(e) => setNewModel(e.target.value)}
+                    required
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                    placeholder="e.g., Latitude 5420, Moma Water"
+                  />
+                </div>
+              </div>
+              {/* --- END NEW FIELDS --- */}
+
               <div>
                 <label htmlFor="assetDesc" className="text-sm font-medium text-gray-700">Description</label>
                 <textarea 
@@ -326,7 +368,6 @@ export default function ConfirmationContent({
                 />
               </div>
 
-              {/* --- Show dropdowns in register mode --- */}
               {renderDropdownSelectors()}
             </div>
             
@@ -338,9 +379,8 @@ export default function ConfirmationContent({
     return null;
   };
   
-  // (getSubmitButton function is unchanged)
+  // (getSubmitButton is unchanged)
   const getSubmitButton = () => {
-    // ...
     if (mode === 'editing') {
       return (
         <button
@@ -374,8 +414,8 @@ export default function ConfirmationContent({
     );
   }
 
+  // (Return wrapper is unchanged)
   return (
-    // (The wrapper JSX is unchanged)
     <div className="p-4 lg:p-8">
       <div className="max-w-2xl mx-auto">
         <form onSubmit={handleSubmit}>
