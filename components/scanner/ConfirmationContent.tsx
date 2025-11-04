@@ -19,9 +19,9 @@ type Asset = {
   description: string;
   location_id: string;
   department_id: string;
-  condition: string;
-  category: string; // <-- Add category
-  model: string;    // <-- Add model
+  status: string;
+  category: string;
+  model: string;
 };
 type Location = { location_id: string; name: string; };
 type Department = { department_id: string; name: string; };
@@ -36,124 +36,96 @@ export default function ConfirmationContent({
   item: any;
   tableName: string;
   onBack: () => void;
-  onSubmit: (data: {
-    condition: string,
-    location_id: string | null,
-    department_id: string | null
-  }) => Promise<void>; 
-  // --- MODIFIED: Add new fields to onCreate ---
+  // --- MODIFIED: onSubmit now accepts the full asset object ---
+  onSubmit: (updatedAsset: any) => Promise<void>; 
   onCreate: (data: { 
     name: string, 
     description: string, 
-    condition: string,
+    status: string,
     location_id: string | null,
     department_id: string | null,
-    category: string, // <-- NEW
-    model: string     // <-- NEW
+    category: string,
+    model: string
   }) => Promise<void>; 
 }) {
   const [mode, setMode] = useState<'loading' | 'editing' | 'registering' | 'error'>('loading');
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   
-  // Form State
+  // (Form states are unchanged)
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
-  const [condition, setcondition] = useState("in use");
-  
-  // --- NEW: State for new required fields ---
+  const [status, setStatus] = useState("in use");
   const [newCategory, setNewCategory] = useState('');
   const [newModel, setNewModel] = useState('');
-  
-  // Dropdown List State
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  
-  // Dropdown SELECTION State
   const [selectedLocation, setSelectedLocation] = useState(''); 
   const [selectedDepartment, setSelectedDepartment] = useState(''); 
-  
   const [error, setError] = useState<string | null>(null);
 
-  const conditionOptions = [
+  const statusOptions = [
     { value: "in use", label: "In Use" },
     { value: "broken", label: "Broken" },
     { value: "in store", label: "In Store" },
   ];
 
-  // (useEffect is unchanged from our last step)
+  // (useEffect is unchanged)
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const { data: locData, error: locError } = await supabase
-          .from('location')
-          .select('location_id, name');
+        const { data: locData, error: locError } = await supabase.from('location').select('location_id, name');
         if (locError) throw locError;
         setLocations(locData || []);
-
-        const { data: deptData, error: deptError } = await supabase
-          .from('department')
-          .select('department_id, name');
+        const { data: deptData, error: deptError } = await supabase.from('department').select('department_id, name');
         if (deptError) throw deptError;
         setDepartments(deptData || []);
-
       } catch (err: any) {
         console.error("Error fetching dropdown data:", err);
       }
     };
-    
     const fetchAssetDetails = async () => {
       if (!item || !item.code || tableName !== "asset") {
         setMode('error');
         setError("Invalid asset data provided.");
         return;
       }
-      
       setMode('loading');
       setError(null);
       await fetchDropdownData(); 
-      
       try {
-        const { data, error } = await supabase
-          .from(tableName)
-          .select()
-          .eq("asset_id", item.code)
-          .single();
-
+        const { data, error } = await supabase.from(tableName).select().eq("asset_id", item.code).single();
         if (error && error.code === 'PGRST116') {
           setMode('registering'); 
-          setcondition('in use'); 
-        } 
-        else if (error) {
+          setStatus('in use'); 
+        } else if (error) {
           throw error;
-        }
-        else if (data) {
+        } else if (data) {
           setAssetDetails(data as Asset);
-          setcondition(data.condition || "in use");
+          setStatus(data.status || "in use");
           setSelectedLocation(data.location_id || '');
           setSelectedDepartment(data.department_id || '');
           setMode('editing');
         }
-
       } catch (err: any) {
         setMode('error');
         setError(err.message || "An unknown error occurred.");
       }
     };
-
     fetchAssetDetails();
   }, [item, tableName]);
 
-  // Handle the form submission
+  // --- MODIFIED: handleSubmit for 'editing' mode ---
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'editing') {
+      // Send the *full* asset object back, merged with the new selections
       onSubmit({
-        condition,
-        location_id: selectedLocation || null,
-        department_id: selectedDepartment || null
+        ...assetDetails, // Send all old details (name, category, model, etc.)
+        status: status, // Overwrite with new status
+        location_id: selectedLocation || null, // Overwrite with new location
+        department_id: selectedDepartment || null // Overwrite with new department
       });
     } else if (mode === 'registering') {
-      // --- MODIFIED: Check for new fields ---
       if (!newName || !newCategory || !newModel) {
         alert("Please fill in all required fields: Asset Name, Category, and Model.");
         return;
@@ -161,16 +133,20 @@ export default function ConfirmationContent({
       onCreate({ 
         name: newName, 
         description: newDescription, 
-        condition,
+        status,
         location_id: selectedLocation || null, 
         department_id: selectedDepartment || null,
-        category: newCategory, // <-- NEW
-        model: newModel        // <-- NEW
+        category: newCategory,
+        model: newModel
       });
     }
   };
 
-  // (renderDropdownSelectors is unchanged)
+  // (All render functions... renderDropdownSelectors, renderStatusSelector, renderFormContent, getSubmitButton... are UNCHANGED from the previous step)
+  // ...
+  // ... (paste all the render functions from the previous step here) ...
+  // ...
+    // Helper to render dropdowns
   const renderDropdownSelectors = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -212,28 +188,28 @@ export default function ConfirmationContent({
     </div>
   );
 
-  // (renderconditionSelector is unchanged)
-  const renderconditionSelector = () => (
+  // Helper to render status
+  const renderStatusSelector = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-        {mode === 'editing' ? 'Update condition' : 'Set Initial Condition'}
+        {mode === 'editing' ? 'Update Status' : 'Set Initial Condition'}
       </h3>
       <div className="flex flex-col sm:flex-row gap-4">
-        {conditionOptions.map((option) => (
+        {statusOptions.map((option) => (
           <label
             key={option.value}
             className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-              condition === option.value
+              status === option.value
                 ? "border-red-600 bg-red-50 shadow-md"
                 : "border-gray-300 hover:border-gray-400"
             }`}
           >
             <input
               type="radio"
-              name="condition"
+              name="status"
               value={option.value}
-              checked={condition === option.value}
-              onChange={() => setcondition(option.value)}
+              checked={status === option.value}
+              onChange={() => setStatus(option.value)}
               className="sr-only"
             />
             <span className="text-lg font-medium text-gray-800">{option.label}</span>
@@ -243,6 +219,7 @@ export default function ConfirmationContent({
     </div>
   );
   
+  // Helper to render form
   const renderFormContent = () => {
     if (mode === 'loading') {
       return <div className="p-8 text-center">Searching for asset...</div>;
@@ -266,7 +243,6 @@ export default function ConfirmationContent({
         <div className="p-6 lg:p-8 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Asset Details</h3>
-            {/* --- MODIFIED: Show Category and Model --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Name</label>
@@ -292,7 +268,7 @@ export default function ConfirmationContent({
              {renderDropdownSelectors()}
           </div>
          
-          {renderconditionSelector()}
+          {renderStatusSelector()}
         </div>
       );
     }
@@ -327,7 +303,6 @@ export default function ConfirmationContent({
                 />
               </div>
 
-              {/* --- NEW REQUIRED FIELDS --- */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="assetCategory" className="text-sm font-medium text-gray-700">Category (Required)</label>
@@ -354,7 +329,6 @@ export default function ConfirmationContent({
                   />
                 </div>
               </div>
-              {/* --- END NEW FIELDS --- */}
 
               <div>
                 <label htmlFor="assetDesc" className="text-sm font-medium text-gray-700">Description</label>
@@ -371,7 +345,7 @@ export default function ConfirmationContent({
               {renderDropdownSelectors()}
             </div>
             
-           {renderconditionSelector()}
+           {renderStatusSelector()}
          </div>
       );
     }
@@ -379,7 +353,7 @@ export default function ConfirmationContent({
     return null;
   };
   
-  // (getSubmitButton is unchanged)
+  // Helper to get submit button
   const getSubmitButton = () => {
     if (mode === 'editing') {
       return (
@@ -414,7 +388,7 @@ export default function ConfirmationContent({
     );
   }
 
-  // (Return wrapper is unchanged)
+  // Final render
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-2xl mx-auto">
@@ -425,7 +399,7 @@ export default function ConfirmationContent({
                 <Edit className="w-8 h-8" />
                 <div>
                   <h1 className="text-2xl font-bold">
-                    {mode === 'registering' ? 'Register Asset' : 'Confirm Asset condition'}
+                    {mode === 'registering' ? 'Register Asset' : 'Confirm Asset Status'}
                   </h1>
                   <p className="text-sm text-red-100">Scanned Code: {item?.code}</p>
                 </div>
