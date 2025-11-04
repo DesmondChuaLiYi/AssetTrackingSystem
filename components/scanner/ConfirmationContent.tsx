@@ -12,13 +12,14 @@ import {
   Building2, 
 } from "lucide-react";
 
+// (Asset, Location, Department types are unchanged)
 type Asset = {
   asset_id: string;
   name: string;
   description: string;
   location_id: string;
   department_id: string;
-  condition: string; // <-- RENAMED
+  condition: string; 
   category: string;
   model: string;
 };
@@ -35,16 +36,21 @@ export default function ConfirmationContent({
   item: any;
   tableName: string;
   onBack: () => void;
-  // --- MODIFIED: 'status' to 'condition' ---
+  // --- MODIFIED: onSubmit now passes back more data ---
   onSubmit: (data: {
     condition: string, 
     location_id: string | null,
-    department_id: string | null
+    department_id: string | null,
+    // --- NEW FIELDS ---
+    name: string,
+    category: string,
+    model: string,
+    asset_id: string
   }) => Promise<void>; 
   onCreate: (data: { 
     name: string, 
     description: string, 
-    condition: string, // <-- RENAMED
+    condition: string,
     location_id: string | null,
     department_id: string | null,
     category: string,
@@ -54,30 +60,28 @@ export default function ConfirmationContent({
   const [mode, setMode] = useState<'loading' | 'editing' | 'registering' | 'error'>('loading');
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   
-  // Form State
+  // (Form state is unchanged)
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
-  const [condition, setCondition] = useState("in use"); // <-- RENAMED
+  const [condition, setCondition] = useState("in use");
   const [newCategory, setNewCategory] = useState('');
   const [newModel, setNewModel] = useState('');
   
-  // Dropdown List State
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   
-  // Dropdown SELECTION State
   const [selectedLocation, setSelectedLocation] = useState(''); 
   const [selectedDepartment, setSelectedDepartment] = useState(''); 
   
   const [error, setError] = useState<string | null>(null);
 
-  // --- MODIFIED: Renamed 'statusOptions' to 'conditionOptions' ---
   const conditionOptions = [
     { value: "in use", label: "In-use" },
     { value: "spoiled", label: "Spoiled" },
     { value: "in store", label: "In-store" },
   ];
 
+  // (useEffect is unchanged)
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -118,14 +122,14 @@ export default function ConfirmationContent({
 
         if (error && error.code === 'PGRST116') {
           setMode('registering'); 
-          setCondition('in use'); // <-- RENAMED
+          setCondition('in use'); 
         } 
         else if (error) {
           throw error;
         }
         else if (data) {
           setAssetDetails(data as Asset);
-          setCondition(data.condition || "in use"); // <-- RENAMED
+          setCondition(data.condition || "in use");
           setSelectedLocation(data.location_id || '');
           setSelectedDepartment(data.department_id || '');
           setMode('editing');
@@ -140,14 +144,19 @@ export default function ConfirmationContent({
     fetchAssetDetails();
   }, [item, tableName]);
 
-  // Handle the form submission
+  // --- MODIFIED: handleSubmit now sends more data on edit ---
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'editing') {
       onSubmit({
-        condition, // <-- RENAMED
+        condition,
         location_id: selectedLocation || null,
-        department_id: selectedDepartment || null
+        department_id: selectedDepartment || null,
+        // --- PASSING THE EXTRA DATA ---
+        name: assetDetails?.name || 'N/A', 
+        category: assetDetails?.category || 'N/A',
+        model: assetDetails?.model || 'N/A',
+        asset_id: assetDetails?.asset_id || item.code
       });
     } else if (mode === 'registering') {
       if (!newName || !newCategory || !newModel) {
@@ -157,7 +166,7 @@ export default function ConfirmationContent({
       onCreate({ 
         name: newName, 
         description: newDescription, 
-        condition, // <-- RENAMED
+        condition,
         location_id: selectedLocation || null, 
         department_id: selectedDepartment || null,
         category: newCategory,
@@ -166,9 +175,15 @@ export default function ConfirmationContent({
     }
   };
 
-  // (renderDropdownSelectors is unchanged)
+  // (The rest of the file is unchanged)
+  // ... renderDropdownSelectors()
+  // ... renderConditionSelector()
+  // ... renderFormContent()
+  // ... getSubmitButton()
+  // ... return ( ... )
+  // ... (pasting all unchanged functions for completeness)
+
   const renderDropdownSelectors = () => (
-    // ...
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label htmlFor="assetLocation" className="text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -209,28 +224,27 @@ export default function ConfirmationContent({
     </div>
   );
 
-  // --- MODIFIED: Renamed 'renderStatusSelector' to 'renderConditionSelector' ---
   const renderConditionSelector = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
         {mode === 'editing' ? 'Update Condition' : 'Set Initial Condition'}
       </h3>
       <div className="flex flex-col sm:flex-row gap-4">
-        {conditionOptions.map((option) => ( // <-- RENAMED
+        {conditionOptions.map((option) => (
           <label
             key={option.value}
             className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-              condition === option.value // <-- RENAMED
+              condition === option.value
                 ? "border-red-600 bg-red-50 shadow-md"
                 : "border-gray-300 hover:border-gray-400"
             }`}
           >
             <input
               type="radio"
-              name="condition" // <-- RENAMED
+              name="condition"
               value={option.value}
-              checked={condition === option.value} // <-- RENAMED
-              onChange={() => setCondition(option.value)} // <-- RENAMED
+              checked={condition === option.value}
+              onChange={() => setCondition(option.value)}
               className="sr-only"
             />
             <span className="text-lg font-medium text-gray-800">{option.label}</span>
@@ -242,12 +256,10 @@ export default function ConfirmationContent({
   
   const renderFormContent = () => {
     if (mode === 'loading') {
-      // ... (unchanged)
       return <div className="p-8 text-center">Searching for asset...</div>;
     }
 
     if (mode === 'error') {
-      // ... (unchanged)
       return (
         <div className="p-8">
             <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
@@ -375,9 +387,7 @@ export default function ConfirmationContent({
     return null;
   };
   
-  // (getSubmitButton is unchanged)
   const getSubmitButton = () => {
-    // ...
     if (mode === 'editing') {
       return (
         <button
@@ -411,7 +421,6 @@ export default function ConfirmationContent({
     );
   }
 
-  // (Return wrapper is unchanged)
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-2xl mx-auto">

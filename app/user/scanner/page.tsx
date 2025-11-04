@@ -4,12 +4,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-
-// Import all your content components
 import ScannerContent from '@/components/scanner/ScannerContext';
 import SuccessContent from '@/components/scanner/SuccessContent';
 import ConfirmationContent from '@/components/scanner/ConfirmationContent';
-
 import { Package, Users, MapPin, Building2 } from 'lucide-react';
 
 // (configs are unchanged)
@@ -21,17 +18,18 @@ const configs = {
 };
 
 export default function ScannerPage() {
-  // (states are unchanged)
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
+  
   const [pageState, setPageState] = useState('scanning'); 
   const [scannedItem, setScannedItem] = useState<any>(null);
-  const [submittedData, setSubmittedData] = useState<any>(null);
-  const [parentScan, setParentScan] = useState<{ type: string, id: string, name: string } | null>(null);
+  // --- MODIFIED: submittedData will now hold a single item object ---
+  const [submittedData, setSubmittedData] = useState<{ item: any, page: string } | null>(null);
+  // -----------------------------------------------------------------
+  const [parentScan, setParentScan] = useState<{ type: string, id: string, name: string } | null>(null);
 
   const config = configs[type] || configs.asset;
 
-  // (useEffect is unchanged)
   useEffect(() => {
     setPageState('scanning');
     setScannedItem(null);
@@ -39,7 +37,6 @@ export default function ScannerPage() {
     setParentScan(null);
   }, [type]);
 
-  // (handleItemScanned is unchanged)
   const handleItemScanned = async (item: any) => {
     const scannedCode = item.code;
 
@@ -63,6 +60,7 @@ export default function ScannerPage() {
       }
     } 
     else {
+      // This is the "Tagging" flow
       const { data: assetData, error: assetError } = await supabase
         .from('asset')
         .select()
@@ -82,8 +80,10 @@ export default function ScannerPage() {
           .eq('asset_id', scannedCode);
 
         if (updateError) throw updateError;
-
-        setSubmittedData({ items: [item], page: `Tagged to ${parentScan.name}` });
+        
+        // --- MODIFIED: Pass the full asset data ---
+        setSubmittedData({ item: assetData, page: `Tagged to ${parentScan.name}` });
+        // ------------------------------------------
         setPageState('success');
         setParentScan(null);
 
@@ -93,11 +93,16 @@ export default function ScannerPage() {
     }
   };
   
-  // --- MODIFIED: This function now accepts 'condition' and 'updated_status' is removed ---
+  // --- MODIFIED: This function's signature has changed ---
   const handleAssetUpdate = async (newData: {
-    condition: string, // <-- RENAMED
+    condition: string,
     location_id: string | null,
-    department_id: string | null
+    department_id: string | null,
+    // --- NEW FIELDS ---
+    name: string,
+    category: string,
+    model: string,
+    asset_id: string
   }) => {
     if (!scannedItem || type !== 'asset') {
       alert("Error: No asset found to update.");
@@ -106,11 +111,10 @@ export default function ScannerPage() {
     
     try {
       const dataToUpdate = {
-        condition: newData.condition, // <-- RENAMED
+        condition: newData.condition,
         location_id: newData.location_id,
         department_id: newData.department_id,
-        updated_at: new Date().toISOString() 
-        // 'updated_status' column removed
+        updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -120,7 +124,12 @@ export default function ScannerPage() {
 
       if (error) throw error;
       
-      setSubmittedData({ items: [scannedItem], page: type });
+      // --- MODIFIED: Pass the full item object ---
+      setSubmittedData({ 
+        item: { ...newData, ...dataToUpdate }, // Combine all known data
+        page: type 
+      });
+      // -----------------------------------------
       setPageState('success');
 
     } catch (e: any) {
@@ -128,11 +137,11 @@ export default function ScannerPage() {
     }
   };
 
-  // --- MODIFIED: This function now accepts 'condition' ---
+  // --- MODIFIED: This function's signature has changed ---
   const handleAssetCreate = async (newData: { 
     name: string, 
     description: string, 
-    condition: string, // <-- RENAMED
+    condition: string,
     location_id: string | null,
     department_id: string | null,
     category: string,
@@ -148,7 +157,7 @@ export default function ScannerPage() {
         asset_id: scannedItem.code, 
         name: newData.name,
         description: newData.description,
-        condition: newData.condition, // <-- RENAMED
+        condition: newData.condition,
         created_at: new Date().toISOString(),
         location_id: newData.location_id,
         department_id: newData.department_id,
@@ -166,7 +175,12 @@ export default function ScannerPage() {
 
       if (error) throw error;
       
-      setSubmittedData({ items: [scannedItem], page: 'New Asset Registered' });
+      // --- MODIFIED: Pass the full item object ---
+      setSubmittedData({ 
+        item: dataToInsert, // Pass the object we just created
+        page: 'New Asset Registered' 
+      });
+      // -----------------------------------------
       setPageState('success');
       setParentScan(null);
 
@@ -175,16 +189,23 @@ export default function ScannerPage() {
     }
   };
 
-  // (The render section is unchanged)
+  // --- MODIFIED: Render section updated ---
   if (pageState === 'success') {
+    // This handles non-asset scans (which we'll add later)
+    if (!submittedData) {
+      return <SuccessContent scannedCount={0} scanType="Error" item={null} />;
+    }
+
+    // This logic determines the title
+    const scanType = (submittedData.page === 'New Asset Registered' || submittedData.page.startsWith('Tagged to'))
+      ? submittedData.page 
+      : configs[submittedData.page as keyof typeof configs].title.split(" ")[0];
+
     return (
       <SuccessContent
-        scannedCount={submittedData.items.length}
-        scanType={
-            (submittedData.page === 'New Asset Registered' || submittedData.page.startsWith('Tagged to'))
-            ? submittedData.page 
-            : configs[submittedData.page as keyof typeof configs].title.split(" ")[0]
-          }
+        scannedCount={1}
+        scanType={scanType}
+        item={submittedData.item} // <-- PASS THE FULL ITEM
       />
     );
   }
@@ -203,6 +224,7 @@ export default function ScannerPage() {
     );
   }
 
+  // Default: pageState === 'scanning'
   return (
     <ScannerContent
       {...config}
