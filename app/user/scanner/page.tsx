@@ -4,9 +4,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+// Import all your content components
 import ScannerContent from '@/components/scanner/ScannerContext';
 import SuccessContent from '@/components/scanner/SuccessContent';
 import ConfirmationContent from '@/components/scanner/ConfirmationContent';
+
 import { Package, Users, MapPin, Building2 } from 'lucide-react';
 
 // (configs are unchanged)
@@ -38,7 +41,6 @@ export default function ScannerPage() {
 
   // (handleItemScanned is unchanged)
   const handleItemScanned = async (item: any) => {
-    // ... (This function is unchanged from the previous step)
     const scannedCode = item.code;
 
     if (parentScan === null) {
@@ -90,10 +92,10 @@ export default function ScannerPage() {
       }
     }
   };
-  
-  // (handleAssetUpdate is unchanged)
+  
+  // --- MODIFIED: This function now accepts 'condition' and 'updated_status' is removed ---
   const handleAssetUpdate = async (newData: {
-    status: string,
+    condition: string, // <-- RENAMED
     location_id: string | null,
     department_id: string | null
   }) => {
@@ -104,11 +106,11 @@ export default function ScannerPage() {
     
     try {
       const dataToUpdate = {
-        status: newData.status,
-        updated_status: newData.status, 
+        condition: newData.condition, // <-- RENAMED
         location_id: newData.location_id,
         department_id: newData.department_id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString() 
+        // 'updated_status' column removed
       };
 
       const { error } = await supabase
@@ -126,15 +128,15 @@ export default function ScannerPage() {
     }
   };
 
-  // --- MODIFIED: This function's signature and data object ---
+  // --- MODIFIED: This function now accepts 'condition' ---
   const handleAssetCreate = async (newData: { 
     name: string, 
     description: string, 
-    status: string,
+    condition: string, // <-- RENAMED
     location_id: string | null,
     department_id: string | null,
-    category: string, // <-- NEW
-    model: string     // <-- NEW
+    category: string,
+    model: string
   }) => {
     if (!scannedItem || type !== 'asset') {
       alert("Error: No asset ID to create.");
@@ -146,12 +148,12 @@ export default function ScannerPage() {
         asset_id: scannedItem.code, 
         name: newData.name,
         description: newData.description,
-        status: newData.status,
+        condition: newData.condition, // <-- RENAMED
         created_at: new Date().toISOString(),
         location_id: newData.location_id,
         department_id: newData.department_id,
-        category: newData.category, // <-- NEW
-        model: newData.model,       // <-- NEW
+        category: newData.category,
+        model: newData.model,
       };
       
       if (parentScan) {
@@ -178,7 +180,7 @@ export default function ScannerPage() {
     return (
       <SuccessContent
         scannedCount={submittedData.items.length}
-        scanType={
+        scanType={
             (submittedData.page === 'New Asset Registered' || submittedData.page.startsWith('Tagged to'))
             ? submittedData.page 
             : configs[submittedData.page as keyof typeof configs].title.split(" ")[0]
@@ -207,6 +209,6 @@ export default function ScannerPage() {
       onItemScanned={handleItemScanned}
       onBack={() => window.location.href = '/user/dashboard'}
       parentScan={parentScan}
-   />
+    />
   );
 }
