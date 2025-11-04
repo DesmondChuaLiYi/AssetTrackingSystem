@@ -4,7 +4,7 @@ import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
 const assetsConfig: DynamicPageConfig = {
   entityName: 'asset',
-  entityDisplayName: 'Assets',
+  entityDisplayName: 'Asset',
   entityDisplayNameSingular: 'Asset',
   apiEndpoint: '/api/assets',
   primaryKey: 'asset_id',
@@ -16,10 +16,8 @@ const assetsConfig: DynamicPageConfig = {
   addUrl: '/admin/assetTracking/addAsset',
   editUrl: '/admin/assetTracking/editAsset',
   searchFields: [
-    { key: 'name', label: 'Asset Name' },
-    { key: 'model', label: 'Model' },
-    { key: 'category', label: 'Category' },
-    { key: 'asset_id', label: 'Asset ID' }
+    { key: 'asset_id', label: 'Search by Asset ID' },  // First field - will be left search box
+    { key: 'name', label: 'Search by Asset Name' }     // Second field - will be right search box
   ],
   columns: [
     { 

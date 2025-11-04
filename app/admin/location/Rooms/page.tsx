@@ -4,7 +4,7 @@ import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
 const config: DynamicPageConfig = {
   entityName: 'location',
-  entityDisplayName: 'Locations',
+  entityDisplayName: 'Location',
   entityDisplayNameSingular: 'Location',
   apiEndpoint: '/api/location',
   primaryKey: 'location_id',
@@ -15,7 +15,10 @@ const config: DynamicPageConfig = {
   showConditionFilter: false,
   addUrl: '/admin/location/addLocation',
   editUrl: '/admin/location/editLocation',
-  searchFields: [{ key: 'name', label: 'Location Name' }],
+  searchFields: [
+    { key: 'location_id', label: 'Search by Location ID' },  // First field - will be left search box
+    { key: 'name', label: 'Search by Asset Name' }     // Second field - will be right search box
+  ],
   columns: [
     { key: 'location_id', label: 'Location ID', sortable: true },
     { key: 'name', label: 'Name', sortable: true },

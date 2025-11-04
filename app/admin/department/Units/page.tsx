@@ -4,7 +4,7 @@ import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
 const config: DynamicPageConfig = {
   entityName: 'department',
-  entityDisplayName: 'Departments',
+  entityDisplayName: 'Department',
   entityDisplayNameSingular: 'Department',
   apiEndpoint: '/api/department',
   primaryKey: 'department_id',
@@ -15,7 +15,10 @@ const config: DynamicPageConfig = {
   showConditionFilter: false,
   addUrl: '/admin/department/addDepartment',
   editUrl: '/admin/department/editDepartment',
-  searchFields: [{ key: 'name', label: 'Department Name' }],
+  searchFields: [
+    { key: 'department', label: 'Search by Department ID' },  // First field - will be left search box
+    { key: 'name', label: 'Search by Department Name' }     // Second field - will be right search box
+  ],
   columns: [
     { key: 'department_id', label: 'Department ID', sortable: true },
     { key: 'name', label: 'Name', sortable: true },

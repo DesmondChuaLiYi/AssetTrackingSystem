@@ -62,7 +62,11 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       const result = await response.json()
       
       if (result.success) {
-        setFormData(result.data)
+        let data = result.data
+        if (config.entityName === 'asset' && (!data.condition || data.condition === '')) {
+          data.condition = 'In-use'
+        }
+        setFormData(data)
       } else {
         alert('Error loading record')
         router.push(config.backUrl)

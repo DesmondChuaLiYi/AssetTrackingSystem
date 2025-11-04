@@ -17,6 +17,7 @@ interface DataTableProps {
   loading?: boolean
   searchTerm?: string
   searchField?: string
+  searchFields?: { key: string; label: string }[] // Add support for custom search fields
   onSearchFieldChange?: (field: string) => void
   onSearchChange?: (term: string) => void
   onSearch?: () => void
@@ -53,6 +54,7 @@ export default function DataTable({
   loading = false,
   searchTerm = '',
   searchField = 'name',
+  searchFields, // Accept custom search fields
   onSearchFieldChange,
   onSearchChange,
   onSearch,
@@ -176,51 +178,102 @@ export default function DataTable({
         <div className="space-y-4">
           {/* Search Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Dynamic ID Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search by {title.replace(' Listing', '')} ID
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={searchField === `${title.toLowerCase().split(' ')[0]}_id` ? localSearchTerm : ''}
-                    onChange={e => {
-                      onSearchFieldChange?.(`${title.toLowerCase().split(' ')[0]}_id`)
-                      handleSearchChange(e.target.value)
-                    }}
-                    onKeyPress={handleKeyPress}
-                    placeholder={`Enter ${title.replace(' Listing', '')} ID...`}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                  <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            {searchFields && searchFields.length >= 2 ? (
+              <>
+                {/* First search field from config (usually ID) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {searchFields[0].label}
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={searchField === searchFields[0].key ? localSearchTerm : ''}
+                        onChange={e => {
+                          onSearchFieldChange?.(searchFields[0].key)
+                          handleSearchChange(e.target.value)
+                        }}
+                        onKeyPress={handleKeyPress}
+                        placeholder={`Enter ${searchFields[0].label.replace('Search by ', '')}...`}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                      <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            
-            {/* Dynamic Name Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search by {title.replace(' Listing', '')} Name
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={searchField === 'name' ? localSearchTerm : ''}
-                    onChange={e => {
-                      onSearchFieldChange?.('name')
-                      handleSearchChange(e.target.value)
-                    }}
-                    onKeyPress={handleKeyPress}
-                    placeholder={`Enter ${title.replace(' Listing', '')} Name...`}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                  <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+
+                {/* Second search field from config (usually Name) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {searchFields[1].label}
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={searchField === searchFields[1].key ? localSearchTerm : ''}
+                        onChange={e => {
+                          onSearchFieldChange?.(searchFields[1].key)
+                          handleSearchChange(e.target.value)
+                        }}
+                        onKeyPress={handleKeyPress}
+                        placeholder={`Enter ${searchFields[1].label.replace('Search by ', '')}...`}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                      <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            ) : (
+              <>
+                {/* Fallback to dynamic title-based search if no searchFields provided */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search by {title.replace(' Listing', '')} ID
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={searchField === `${title.toLowerCase().split(' ')[0]}_id` ? localSearchTerm : ''}
+                        onChange={e => {
+                          onSearchFieldChange?.(`${title.toLowerCase().split(' ')[0]}_id`)
+                          handleSearchChange(e.target.value)
+                        }}
+                        onKeyPress={handleKeyPress}
+                        placeholder={`Enter ${title.replace(' Listing', '')} ID...`}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                      <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search by {title.replace(' Listing', '')} Name
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={searchField === 'name' ? localSearchTerm : ''}
+                        onChange={e => {
+                          onSearchFieldChange?.('name')
+                          handleSearchChange(e.target.value)
+                        }}
+                        onKeyPress={handleKeyPress}
+                        placeholder={`Enter ${title.replace(' Listing', '')} Name...`}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      />
+                      <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Action Buttons and Filters */}
