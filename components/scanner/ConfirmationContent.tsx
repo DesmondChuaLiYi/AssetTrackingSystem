@@ -12,16 +12,11 @@ import {
   Building2, 
 } from "lucide-react";
 
-// (Asset, Location, Department types are unchanged)
+// (Types are unchanged)
 type Asset = {
-  asset_id: string;
-  name: string;
-  description: string;
-  location_id: string;
-  department_id: string;
-  condition: string; 
-  category: string;
-  model: string;
+  asset_id: string; name: string; description: string;
+  location_id: string; department_id: string;
+  condition: string; category: string; model: string;
 };
 type Location = { location_id: string; name: string; };
 type Department = { department_id: string; name: string; };
@@ -32,35 +27,27 @@ export default function ConfirmationContent({
   onBack,
   onSubmit,
   onCreate,
+  parentScan, // <-- ADD THIS PROP
 }: {
   item: any;
   tableName: string;
   onBack: () => void;
-  // --- MODIFIED: onSubmit now passes back more data ---
   onSubmit: (data: {
     condition: string, 
     location_id: string | null,
     department_id: string | null,
-    // --- NEW FIELDS ---
-    name: string,
-    category: string,
-    model: string,
-    asset_id: string
+    name: string, category: string, model: string, asset_id: string
   }) => Promise<void>; 
   onCreate: (data: { 
-    name: string, 
-    description: string, 
-    condition: string,
-    location_id: string | null,
-    department_id: string | null,
-    category: string,
-    model: string
-  }) => Promise<void>; 
+    name: string, description: string, condition: string,
+    location_id: string | null, department_id: string | null,
+    category: string, model: string
+  }) => Promise<void>;
+  parentScan: { type: string, id: string, name: string } | null; // <-- ADD THIS PROP
 }) {
   const [mode, setMode] = useState<'loading' | 'editing' | 'registering' | 'error'>('loading');
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
   
-  // (Form state is unchanged)
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [condition, setCondition] = useState("in use");
@@ -76,13 +63,13 @@ export default function ConfirmationContent({
   const [error, setError] = useState<string | null>(null);
 
   const conditionOptions = [
-    { value: "in use", label: "In-use" },
-    { value: "spoiled", label: "Spoiled" },
-    { value: "in store", label: "In-store" },
+    { value: "in use", label: "In Use" },
+    { value: "broken", label: "Broken" },
+    { value: "in store", label: "In Store" },
   ];
 
-  // (useEffect is unchanged)
   useEffect(() => {
+    // (This useEffect is unchanged)
     const fetchDropdownData = async () => {
       try {
         const { data: locData, error: locError } = await supabase
@@ -144,15 +131,14 @@ export default function ConfirmationContent({
     fetchAssetDetails();
   }, [item, tableName]);
 
-  // --- MODIFIED: handleSubmit now sends more data on edit ---
   const handleSubmit = (e: React.FormEvent) => {
+    // (This handleSubmit is unchanged)
     e.preventDefault();
     if (mode === 'editing') {
       onSubmit({
         condition,
         location_id: selectedLocation || null,
         department_id: selectedDepartment || null,
-        // --- PASSING THE EXTRA DATA ---
         name: assetDetails?.name || 'N/A', 
         category: assetDetails?.category || 'N/A',
         model: assetDetails?.model || 'N/A',
@@ -175,55 +161,57 @@ export default function ConfirmationContent({
     }
   };
 
-  // (The rest of the file is unchanged)
-  // ... renderDropdownSelectors()
-  // ... renderConditionSelector()
-  // ... renderFormContent()
-  // ... getSubmitButton()
-  // ... return ( ... )
-  // ... (pasting all unchanged functions for completeness)
-
+  // --- THIS IS THE FIX for Issue 2 ---
+  // This function now hides dropdowns based on parentScan
   const renderDropdownSelectors = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div>
-        <label htmlFor="assetLocation" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-          <MapPin className="w-4 h-4" /> Location (Optional)
-        </label>
-        <select 
-          id="assetLocation"
-          value={selectedLocation}
-          onChange={(e) => setSelectedLocation(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-        >
-          <option value="">-- None --</option>
-          {locations.map((loc) => (
-            <option key={loc.location_id} value={loc.location_id}>
-              {loc.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Only show Location dropdown if we are NOT in a Location Scan flow */}
+      {(!parentScan || parentScan.type !== 'location') && (
         <div>
-        <label htmlFor="assetDept" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-          <Building2 className="w-4 h-4" /> Department (Optional)
-        </label>
-        <select 
-          id="assetDept"
-          value={selectedDepartment}
-          onChange={(e) => setSelectedDepartment(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-        >
-          <option value="">-- None --</option>
-          {departments.map((dept) => (
-            <option key={dept.department_id} value={dept.department_id}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
-      </div>
+          <label htmlFor="assetLocation" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <MapPin className="w-4 h-4" /> Location (Optional)
+          </label>
+          <select 
+            id="assetLocation"
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+          >
+            <option value="">-- None --</option>
+            {locations.map((loc) => (
+              <option key={loc.location_id} value={loc.location_id}>
+                {loc.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+      {/* Only show Department dropdown if we are NOT in a Department Scan flow */}
+      {(!parentScan || parentScan.type !== 'department') && (
+        <div>
+          <label htmlFor="assetDept" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+            <Building2 className="w-4 h-4" /> Department (Optional)
+          </label>
+          <select 
+            id="assetDept"
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+          >
+            <option value="">-- None --</option>
+            {departments.map((dept) => (
+              <option key={dept.department_id} value={dept.department_id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 
+  // (renderConditionSelector is unchanged)
   const renderConditionSelector = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
@@ -254,6 +242,7 @@ export default function ConfirmationContent({
     </div>
   );
   
+  // (renderFormContent is unchanged)
   const renderFormContent = () => {
     if (mode === 'loading') {
       return <div className="p-8 text-center">Searching for asset...</div>;
@@ -387,6 +376,7 @@ export default function ConfirmationContent({
     return null;
   };
   
+  // (getSubmitButton is unchanged)
   const getSubmitButton = () => {
     if (mode === 'editing') {
       return (
@@ -421,6 +411,7 @@ export default function ConfirmationContent({
     );
   }
 
+  // (Return wrapper is unchanged)
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-2xl mx-auto">

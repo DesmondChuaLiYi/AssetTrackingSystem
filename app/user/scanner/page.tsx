@@ -9,7 +9,6 @@ import SuccessContent from '@/components/scanner/SuccessContent';
 import ConfirmationContent from '@/components/scanner/ConfirmationContent';
 import { Package, Users, MapPin, Building2 } from 'lucide-react';
 
-// (configs are unchanged)
 const configs = {
   asset: { title: "Asset Scanner", description: "Scan asset QR codes or barcodes", icon: Package, idColumn: "asset_id" },
   staff: { title: "Staff ID Scanner", description: "Scan staff identification codes", icon: Users, idColumn: "staff_id" },
@@ -23,9 +22,7 @@ export default function ScannerPage() {
   
   const [pageState, setPageState] = useState('scanning'); 
   const [scannedItem, setScannedItem] = useState<any>(null);
-  // --- MODIFIED: submittedData will now hold a single item object ---
   const [submittedData, setSubmittedData] = useState<{ item: any, page: string } | null>(null);
-  // -----------------------------------------------------------------
   const [parentScan, setParentScan] = useState<{ type: string, id: string, name: string } | null>(null);
 
   const config = configs[type] || configs.asset;
@@ -45,7 +42,7 @@ export default function ScannerPage() {
         const { data, error } = await supabase
           .from(type)
           .select()
-          .eq(config.idColumn, scannedCode)
+          .ilike(config.idColumn, scannedCode.trim()) 
           .single();
 
         if (error || !data) {
@@ -81,9 +78,16 @@ export default function ScannerPage() {
 
         if (updateError) throw updateError;
         
-        // --- MODIFIED: Pass the full asset data ---
-        setSubmittedData({ item: assetData, page: `Tagged to ${parentScan.name}` });
-        // ------------------------------------------
+        // --- THIS IS THE FIX for Issue 1 ---
+        // Manually add the new location/dept to the asset data
+        // so the success page can display it.
+        const updatedAssetData = {
+          ...assetData,
+          [parentScan.type + '_id']: parentScan.id 
+        };
+        setSubmittedData({ item: updatedAssetData, page: `Tagged to ${parentScan.name}` });
+        // --- END FIX ---
+        
         setPageState('success');
         setParentScan(null);
 
@@ -93,12 +97,11 @@ export default function ScannerPage() {
     }
   };
   
-  // --- MODIFIED: This function's signature has changed ---
+  // (handleAssetUpdate is unchanged)
   const handleAssetUpdate = async (newData: {
     condition: string,
     location_id: string | null,
     department_id: string | null,
-    // --- NEW FIELDS ---
     name: string,
     category: string,
     model: string,
@@ -124,12 +127,10 @@ export default function ScannerPage() {
 
       if (error) throw error;
       
-      // --- MODIFIED: Pass the full item object ---
       setSubmittedData({ 
-        item: { ...newData, ...dataToUpdate }, // Combine all known data
+        item: { ...newData, ...dataToUpdate }, 
         page: type 
       });
-      // -----------------------------------------
       setPageState('success');
 
     } catch (e: any) {
@@ -137,7 +138,7 @@ export default function ScannerPage() {
     }
   };
 
-  // --- MODIFIED: This function's signature has changed ---
+  // (handleAssetCreate is unchanged)
   const handleAssetCreate = async (newData: { 
     name: string, 
     description: string, 
@@ -147,7 +148,7 @@ export default function ScannerPage() {
     category: string,
     model: string
   }) => {
-    if (!scannedItem || type !== 'asset') {
+    if (!scannedItem) {
       alert("Error: No asset ID to create.");
       return;
     }
@@ -175,12 +176,10 @@ export default function ScannerPage() {
 
       if (error) throw error;
       
-      // --- MODIFIED: Pass the full item object ---
       setSubmittedData({ 
-        item: dataToInsert, // Pass the object we just created
+        item: dataToInsert, 
         page: 'New Asset Registered' 
       });
-      // -----------------------------------------
       setPageState('success');
       setParentScan(null);
 
@@ -189,14 +188,12 @@ export default function ScannerPage() {
     }
   };
 
-  // --- MODIFIED: Render section updated ---
+  // (Render block)
   if (pageState === 'success') {
-    // This handles non-asset scans (which we'll add later)
     if (!submittedData) {
       return <SuccessContent scannedCount={0} scanType="Error" item={null} />;
     }
 
-    // This logic determines the title
     const scanType = (submittedData.page === 'New Asset Registered' || submittedData.page.startsWith('Tagged to'))
       ? submittedData.page 
       : configs[submittedData.page as keyof typeof configs].title.split(" ")[0];
@@ -205,7 +202,7 @@ export default function ScannerPage() {
       <SuccessContent
         scannedCount={1}
         scanType={scanType}
-        item={submittedData.item} // <-- PASS THE FULL ITEM
+        item={submittedData.item}
       />
     );
   }
@@ -220,6 +217,7 @@ export default function ScannerPage() {
         }}
         onSubmit={handleAssetUpdate} 
         onCreate={handleAssetCreate} 
+        parentScan={parentScan} // <-- THIS IS THE FIX for Issue 2
       />
     );
   }
@@ -229,7 +227,7 @@ export default function ScannerPage() {
     <ScannerContent
       {...config}
       onItemScanned={handleItemScanned}
-      onBack={() => window.location.href = '/user/dashboard'}
+      onBack={() => window.location.href = '/user/dashboard'} // Or wherever "Home" is
       parentScan={parentScan}
     />
   );

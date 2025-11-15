@@ -1,11 +1,12 @@
-// components/scanner/ScannerContent.tsx
+// components/scanner/ScannerContext.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   QrCode, Barcode,
-  ChevronLeft
+  ChevronLeft,
+  XCircle // <-- Add this import
 } from 'lucide-react';
 
 export default function ScannerContent({
@@ -14,14 +15,14 @@ export default function ScannerContent({
   icon: Icon,
   onItemScanned,
   onBack,
-  parentScan, // <-- ADD THIS LINE
+  parentScan, // <-- It now accepts this prop
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
   onItemScanned: (item: any) => Promise<void>;
   onBack: () => void;
-  parentScan: { type: string, id: string, name: string } | null; // <-- ADD THIS LINE
+  parentScan: { type: string, id: string, name: string } | null; // <-- Prop type
 }) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
@@ -51,7 +52,6 @@ export default function ScannerContent({
           const config = { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
 
           const onScanSuccess = (decodedText: string) => {
-            // --- SINGLE SCAN LOGIC ---
             stopScanning(); // Stop immediately
             
             const newItem = {
@@ -64,7 +64,6 @@ export default function ScannerContent({
             const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGgU+mtn0xG8qBSuBzvLZiTYIGWe77OWfTRAMUKnj7K5iHAY5j9n0xXksBS");
             audio.play().catch(() => {});
 
-            // Tell the parent component about the scan
             onItemScanned(newItem);
           };
 
@@ -72,7 +71,7 @@ export default function ScannerContent({
             { facingMode: "environment" },
             config,
             onScanSuccess,
-            () => {} // Failure callback (ignore)
+            () => {}
           );
         } catch (error: any) {
           setScannerError(error.message || "Camera access denied.");
@@ -94,28 +93,48 @@ export default function ScannerContent({
 
   const handleBack = () => {
     if (isScanning) stopScanning();
-    onBack(); // Call the prop
+    onBack();
   };
 
   return (
     <div className="p-4 lg:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header card (no cart) */}
+        {/* --- THIS IS THE UPDATED HEADER --- */}
         <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-red-700 to-red-500 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Icon className="w-8 h-8" />
                 <div>
-                  <h1 className="text-2xl font-bold">{title}</h1>
-                  <p className="text-sm text-red-100">{description}</p>
+                  {!parentScan ? (
+                    <>
+                      <h1 className="text-2xl font-bold">{title}</h1>
+                      <p className="text-sm text-red-100">{description}</p>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-2xl font-bold">Now Scan an Asset</h1>
+                      <p className="text-sm text-red-100">
+                        Tagging to {parentScan.type}: <strong>{parentScan.name}</strong>
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
+              {parentScan && (
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-lg text-sm hover:bg-white/40"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Cancel
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Scanner Area */}
+        {/* --- THIS IS THE UPDATED SCANNER AREA --- */}
         <div className="bg-white rounded-lg shadow-md mb-6">
           <div className="p-6 lg:p-8">
             {!isScanning ? (
@@ -125,7 +144,13 @@ export default function ScannerContent({
               >
                 <QrCode className="w-20 h-20 text-red-600 animate-pulse mb-4" />
                 <Barcode className="w-20 h-20 text-black opacity-20 absolute" />
-                <p className="text-lg font-medium text-gray-700">Click to Scan</p>
+                
+                {!parentScan ? (
+                  <p className="text-lg font-medium text-gray-700">Scan {title.split(' ')[0]}</p>
+                ) : (
+                  <p className="text-lg font-medium text-gray-700">Scan Asset</p>
+                )}
+
                 <p className="text-sm text-gray-500 mt-2">Position the code within the frame</p>
               </div>
             ) : (
@@ -160,14 +185,12 @@ export default function ScannerContent({
           </div>
         </div>
 
-        {/* Cart and Submit buttons REMOVED */}
-
-        {/* Footer (Back button only) */}
+        {/* --- THIS IS THE UPDATED FOOTER --- */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="px-4 lg:px-6 py-4 bg-gray-50">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={handleBack} // Use the new handler
+                onClick={handleBack}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-md"
               >
                 <ChevronLeft className="w-5 h-5" />
