@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import ScannerContent from '@/components/scanner/ScannerContext';
 import SuccessContent from '@/components/scanner/SuccessContent';
 import ConfirmationContent from '@/components/scanner/ConfirmationContent';

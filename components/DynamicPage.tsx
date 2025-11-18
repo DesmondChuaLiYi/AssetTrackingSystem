@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from '@/components/SessionProvider'
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import DataTable from '@/components/ui/DataTable'
@@ -40,7 +40,7 @@ interface DynamicPageProps {
 }
 
 export default function DynamicPage({ config }: DynamicPageProps) {
-  const { session } = useSession()
+  const { session, isLoading: sessionLoading } = useAdminAccess()
   const router = useRouter()
 
   const [data, setData] = useState<any[]>([])
@@ -64,9 +64,6 @@ export default function DynamicPage({ config }: DynamicPageProps) {
   const [formData, setFormData] = useState<any>({})
 
   useEffect(() => setMounted(true), [])
-  useEffect(() => {
-    if (mounted && !session) router.push('/')
-  }, [mounted, session, router])
 
   useEffect(() => {
     if (mounted && session) {
@@ -401,7 +398,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
     }
   }
 
-  if (!mounted || !session) {
+  if (!mounted || sessionLoading || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
