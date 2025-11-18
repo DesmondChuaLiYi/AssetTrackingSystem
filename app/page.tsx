@@ -91,7 +91,21 @@ export default function LoginPage() {
   // Redirect to dashboard if already authenticated with session
   useEffect(() => {
     if (status === 'authenticated' && session && !isInitializing) {
-      router.replace("/admin/dashboard");
+      // Hardcoded admin emails
+      const ADMIN_EMAILS = [
+        '104385730@students.swinburne.edu.my',
+        '104401021@students.swinburne.edu.my',
+        '104401173@students.swinburne.edu.my',
+      ];
+
+      // Redirect based on role or email
+      const isAdmin = session.role === 'admin' || (session.email && ADMIN_EMAILS.includes(session.email));
+
+      if (isAdmin) {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/user/dashboard");
+      }
     }
   }, [status, session, isInitializing, router]);
 
