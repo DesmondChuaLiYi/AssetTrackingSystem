@@ -203,19 +203,6 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       // Ensure proper typing for IDs
       if (cleanedData.location_id === '') {
         cleanedData.location_id = null
-      } else if (cleanedData.location_id) {
-        // Ensure location_id is a valid UUID
-        try {
-          // Validate UUID format
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-          if (!uuidRegex.test(cleanedData.location_id)) {
-            throw new Error('Invalid location_id format')
-          }
-        } catch (error) {
-          console.error('Invalid location_id:', error)
-          alert('Invalid location ID format')
-          return
-        }
       }
 
       // Handle department_id (string type)

@@ -18,20 +18,7 @@
 
       // Apply search filter fo UUID
       if (search) {
-        const { data, error } = await supabase.from('location').select('*')
-        if (error) throw error
-
-        const filtered = data.filter((loc) =>
-          searchField === 'location_id'
-            ? loc.location_id.includes(search)
-            : loc[searchField]?.toLowerCase().includes(search.toLowerCase())
-        )
-
-        return NextResponse.json({
-          data: filtered,
-          totalItems: filtered.length,
-          totalPages: 1
-        })
+        query = query.ilike(searchField, `%${search}%`)
       }
 
       // Add sorting
