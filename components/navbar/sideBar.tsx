@@ -115,7 +115,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
         <nav className="space-y-1">
           {items.map((item) => (
             <div key={item.name}>
-              {/* === NON-DROPDOWN ITEMS (Main Menu, Home) === */}
+              {/* NON-DROPDOWN ITEMS (Main Menu, Home) */}
               {item.dropdown ? null : (
                 <Link
                   href={item.href}
@@ -134,7 +134,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                 </Link>
               )}
 
-              {/* === DROPDOWN ITEMS === */}
+              {/* DROPDOWN ITEMS */}
               {item.dropdown && (
                 <button
                   onClick={() => toggleDropdown(item.href)}
@@ -158,7 +158,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                 </button>
               )}
 
-              {/* === DROPDOWN CONTENT === */}
+              {/* DROPDOWN CONTENT */}
               <AnimatePresence>
                 {item.dropdown && activeItem === item.href && (
                   <motion.div

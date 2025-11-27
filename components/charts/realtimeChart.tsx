@@ -110,14 +110,15 @@ export default function RealtimeChart({ config }: RealtimeChartProps) {
       let currentQuarter;
       let quarterYear = year;
       
-      if (month >= 2 && month <= 4) { // March, April, May
-        currentQuarter = 1; // Spring
-      } else if (month >= 5 && month <= 7) { // June, July, August
-        currentQuarter = 2; // Summer
-      } else if (month >= 8 && month <= 10) { // September, October, November
-        currentQuarter = 3; // Autumn
-      } else { // December, January, February
-        currentQuarter = 4; // Winter
+      if (month >= 2 && month <= 4) { 
+        currentQuarter = 1; // Spring (March, April, May)
+      } else if (month >= 5 && month <= 7) { 
+        currentQuarter = 2; // Summer (June, July, August)
+      } else if (month >= 8 && month <= 10) { 
+        currentQuarter = 3; // Autumn (September, October, November)
+      } else { 
+        currentQuarter = 4; // Winter (December, January, February)
+
         // If January or February, use previous year's winter
         if (month === 0 || month === 1) {
           quarterYear = year - 1;
@@ -207,17 +208,24 @@ export default function RealtimeChart({ config }: RealtimeChartProps) {
         // Q3 (Autumn): September(8), October(9), November(10)
         // Q4 (Winter): December(11), January(0), February(1)
         
-        if (quarter === 1) { // Spring: March, April, May
+        // Spring (March, April, May)
+        if (quarter === 1) { 
           return itemDate.getFullYear() === year &&
                  itemDate.getMonth() >= 2 && itemDate.getMonth() <= 4;
-        } else if (quarter === 2) { // Summer: June, July, August
+        } 
+        // Summer (June, July, August)
+        else if (quarter === 2) { 
           return itemDate.getFullYear() === year &&
                  itemDate.getMonth() >= 5 && itemDate.getMonth() <= 7;
-        } else if (quarter === 3) { // Autumn: September, October, November
+        } 
+        // Autumn (September, October, November)
+        else if (quarter === 3) {
           return itemDate.getFullYear() === year &&
                  itemDate.getMonth() >= 8 && itemDate.getMonth() <= 10;
-        } else if (quarter === 4) { // Winter: December, January, February
-          // December of current year OR January/February of next year
+        } 
+        // Winter (December, January, February)
+        else if (quarter === 4) { 
+        // December of current year OR January/February of next year
           return (itemDate.getFullYear() === year && itemDate.getMonth() === 11) ||
                  (itemDate.getFullYear() === year + 1 && (itemDate.getMonth() === 0 || itemDate.getMonth() === 1));
         }
@@ -231,7 +239,7 @@ export default function RealtimeChart({ config }: RealtimeChartProps) {
     });
   };
 
-  // Format date as "Month Day" (e.g., "Nov 2")
+  // Format date to "Nov 2"
   const formatDateShort = (dateStr: string) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
@@ -240,19 +248,19 @@ export default function RealtimeChart({ config }: RealtimeChartProps) {
     return date.toLocaleDateString('en-US', options);
   };
 
-  // Format month key to readable format (e.g., "2024-10" to "October 2024")
+  // Format month key ("2024-10" to "October 2024")
   const formatMonth = (monthKey: string) => {
     const [year, month] = monthKey.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
-  // Format data for chart - Group by date and count
+  // Format data for chart: Group by date and count
   const chartData = (() => {
     const filteredData = getFilteredData();
 
     if (valueKey === 'count') {
-      // Group by date and count occurrences
+      // Group by date and count 
       const dateGroups = filteredData.reduce((acc, item) => {
         const dateStr = item.created_dt || item.created_at || item.updated_at;
         if (dateStr) {
