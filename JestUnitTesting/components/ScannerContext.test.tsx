@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import ScannerContext from '@/components/scanner/ScannerContext';
+import ScannerContext from '@/components/scanner/scannerContext';
 import '@testing-library/jest-dom';
 
 // --- 1. MOCK HTML5-QRCODE ---
@@ -118,14 +118,14 @@ describe('ScannerContext Component', () => {
         icon={() => <svg />}
         onItemScanned={jest.fn()}
         onBack={jest.fn()}
-        parentScan={parentInfo} 
+        parentScan={parentInfo}
       />
     );
 
     // Check for the dynamic text
     expect(screen.getByText('Now Scan an Asset')).toBeInTheDocument();
     expect(screen.getByText('Warehouse')).toBeInTheDocument();
-    
+
     // Check for the Cancel button
     expect(screen.getByText('Cancel')).toBeInTheDocument();
   });

@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import DynamicEdit from '@/components/DynamicEdit'
+import DynamicEdit from '@/components/dynamicEdit'
 
 const editLocationConfig = {
   entityName: 'location',
@@ -12,10 +12,10 @@ const editLocationConfig = {
   pageTitle: 'Edit Location',
   backUrl: '/admin/location/Rooms',
   formFields: [
-    { 
-      key: 'location_id', 
-      label: 'Location ID', 
-      type: 'text' as const, 
+    {
+      key: 'location_id',
+      label: 'Location ID',
+      type: 'text' as const,
       required: true,
       disabled: true
     },

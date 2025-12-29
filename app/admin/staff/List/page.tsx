@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
-import Breadcrumb from '@/components/ui/Breadcrumb'
+import Breadcrumb from '@/components/ui/breadcrumb'
 
 import {
   PencilIcon,
@@ -162,7 +162,7 @@ export default function AddStaffPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 font-sans antialiased">
-       <main className="p-6 flex-grow ml-auto w-[81%]">
+      <main className="p-6 flex-grow ml-auto w-[81%]">
         <div className="max-w-7xl mx-auto">
           <Breadcrumb customItems={breadcrumbItems} />
           <div className="mb-6">

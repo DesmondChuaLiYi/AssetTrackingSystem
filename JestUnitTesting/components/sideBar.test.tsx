@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
-import Sidebar from '@/components/navbar/sideBar';
-import { useSession } from '@/components/SessionProvider';
+import Sidebar from '@/components/navbar/sidebar';
+import { useSession } from '@/components/sessionProvider';
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
@@ -33,7 +33,7 @@ describe('Sidebar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (usePathname as jest.Mock).mockReturnValue('/admin/dashboard');
-    
+
     // Mock localStorage
     const localStorageMock = {
       getItem: jest.fn(),
@@ -45,7 +45,7 @@ describe('Sidebar', () => {
       value: localStorageMock,
       writable: true,
     });
-    
+
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
@@ -62,7 +62,7 @@ describe('Sidebar', () => {
 
     it('renders admin modules for admin user', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('Asset Tracking')).toBeInTheDocument();
       expect(screen.getByText('Location')).toBeInTheDocument();
@@ -72,10 +72,10 @@ describe('Sidebar', () => {
 
     it('toggles dropdown menu when clicked', async () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const assetTrackingButton = screen.getByText('Asset Tracking');
       fireEvent.click(assetTrackingButton);
-      
+
       await waitFor(() => {
         expect(screen.getByText('Assets')).toBeInTheDocument();
         expect(screen.getByText('Categories')).toBeInTheDocument();
@@ -85,10 +85,10 @@ describe('Sidebar', () => {
 
     it('saves active dropdown state to localStorage', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const assetTrackingButton = screen.getByText('Asset Tracking');
       fireEvent.click(assetTrackingButton);
-      
+
       expect(localStorage.setItem).toHaveBeenCalledWith(
         'sidebarActiveItem',
         '/admin/assetTracking'
@@ -97,19 +97,19 @@ describe('Sidebar', () => {
 
     it('highlights active route', () => {
       (usePathname as jest.Mock).mockReturnValue('/admin/location');
-      
+
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const locationButton = screen.getByText('Location').closest('button');
       expect(locationButton).toHaveClass('bg-red-600');
     });
 
     it('expands location dropdown and shows sub-items', async () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const locationButton = screen.getByText('Location');
       fireEvent.click(locationButton);
-      
+
       await waitFor(() => {
         expect(screen.getByText('Rooms')).toBeInTheDocument();
         expect(screen.getByText('Sites')).toBeInTheDocument();
@@ -119,10 +119,10 @@ describe('Sidebar', () => {
 
     it('expands department dropdown and shows sub-items', async () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const departmentButton = screen.getByText('Department');
       fireEvent.click(departmentButton);
-      
+
       await waitFor(() => {
         expect(screen.getByText('Units')).toBeInTheDocument();
         expect(screen.getByText('Teams')).toBeInTheDocument();
@@ -132,10 +132,10 @@ describe('Sidebar', () => {
 
     it('expands staff dropdown and shows sub-items', async () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const staffButton = screen.getByText('Staff');
       fireEvent.click(staffButton);
-      
+
       await waitFor(() => {
         expect(screen.getByText('List')).toBeInTheDocument();
         expect(screen.getByText('Approvals')).toBeInTheDocument();
@@ -146,15 +146,15 @@ describe('Sidebar', () => {
 
     it('closes dropdown when clicked again', async () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const assetTrackingButton = screen.getByText('Asset Tracking');
-      
+
       // Open dropdown
       fireEvent.click(assetTrackingButton);
       await waitFor(() => {
         expect(screen.getByText('Assets')).toBeInTheDocument();
       });
-      
+
       // Close dropdown
       fireEvent.click(assetTrackingButton);
       await waitFor(() => {
@@ -172,7 +172,7 @@ describe('Sidebar', () => {
 
     it('renders only user modules for regular user', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.getByText('Main Menu')).toBeInTheDocument();
       expect(screen.queryByText('Asset Tracking')).not.toBeInTheDocument();
       expect(screen.queryByText('Location')).not.toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('Sidebar', () => {
 
     it('renders user section label', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.getByText('User')).toBeInTheDocument();
     });
   });
@@ -192,7 +192,7 @@ describe('Sidebar', () => {
         configurable: true,
         value: 500,
       });
-      
+
       (useSession as jest.Mock).mockReturnValue({
         session: { email: '104385730@students.swinburne.edu.my' },
       });
@@ -200,8 +200,8 @@ describe('Sidebar', () => {
 
     it('renders mobile close button', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
-      const closeButton = screen.getAllByRole('button').find(btn => 
+
+      const closeButton = screen.getAllByRole('button').find(btn =>
         btn.querySelector('svg path[d*="M6 18L18 6M6 6l12 12"]')
       );
       expect(closeButton).toBeInTheDocument();
@@ -209,19 +209,19 @@ describe('Sidebar', () => {
 
     it('renders search input on mobile', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const searchInput = screen.getByPlaceholderText('Search...');
       expect(searchInput).toBeInTheDocument();
     });
 
     it('closes sidebar when close button is clicked', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const closeButtons = screen.getAllByRole('button');
-      const closeButton = closeButtons.find(btn => 
+      const closeButton = closeButtons.find(btn =>
         btn.querySelector('svg path[d*="M6 18L18 6M6 6l12 12"]')
       );
-      
+
       if (closeButton) {
         fireEvent.click(closeButton);
         expect(mockSetIsOpen).toHaveBeenCalledWith(false);
@@ -230,7 +230,7 @@ describe('Sidebar', () => {
 
     it('applies mobile-specific styles', () => {
       const { container } = render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const sidebar = container.querySelector('.sidebar');
       expect(sidebar).toHaveClass('fixed');
     });
@@ -245,7 +245,7 @@ describe('Sidebar', () => {
 
     it('renders settings link', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const settingsLink = screen.getByText('Settings');
       expect(settingsLink).toBeInTheDocument();
       expect(settingsLink.closest('a')).toHaveAttribute('href', '/settings');
@@ -253,15 +253,15 @@ describe('Sidebar', () => {
 
     it('renders logout button', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.getByText('Sign Out')).toBeInTheDocument();
     });
 
     it('highlights settings when on settings page', () => {
       (usePathname as jest.Mock).mockReturnValue('/settings');
-      
+
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const settingsLink = screen.getByText('Settings');
       expect(settingsLink).toBeInTheDocument();
 
@@ -277,13 +277,13 @@ describe('Sidebar', () => {
 
     it('does not render when isOpen is false', () => {
       render(<Sidebar isOpen={false} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.queryByText('Home')).not.toBeInTheDocument();
     });
 
     it('renders when isOpen is true', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(screen.getByText('Home')).toBeInTheDocument();
     });
   });
@@ -297,21 +297,21 @@ describe('Sidebar', () => {
 
     it('retrieves saved active item from localStorage on mount', () => {
       (localStorage.getItem as jest.Mock).mockReturnValue('/admin/location');
-      
+
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       expect(localStorage.getItem).toHaveBeenCalledWith('sidebarActiveItem');
     });
 
     it('clears active item when toggling closed', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const assetTrackingButton = screen.getByText('Asset Tracking');
-      
+
       // Open
       fireEvent.click(assetTrackingButton);
       expect(localStorage.setItem).toHaveBeenCalledWith('sidebarActiveItem', '/admin/assetTracking');
-      
+
       // Close
       fireEvent.click(assetTrackingButton);
       expect(localStorage.setItem).toHaveBeenCalledWith('sidebarActiveItem', '');
@@ -327,9 +327,9 @@ describe('Sidebar', () => {
 
     it('applies hover styles on mouse enter', () => {
       render(<Sidebar isOpen={true} setIsOpen={mockSetIsOpen} />);
-      
+
       const homeLink = screen.getByText('Home').closest('a');
-      
+
       if (homeLink) {
         fireEvent.mouseEnter(homeLink);
         // Component should handle hover state internally

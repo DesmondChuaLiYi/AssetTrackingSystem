@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from '@/components/SessionProvider'
+import { useSession } from '@/components/sessionProvider'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/Breadcrumb'
+import Breadcrumb from '@/components/ui/breadcrumb'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 interface FormFieldConfig {
@@ -42,7 +42,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-  
+
   useEffect(() => {
     if (mounted && !session) {
       router.push('/')
@@ -60,7 +60,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
     try {
       const response = await fetch(`${config.apiEndpoint}/${recordId}`)
       const result = await response.json()
-      
+
       if (result.success) {
         const data = result.data
         // Default condition to 'In-use' for assets if it's not already set
@@ -82,19 +82,19 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
   }
 
   const loadRelatedData = async () => {
-    const selectFields = config.formFields.filter(field => 
+    const selectFields = config.formFields.filter(field =>
       field.type === 'select' && !field.options && field.key.endsWith('_id')
     )
-  
+
     try {
       // Fetch locations
       const locationsRes = await fetch('/api/location?page=1&limit=1000')
       const locationsData = await locationsRes.json()
-      
+
       // Fetch departments
       const departmentsRes = await fetch('/api/department?page=1&limit=1000')
       const departmentsData = await departmentsRes.json()
-      
+
       setRelatedData({
         location_id: locationsData.data || [],
         department_id: departmentsData.data || []
@@ -108,10 +108,10 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
     const value = formData[field.key] || ''
     const isIdField = field.key === config.primaryKey
     const isDisabled = field.disabled || isIdField
-  
+
     if (field.type === 'select') {
       let options = field.options || []
-      
+
       // For location_id field, use locations from relatedData
       if (field.key === 'location_id' && relatedData.location_id?.length > 0) {
         options = [
@@ -122,7 +122,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
           }))
         ]
       }
-      
+
       // For department_id field, use departments from relatedData
       if (field.key === 'department_id' && relatedData.department_id?.length > 0) {
         options = [
@@ -133,15 +133,14 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
           }))
         ]
       }
-  
+
       return (
         <select
           value={value}
           onChange={(e) => handleInputChange(field.key, e.target.value)}
           disabled={isDisabled}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
-            isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
+          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
+            }`}
           required={field.required}
         >
           {options.map(option => (
@@ -160,9 +159,8 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
           onChange={(e) => handleInputChange(field.key, e.target.value)}
           disabled={isDisabled}
           placeholder={field.placeholder}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
-            isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
+          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
+            }`}
           rows={3}
           required={field.required}
         />
@@ -176,9 +174,8 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
         onChange={(e) => handleInputChange(field.key, e.target.value)}
         disabled={isDisabled}
         placeholder={field.placeholder}
-        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
-          isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
-        }`}
+        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''
+          }`}
         required={field.required}
       />
     )
@@ -195,11 +192,11 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
     try {
       // Clean up the data before sending
       const cleanedData = { ...formData }
-      
+
       // Remove nested objects
       delete cleanedData.location
       delete cleanedData.department
-      
+
       // Ensure proper typing for IDs
       if (cleanedData.location_id === '') {
         cleanedData.location_id = null
@@ -217,7 +214,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       })
 
       const result = await response.json()
-      
+
       if (result.success) {
         alert(`${config.entityDisplayNameSingular} updated successfully!`)
         router.push(config.backUrl)
@@ -230,7 +227,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
     } finally {
       setLoading(false)
     }
-}
+  }
 
   const breadcrumbItems = [
     { label: 'Home', href: '/admin/dashboard', isClickable: true },
@@ -256,7 +253,7 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
       <main className="p-6">
         <div className="max-w-4xl mx-auto">
           <Breadcrumb />
-          
+
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Edit {config.entityDisplayNameSingular}</h1>
             <p className="text-gray-600 mt-1">Update {config.entityDisplayNameSingular.toLowerCase()} details</p>
@@ -279,11 +276,11 @@ export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
               </div>
               <div className="mt-8 flex justify-end space-x-3">
                 <button
-                    type="button"
-                    onClick={() => router.push(config.backUrl)}
-                    className="px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    Cancel
+                  type="button"
+                  onClick={() => router.push(config.backUrl)}
+                  className="px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Cancel
                 </button>
                 <button
                   type="submit"

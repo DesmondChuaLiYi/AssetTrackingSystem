@@ -4,7 +4,7 @@ import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
-import { useSession } from './SessionProvider'
+import { useSession } from './sessionProvider'
 
 interface LogoutButtonProps {
   className?: string

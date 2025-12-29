@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import ConfirmationContent from '@/components/scanner/ConfirmationContent';
+import ConfirmationContent from '@/components/scanner/confirmationContext';
 import '@testing-library/jest-dom';
 
 // --- 1. MOCK SUPABASE ---
@@ -38,9 +38,9 @@ describe('ConfirmationContent Component', () => {
   // TEST CASE 1: REGISTERING A NEW ASSET
   it('shows registration form when asset is not found', async () => {
     // Setup the mock to return an error (simulating "Not Found")
-    mockSingle.mockResolvedValueOnce({ 
-      data: null, 
-      error: { code: 'PGRST116', message: 'Not found' } 
+    mockSingle.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'PGRST116', message: 'Not found' }
     });
 
     // Fake props
@@ -72,9 +72,9 @@ describe('ConfirmationContent Component', () => {
   // TEST CASE 2: SUBMITTING A NEW ASSET
   it('validates form and calls onCreate when registering', async () => {
     // Setup mock to fail finding the asset (trigger register mode)
-    mockSingle.mockResolvedValueOnce({ 
-      data: null, 
-      error: { code: 'PGRST116' } 
+    mockSingle.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'PGRST116' }
     });
 
     const mockOnCreate = jest.fn();
@@ -91,13 +91,13 @@ describe('ConfirmationContent Component', () => {
     );
 
     // Wait for form to load
-// FIX: Wait for the heading specifically
-    await waitFor(() => 
+    // FIX: Wait for the heading specifically
+    await waitFor(() =>
       expect(screen.getByRole('heading', { name: /Register New Asset/i })).toBeInTheDocument()
     );
 
-// OR, even better, look for the heading specifically:
-// await waitFor(() => screen.getByRole('heading', { name: /Register New Asset/i }));
+    // OR, even better, look for the heading specifically:
+    // await waitFor(() => screen.getByRole('heading', { name: /Register New Asset/i }));
 
     // 1. Try to click submit without filling inputs
     const submitBtn = screen.getByRole('button', { name: /Register New Asset/i });
@@ -134,15 +134,15 @@ describe('ConfirmationContent Component', () => {
   // TEST CASE 3: EDITING AN EXISTING ASSET
   it('loads existing data and calls onSubmit when editing', async () => {
     // Setup mock to RETURN data (simulating "Found")
-    mockSingle.mockResolvedValueOnce({ 
-      data: { 
-        asset_id: 'EXISTING-1', 
-        name: 'Old Laptop', 
-        category: 'Tech', 
-        model: 'V1', 
-        condition: 'broken' 
-      }, 
-      error: null 
+    mockSingle.mockResolvedValueOnce({
+      data: {
+        asset_id: 'EXISTING-1',
+        name: 'Old Laptop',
+        category: 'Tech',
+        model: 'V1',
+        condition: 'broken'
+      },
+      error: null
     });
 
     const mockOnSubmit = jest.fn();

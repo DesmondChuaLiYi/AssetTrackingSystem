@@ -8,11 +8,11 @@ import {
   CogIcon,
   Bars3Icon,
 } from '@heroicons/react/24/outline';
-import LogoutButton from '../LogoutButton';
-import { useSession } from '../SessionProvider';
+import LogoutButton from '../logoutButton';
+import { useSession } from '../sessionProvider';
 
 // Dynamically import Sidebar with SSR disabled
-const Sidebar = dynamic(() => import('./sideBar'), { ssr: false });
+const Sidebar = dynamic(() => import('./sidebar'), { ssr: false });
 
 interface NavBarProps {
   sidebarOpen: boolean;
@@ -25,7 +25,7 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
   const { session } = useSession();
 
   const [isMobile, setIsMobile] = useState(false);
-  const prevPathname = useRef(pathname); // 🧠 store last pathname
+  const prevPathname = useRef(pathname);
 
   // Track mobile vs desktop
   useEffect(() => {
@@ -135,11 +135,10 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
                             window.location.href = '/profile';
                             setIsProfileOpen(false);
                           }}
-                          className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${
-                            pathname === '/profile'
-                              ? 'bg-red-600 text-white shadow-md'
-                              : 'text-gray-800 hover:bg-red-50 hover:text-red-600'
-                          }`}
+                          className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${pathname === '/profile'
+                            ? 'bg-red-600 text-white shadow-md'
+                            : 'text-gray-800 hover:bg-red-50 hover:text-red-600'
+                            }`}
                         >
                           <UserCircleIcon className="h-6 w-6 mr-3 flex-shrink-0" />
                           Profile
@@ -150,11 +149,10 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
                             window.location.href = '/settings';
                             setIsProfileOpen(false);
                           }}
-                          className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${
-                            pathname === '/settings'
-                              ? 'bg-red-600 text-white shadow-md'
-                              : 'text-gray-800 hover:bg-red-50 hover:text-red-600'
-                          }`}
+                          className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${pathname === '/settings'
+                            ? 'bg-red-600 text-white shadow-md'
+                            : 'text-gray-800 hover:bg-red-50 hover:text-red-600'
+                            }`}
                         >
                           <CogIcon className="h-6 w-6 mr-3 flex-shrink-0" />
                           Settings

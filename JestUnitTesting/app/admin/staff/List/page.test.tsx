@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import StaffListPage from '@/app/admin/staff/List/page';
+import StaffListPage from '@/app/admin/staff/list/page';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 // Mock dependencies

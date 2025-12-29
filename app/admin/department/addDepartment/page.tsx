@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicAdd from '@/components/DynamicAdd'
+import DynamicAdd from '@/components/dynamicAdd'
 
 const addDepartmentConfig = {
   entityName: 'department',
@@ -11,10 +11,10 @@ const addDepartmentConfig = {
   pageTitle: 'Add Department',
   backUrl: '/admin/department/Units',
   formFields: [
-    { 
-      key: 'department_id', 
-      label: 'Department ID', 
-      type: 'text' as const, 
+    {
+      key: 'department_id',
+      label: 'Department ID',
+      type: 'text' as const,
       required: true,
       placeholder: 'Enter department code (e.g., from barcode scanner)'
     },

@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import NavBar from './navbar/navBar'
+import NavBar from './navbar/navbar'
 import { ReactNode, useState, useEffect } from 'react'
 
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
@@ -10,7 +10,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [desktopSidebarState, setDesktopSidebarState] = useState(true)
-  
+
   // Pages where navbar/sidebar should be hidden
   const authPages = ['/', '/session/start', '/session/end', '/register']
   const isAuthPage = authPages.includes(pathname)
@@ -28,7 +28,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
       const mobile = window.innerWidth < 768
       const wasMobile = isMobile
       setIsMobile(mobile)
-      
+
       if (!mobile && wasMobile) {
         // Transitioning from mobile to desktop - restore desktop state
         setSidebarOpen(desktopSidebarState)
@@ -46,7 +46,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         setDesktopSidebarState(initialState)
       }
     }
-    
+
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -85,14 +85,13 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
   return (
     <>
       <NavBar sidebarOpen={sidebarOpen} setSidebarOpen={handleSidebarToggle} />
-      <div 
-        className={`transition-all duration-200 ease-in-out ${
-          isMobile 
+      <div
+        className={`transition-all duration-200 ease-in-out ${isMobile
             ? 'pt-16' // Only top padding on mobile
-            : sidebarOpen 
+            : sidebarOpen
               ? 'pt-16 ml-64' // Top padding + left margin for sidebar on desktop
               : 'pt-16' // Only top padding when sidebar is closed
-        }`}
+          }`}
       >
         <div> {/* Desmond, 1 Nov 25: This div is for the main content, can add padding here if stuff is too cramped */}
           {children}

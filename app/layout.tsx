@@ -1,9 +1,9 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import "./styles/globals.css";
-import { NextAuthProvider } from "@/components/auth/NextAuthProvider";
-import { SessionProvider } from "@/components/SessionProvider";
-import { ToastProvider } from "@/components/ui/Toast";
+import { NextAuthProvider } from "@/components/auth/nextAuthProvider";
+import { SessionProvider } from "@/components/sessionProvider";
+import { ToastProvider } from "@/components/ui/toast";
 import LayoutWrapper from "@/components/layoutWrapper";
 
 export const metadata: Metadata = {

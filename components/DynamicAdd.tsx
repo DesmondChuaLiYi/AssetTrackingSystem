@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from '@/components/SessionProvider'
+import { useSession } from '@/components/sessionProvider'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/Breadcrumb'
+import Breadcrumb from '@/components/ui/breadcrumb'
 
 interface FormFieldConfig {
   key: string
@@ -33,15 +33,15 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
   const { session } = useSession()
   const router = useRouter()
   const [formData, setFormData] = useState<any>({})
-  const [relatedData, setRelatedData] = useState<{ 
-    locations: any[], 
-    departments: any[] 
+  const [relatedData, setRelatedData] = useState<{
+    locations: any[],
+    departments: any[]
   }>({ locations: [], departments: [] })
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-  
+
   useEffect(() => {
     if (mounted && !session) {
       router.push('/')
@@ -73,11 +73,11 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
       // Fetch locations
       const locationsRes = await fetch('/api/location?page=1&limit=1000')
       const locationsData = await locationsRes.json()
-      
+
       // Fetch departments
       const departmentsRes = await fetch('/api/department?page=1&limit=1000')
       const departmentsData = await departmentsRes.json()
-      
+
       setRelatedData({
         locations: locationsData.data || [],
         departments: departmentsData.data || []
@@ -94,11 +94,11 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-  
+
     try {
       // Create a copy of the form data
       const submissionData = { ...formData }
-  
+
       // Handle empty location_id and department_id
       if (!submissionData.location_id || submissionData.location_id === '') {
         submissionData.location_id = null
@@ -106,15 +106,15 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
       if (!submissionData.department_id || submissionData.department_id === '') {
         submissionData.department_id = null
       }
-  
+
       const response = await fetch(config.apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData)
       })
-  
+
       const result = await response.json()
-      
+
       if (response.ok) {
         alert(`${config.entityDisplayNameSingular} added successfully!`)
         router.push(config.backUrl)
@@ -131,10 +131,10 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
 
   const renderField = (field: FormFieldConfig) => {
     const value = formData[field.key] || ''
-  
+
     if (field.type === 'select') {
       let options = field.options || []
-      
+
       // For location_id field, use locations from relatedData
       if (field.key === 'location_id' && relatedData.locations.length > 0) {
         options = [
@@ -145,7 +145,7 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
           }))
         ]
       }
-      
+
       // For department_id field, use departments from relatedData
       if (field.key === 'department_id' && relatedData.departments.length > 0) {
         options = [
@@ -156,7 +156,7 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
           }))
         ]
       }
-  
+
       return (
         <select
           value={value}
@@ -204,7 +204,7 @@ export default function DynamicAdd({ config }: DynamicAddProps) {
       <main className="p-6">
         <div className="max-w-4xl mx-auto">
           <Breadcrumb />
-          
+
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Add {config.entityDisplayNameSingular}</h1>
             <p className="text-gray-600 mt-1">Create a new {config.entityDisplayNameSingular.toLowerCase()} record</p>

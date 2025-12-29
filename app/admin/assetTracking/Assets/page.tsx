@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
+import DynamicPage, { DynamicPageConfig } from '@/components/dynamicPage'
 
 const assetsConfig: DynamicPageConfig = {
   entityName: 'asset',
@@ -20,11 +20,11 @@ const assetsConfig: DynamicPageConfig = {
     { key: 'name', label: 'Search by Asset Name' }     // Second field - will be right search box
   ],
   columns: [
-    { 
-      key: 'asset_id', 
-      label: 'Asset ID', 
-      sortable: true, 
-      render: (v: string) => <span className="font-medium text-gray-900">{v}</span> 
+    {
+      key: 'asset_id',
+      label: 'Asset ID',
+      sortable: true,
+      render: (v: string) => <span className="font-medium text-gray-900">{v}</span>
     },
     { key: 'name', label: 'Asset Name', sortable: true },
     { key: 'model', label: 'Model', sortable: false },
@@ -32,18 +32,17 @@ const assetsConfig: DynamicPageConfig = {
     {
       key: 'condition', label: 'Condition', sortable: false,
       render: (v: string) => (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          v === 'In-use' ? 'bg-green-100 text-green-800' :
-          v === 'In-store' ? 'bg-yellow-100 text-yellow-800' :
-          'bg-red-100 text-red-800'
-        }`}>{v}</span>
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${v === 'In-use' ? 'bg-green-100 text-green-800' :
+            v === 'In-store' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+          }`}>{v}</span>
       )
     },
     { key: 'location', label: 'Location', sortable: false, render: (_: any, row: any) => row.location?.name || 'N/A' },
     { key: 'department', label: 'Department', sortable: false, render: (_: any, row: any) => row.department?.name || 'N/A' },
-    { 
-      key: 'created_dt', 
-      label: 'Created Date', 
+    {
+      key: 'created_dt',
+      label: 'Created Date',
       sortable: true,
       render: (value: string) => new Date(value).toLocaleDateString('en-GB', {
         day: '2-digit',
@@ -53,11 +52,11 @@ const assetsConfig: DynamicPageConfig = {
     }
   ],
   formFields: [
-    { 
-      key: 'asset_id', 
-      label: 'Asset ID', 
-      type: 'text' as const, 
-      disabled: false, 
+    {
+      key: 'asset_id',
+      label: 'Asset ID',
+      type: 'text' as const,
+      disabled: false,
       required: true,
       placeholder: 'Enter asset barcode (e.g., from barcode scanner)'
     },
@@ -65,10 +64,10 @@ const assetsConfig: DynamicPageConfig = {
     { key: 'model', label: 'Model', type: 'text' as const, required: true },
     { key: 'description', label: 'Description', type: 'textarea' as const },
     { key: 'category', label: 'Category', type: 'text' as const, required: true },
-    { 
-      key: 'condition', 
-      label: 'Condition', 
-      type: 'select' as const, 
+    {
+      key: 'condition',
+      label: 'Condition',
+      type: 'select' as const,
       options: [
         { value: 'In-use', label: 'In-use' },
         { value: 'In-store', label: 'In-store' },

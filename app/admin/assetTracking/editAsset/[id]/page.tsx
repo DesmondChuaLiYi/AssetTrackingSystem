@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import DynamicEdit from '@/components/DynamicEdit'
+import DynamicEdit from '@/components/dynamicEdit'
 
 const editAssetConfig = {
   entityName: 'asset',
@@ -12,10 +12,10 @@ const editAssetConfig = {
   pageTitle: 'Edit Asset',
   backUrl: '/admin/assetTracking/Assets',
   formFields: [
-    { 
-      key: 'asset_id', 
-      label: 'Asset ID', 
-      type: 'text' as const, 
+    {
+      key: 'asset_id',
+      label: 'Asset ID',
+      type: 'text' as const,
       required: true,
       disabled: true
     },
@@ -23,10 +23,10 @@ const editAssetConfig = {
     { key: 'model', label: 'Model', type: 'text' as const, required: true },
     { key: 'description', label: 'Description', type: 'textarea' as const },
     { key: 'category', label: 'Category', type: 'text' as const, required: true },
-    { 
-      key: 'condition', 
-      label: 'Condition', 
-      type: 'select' as const, 
+    {
+      key: 'condition',
+      label: 'Condition',
+      type: 'select' as const,
       options: [
         { value: 'In-use', label: 'In-use' },
         { value: 'In-store', label: 'In-store' },

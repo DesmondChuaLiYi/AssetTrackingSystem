@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicAdd from '@/components/DynamicAdd'
+import DynamicAdd from '@/components/dynamicAdd'
 
 const addLocationConfig = {
   entityName: 'location',
@@ -11,10 +11,10 @@ const addLocationConfig = {
   pageTitle: 'Add Location',
   backUrl: '/admin/location/Rooms',
   formFields: [
-    { 
-      key: 'location_id', 
-      label: 'Location ID', 
-      type: 'text' as const, 
+    {
+      key: 'location_id',
+      label: 'Location ID',
+      type: 'text' as const,
       required: true,
       placeholder: 'Enter location code (e.g., from QR code)'
     },

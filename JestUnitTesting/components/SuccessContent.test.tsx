@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import SuccessContent from '@/components/scanner/SuccessContent';
+import SuccessContent from '@/components/scanner/successContent';
 import '@testing-library/jest-dom';
 
 // Mock window.history.back
@@ -24,10 +24,10 @@ describe('SuccessContent Component', () => {
     };
 
     render(
-      <SuccessContent 
-        scannedCount={1} 
-        scanType="asset" 
-        item={mockItem} 
+      <SuccessContent
+        scannedCount={1}
+        scanType="asset"
+        item={mockItem}
       />
     );
 
@@ -41,10 +41,10 @@ describe('SuccessContent Component', () => {
     const mockItem = { name: 'New Laptop' };
 
     render(
-      <SuccessContent 
-        scannedCount={1} 
-        scanType="New Asset Registered" 
-        item={mockItem} 
+      <SuccessContent
+        scannedCount={1}
+        scanType="New Asset Registered"
+        item={mockItem}
       />
     );
 

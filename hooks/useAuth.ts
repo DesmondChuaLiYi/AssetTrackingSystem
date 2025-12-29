@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from '@/components/SessionProvider'
+import { useSession } from '@/components/sessionProvider'
 
 /**
  * Custom hook to protect pages that require authentication

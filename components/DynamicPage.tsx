@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/Breadcrumb'
-import DataTable from '@/components/ui/DataTable'
+import Breadcrumb from '@/components/ui/breadcrumb'
+import DataTable from '@/components/ui/datatable'
 import { configEasing } from 'recharts/types/animation/easing'
 
 export interface DynamicPageConfig {
@@ -119,7 +119,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
     }
 
     const newRelatedData: { [key: string]: any[] } = {}
-    
+
     for (const [key, endpoint] of Object.entries(relatedEndpoints)) {
       try {
         const res = await fetch(endpoint)
@@ -131,7 +131,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
         console.error(`Failed to load ${key}:`, e)
       }
     }
-    
+
     setRelatedData(newRelatedData)
   }
 
@@ -144,7 +144,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
     setSortBy(config.defaultSortBy)
     setSortOrder('desc')
   }
-  
+
   const handleSort = (col: string) => {
     if (sortBy === col) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     else { setSortBy(col); setSortOrder('asc') }
@@ -178,7 +178,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     })
-    
+
     if (res.ok) {
       alert(`${config.entityDisplayNameSingular} updated successfully!`)
       setShowModal(false)
@@ -200,10 +200,10 @@ export default function DynamicPage({ config }: DynamicPageProps) {
         ...(searchTerm && { search: searchTerm, searchField }),
         ...(conditionFilter && { condition: conditionFilter })
       })
-      
+
       let dataToExport = data
       let totalRecords = totalItems
-      
+
       const res = await fetch(`${config.apiEndpoint}?${params}`)
       if (res.ok) {
         const responseData = await res.json()
@@ -215,7 +215,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
       const jsPDF = jsPDFModule.default
       const autoTableModule = await import('jspdf-autotable')
       const autoTable = autoTableModule.default
-      
+
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -233,12 +233,12 @@ export default function DynamicPage({ config }: DynamicPageProps) {
       yPosition += 6
       doc.text(`Total ${config.entityDisplayName}: ${totalRecords}`, 14, yPosition)
       yPosition += 6
-      
+
       if (searchTerm) {
         doc.text(`Search Filter: ${searchField} = "${searchTerm}"`, 14, yPosition)
         yPosition += 6
       }
-      
+
       if (conditionFilter) {
         doc.text(`Condition Filter: ${conditionFilter}`, 14, yPosition)
         yPosition += 6
@@ -276,7 +276,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
 
       const fileName = `${config.entityName}-report-${new Date().toISOString().slice(0, 10)}.pdf`
       doc.save(fileName)
-      
+
     } catch (error) {
       console.error('PDF generation failed:', error)
       alert('Failed to generate PDF. Error: ' + (error as Error).message)
@@ -293,35 +293,35 @@ export default function DynamicPage({ config }: DynamicPageProps) {
         ...(searchTerm && { search: searchTerm, searchField }),
         ...(conditionFilter && { condition: conditionFilter })
       })
-      
+
       const res = await fetch(`${config.apiEndpoint}?${params}`)
-      
+
       if (!res.ok) {
         throw new Error(`Failed to fetch ${config.entityDisplayName.toLowerCase()} data`)
       }
-      
+
       const responseData = await res.json()
       const dataToExport = responseData.data || []
-      
+
       if (dataToExport.length === 0) {
         alert('No data to export')
         return
       }
-      
+
       const headers = ['No.', ...config.columns.map(col => col.label)]
       const rows = dataToExport.map((item: any, index: number) => {
         const row: string[] = [(index + 1).toString()]
         config.columns.forEach(col => {
           if (col.render && typeof col.render === 'function') {
             const rendered = col.render(item[col.key], item)
-            row.push(typeof rendered === 'string' ? `"${rendered}"` : `"${item[col.key] || 'N/A'}"`) 
+            row.push(typeof rendered === 'string' ? `"${rendered}"` : `"${item[col.key] || 'N/A'}"`)
           } else {
             row.push(`"${item[col.key] || 'N/A'}"`)
           }
         })
         return row
       })
-      
+
       const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
       const blob = new Blob([csv], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
@@ -330,7 +330,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
       link.download = `${config.entityName}-${new Date().toISOString().slice(0, 10)}.csv`
       link.click()
       URL.revokeObjectURL(url)
-      
+
     } catch (error) {
       console.error('CSV export failed:', error)
       alert('Failed to export CSV: ' + (error as Error).message)
@@ -339,7 +339,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
 
   const renderFormField = (field: FormFieldConfig) => {
     const value = formData[field.key] || ''
-    
+
     switch (field.type) {
       case 'textarea':
         return (
@@ -416,7 +416,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
       <main className="p-6">
         <div className="max-w-7xl mx-auto">
           <Breadcrumb />
-          
+
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">{config.pageTitle}</h1>
             <p className="text-gray-600 mt-1">{config.pageDescription}</p>

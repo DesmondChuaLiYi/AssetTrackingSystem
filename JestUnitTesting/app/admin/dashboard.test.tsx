@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import DashboardPage from '@/app/admin/dashboard/page';
-import { useSession } from '@/components/SessionProvider';
+import { useSession } from '@/components/sessionProvider';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
@@ -34,12 +34,12 @@ describe('DashboardPage', () => {
     email: 'test@example.com',
   };
 
-    beforeEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
     const mockReplace = jest.fn();
-    (useRouter as jest.Mock).mockReturnValue({ 
-        push: mockPush,
-        replace: mockReplace,
+    (useRouter as jest.Mock).mockReturnValue({
+      push: mockPush,
+      replace: mockReplace,
     });
     (useSession as jest.Mock).mockReturnValue({ session: mockSession });
 
@@ -97,9 +97,9 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       const totalAssetsElements = screen.getAllByText('Total Assets');
       expect(totalAssetsElements.length).toBeGreaterThan(0);
-      
+
       expect(screen.getByText('Staff Members')).toBeInTheDocument();
-      
+
       const locationElements = screen.getAllByText('Locations');
       expect(locationElements.length).toBeGreaterThan(0);
     });
@@ -113,7 +113,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       const statCards = screen.getAllByText('Total Assets');
       const statCard = statCards[0].closest('div[class*="cursor-pointer"]');
-      
+
       if (statCard) {
         fireEvent.click(statCard);
         expect(mockPush).toHaveBeenCalledWith('/admin/assetTracking/Assets');
@@ -129,7 +129,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('View All Assets')).toBeInTheDocument();
       expect(screen.getByText('Manage Staff')).toBeInTheDocument();
-      
+
       const departmentElements = screen.getAllByText(/Departments?/i);
       expect(departmentElements.length).toBeGreaterThan(0);
     });
@@ -167,7 +167,7 @@ describe('DashboardPage', () => {
     });
 
     const refreshButton = screen.getByText('Refresh');
-    
+
     await act(async () => {
       fireEvent.click(refreshButton);
     });
@@ -196,18 +196,18 @@ describe('DashboardPage', () => {
 
     await waitFor(() => {
       const dropdown = screen.getByRole('combobox') as HTMLSelectElement;
-      
+
       act(() => {
         fireEvent.change(dropdown, { target: { value: 'departments' } });
       });
-      
+
       expect(dropdown.value).toBe('departments');
     });
   });
 
   it('displays loading state initially', async () => {
-    (global.fetch as jest.Mock).mockImplementation(() => 
-      new Promise(() => {})
+    (global.fetch as jest.Mock).mockImplementation(() =>
+      new Promise(() => { })
     );
 
     await act(async () => {
@@ -218,24 +218,24 @@ describe('DashboardPage', () => {
     expect(allElements.length).toBeGreaterThan(0);
   });
 
-    it('redirects to home when no session', async () => {
+  it('redirects to home when no session', async () => {
     (useSession as jest.Mock).mockReturnValue({ session: null });
 
     await act(async () => {
-        render(<DashboardPage />);
+      render(<DashboardPage />);
     });
 
     await waitFor(() => {
-        const routerMock = (useRouter as jest.Mock).mock.results[0].value;
-        expect(routerMock.replace).toHaveBeenCalledWith('/');  // Change this to '/'
+      const routerMock = (useRouter as jest.Mock).mock.results[0].value;
+      expect(routerMock.replace).toHaveBeenCalledWith('/');  // Change this to '/'
     });
-    });
+  });
 
   it('handles fetch errors gracefully', async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
-    
+
     const consoleError = jest.spyOn(console, 'error').mockImplementation();
-    
+
     await act(async () => {
       render(<DashboardPage />);
     });

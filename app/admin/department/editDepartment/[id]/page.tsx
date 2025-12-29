@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import DynamicEdit from '@/components/DynamicEdit'
+import DynamicEdit from '@/components/dynamicEdit'
 
 const editDepartmentConfig = {
   entityName: 'department',
@@ -12,10 +12,10 @@ const editDepartmentConfig = {
   pageTitle: 'Edit Department',
   backUrl: '/admin/department/Units',
   formFields: [
-    { 
-      key: 'department_id', 
-      label: 'Department ID', 
-      type: 'text' as const, 
+    {
+      key: 'department_id',
+      label: 'Department ID',
+      type: 'text' as const,
       required: true,
       disabled: true
     },

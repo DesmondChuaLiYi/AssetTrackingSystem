@@ -1,9 +1,9 @@
 'use client'
 
-import { useSession } from '@/components/SessionProvider'
+import { useSession } from '@/components/sessionProvider'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/Breadcrumb'
+import Breadcrumb from '@/components/ui/breadcrumb'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -62,7 +62,7 @@ export default function ProfilePage() {
         <div className="max-w-6xl mx-auto">
           {/* Add Breadcrumb component */}
           <Breadcrumb customItems={breadcrumbItems} />
-          
+
           {/* Profile Card */}
           <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
             {/* Header */}

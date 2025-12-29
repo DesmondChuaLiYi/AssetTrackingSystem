@@ -2,8 +2,8 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { useRouter } from 'next/navigation';
 import { useSession as useNextAuthSession, signIn, signOut } from 'next-auth/react';
 import LoginPage from '@/app/page';
-import { useSession } from '@/components/SessionProvider';
-import { useToast } from '@/components/ui/Toast';
+import { useSession } from '@/components/sessionProvider';
+import { useToast } from '@/components/ui/toast';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({

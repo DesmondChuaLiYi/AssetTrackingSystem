@@ -12,9 +12,9 @@ import {
   UsersIcon,
   ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
-import LogoutButton from '../LogoutButton';
+import LogoutButton from '../logoutButton';
 import { HomeIcon } from 'lucide-react';
-import { useSession } from '../SessionProvider';
+import { useSession } from '../sessionProvider';
 
 const adminModules = [
   { name: 'Home', icon: HomeIcon, href: '/admin/dashboard' },
@@ -22,25 +22,35 @@ const adminModules = [
     name: 'Asset Tracking',
     icon: ComputerDesktopIcon,
     href: '/admin/assetTracking',
-    dropdown: ['Assets', 'Categories', 'Reports'],
+    dropdown: [
+      { label: 'Assets', path: 'assets' },
+    ],
   },
   {
     name: 'Location',
     icon: MapPinIcon,
     href: '/admin/location',
-    dropdown: ['Rooms', 'Sites', 'Zones'],
+    dropdown: [
+      { label: 'Rooms', path: 'rooms' },
+    ],
   },
   {
     name: 'Department',
     icon: BuildingOfficeIcon,
     href: '/admin/department',
-    dropdown: ['Units', 'Teams', 'Budgets'],
+    dropdown: [
+      { label: 'Units', path: 'units' },
+    ],
   },
   {
     name: 'Staff',
     icon: UsersIcon,
     href: '/admin/staff',
-    dropdown: ['List', 'Approvals', 'Roles', 'Attendance'],
+    dropdown: [
+      { label: 'List', path: 'list' },
+      { label: 'Approvals', path: 'approvals' },
+      // { label: 'Roles', path: 'roles' },
+    ],
   },
 ];
 
@@ -121,13 +131,12 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                   href={item.href}
                   onMouseEnter={() => setHoveredItem(item.name)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  className={`flex items-center w-full p-2 rounded-md transition-all duration-200 ease-in-out whitespace-nowrap ${
-                    pathname === item.href
-                      ? 'bg-red-600 text-white shadow-md'
-                      : hoveredItem === item.name
+                  className={`flex items-center w-full p-2 rounded-md transition-all duration-200 ease-in-out whitespace-nowrap ${pathname === item.href
+                    ? 'bg-red-600 text-white shadow-md'
+                    : hoveredItem === item.name
                       ? 'bg-red-50 text-red-600'
                       : 'text-black-700 hover:bg-red-50 hover:text-red-600'
-                  }`}
+                    }`}
                 >
                   <item.icon className="h-5 w-5 mr-3 flex-shrink-0" />
                   {item.name}
@@ -140,20 +149,18 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                   onClick={() => toggleDropdown(item.href)}
                   onMouseEnter={() => setHoveredItem(item.name)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  className={`flex items-center w-full p-2 rounded-md transition-all duration-200 ease-in-out whitespace-nowrap ${
-                    pathname.startsWith(item.href)
-                      ? 'bg-red-600 text-white shadow-md'
-                      : hoveredItem === item.name
+                  className={`flex items-center w-full p-2 rounded-md transition-all duration-200 ease-in-out whitespace-nowrap ${pathname.startsWith(item.href)
+                    ? 'bg-red-600 text-white shadow-md'
+                    : hoveredItem === item.name
                       ? 'bg-red-50 text-red-600'
                       : 'text-black-700 hover:bg-red-50 hover:text-red-600'
-                  }`}
+                    }`}
                 >
                   <item.icon className="h-5 w-5 mr-3 flex-shrink-0" />
                   {item.name}
                   <ChevronDownIcon
-                    className={`h-5 w-5 ml-auto transition-transform duration-200 ${
-                      activeItem === item.href ? 'rotate-180' : ''
-                    }`}
+                    className={`h-5 w-5 ml-auto transition-transform duration-200 ${activeItem === item.href ? 'rotate-180' : ''
+                      }`}
                   />
                 </button>
               )}
@@ -170,15 +177,14 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
                   >
                     {item.dropdown.map((subItem) => (
                       <Link
-                        key={subItem}
-                        href={`${item.href}/${subItem}`}
-                        className={`block p-2 text-sm rounded transition-all duration-200 ease-in-out ${
-                          pathname === `${item.href}/${subItem}`
-                            ? 'text-red-600 bg-red-50 font-medium'
-                            : 'text-black-600 hover:text-red-600 hover:bg-red-50'
-                        }`}
+                        key={subItem.path}
+                        href={`${item.href}/${subItem.path}`}
+                        className={`block p-2 text-sm rounded transition-all duration-200 ease-in-out ${pathname === `${item.href}/${subItem.path}`
+                          ? 'text-red-600 bg-red-50 font-medium'
+                          : 'text-black-600 hover:text-red-600 hover:bg-red-50'
+                          }`}
                       >
-                        {subItem}
+                        {subItem.label}
                       </Link>
                     ))}
                   </motion.div>
@@ -195,11 +201,10 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className={`sidebar bg-white shadow-lg flex flex-col z-40 ${
-            isMobile
-              ? 'fixed top-0 left-0 w-full p-4 pt-6'
-              : 'min-h-screen w-64 p-4 fixed left-0'
-          }`}
+          className={`sidebar bg-white shadow-lg flex flex-col z-40 ${isMobile
+            ? 'fixed top-0 left-0 w-full p-4 pt-6'
+            : 'min-h-screen w-64 p-4 fixed left-0'
+            }`}
           style={{ maxHeight: isMobile ? 'calc(100vh - 2rem)' : 'calc(100vh - 4rem)', overflowY: 'auto' }}
           variants={sidebarVariants}
           initial={isMobile ? 'mobileClosed' : 'closed'}
@@ -248,25 +253,23 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
               href="/settings"
               onMouseEnter={() => setHoveredItem('Settings')}
               onMouseLeave={() => setHoveredItem(null)}
-              className={`flex items-center p-3 rounded-lg transition-all duration-200 ease-in-out ${
-                pathname === '/settings'
-                  ? 'bg-red-600 text-white shadow-md'
-                  : hoveredItem === 'Settings'
+              className={`flex items-center p-3 rounded-lg transition-all duration-200 ease-in-out ${pathname === '/settings'
+                ? 'bg-red-600 text-white shadow-md'
+                : hoveredItem === 'Settings'
                   ? 'bg-red-50 text-red-600'
                   : 'text-black-700 hover:bg-red-50 hover:text-red-600'
-              }`}
+                }`}
             >
               <CogIcon className="h-5 w-5 mr-3 flex-shrink-0" />
               Settings
             </Link>
             <LogoutButton
-              className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${
-                pathname === '/logout'
-                  ? 'bg-red-600 text-white shadow-md'
-                  : hoveredItem === 'Log Out'
+              className={`flex items-center w-full p-3 rounded-lg transition-all duration-200 ease-in-out ${pathname === '/logout'
+                ? 'bg-red-600 text-white shadow-md'
+                : hoveredItem === 'Log Out'
                   ? 'bg-red-50 text-red-600'
                   : 'text-black-700 hover:bg-red-50 hover:text-red-600'
-              }`}
+                }`}
               showIcon={true}
               text="Sign Out"
             />

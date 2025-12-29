@@ -4,9 +4,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import ScannerContent from '@/components/scanner/ScannerContext';
-import SuccessContent from '@/components/scanner/SuccessContent';
-import ConfirmationContent from '@/components/scanner/ConfirmationContent';
+import ScannerContent from '@/components/scanner/scannerContext';
+import SuccessContent from '@/components/scanner/successContent';
+import ConfirmationContent from '@/components/scanner/confirmationContext';
 import { Package, Users, MapPin, Building2, CheckCircle, AlertCircle, ShoppingCart, Trash2, X } from 'lucide-react';
 
 // --- CONFIGURATION ---
@@ -84,9 +84,9 @@ function ErrorModal({ message, onClose }: any) {
 export default function ScannerPage() {
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
-  
+
   // Shared State
-  const [pageState, setPageState] = useState('scanning'); 
+  const [pageState, setPageState] = useState('scanning');
   const [scannedItem, setScannedItem] = useState<any>(null);
   const [submittedData, setSubmittedData] = useState<{ item: any, page: string } | null>(null); // Fixed type signature
   const [scannerKey, setScannerKey] = useState(0); // Forces scanner reset
@@ -124,7 +124,7 @@ export default function ScannerPage() {
     // PATH 1: STAFF SCANNING (Irene's Logic)
     // --------------------------------------------
     if (type === 'staff') {
-      
+
       // Step A: If we haven't scanned a staff member yet
       if (!staffData) {
         try {
@@ -149,7 +149,7 @@ export default function ScannerPage() {
 
           setStaffData({ ...existingStaff, currentAssetCount: count || 0 });
           setShowStaffModal(true); // Show confirmation
-          
+
         } catch (e: any) {
           setErrorMessage(`Error validating staff: ${e.message}`);
           setShowErrorModal(true);
@@ -209,7 +209,7 @@ export default function ScannerPage() {
         setTimeout(() => {
           setScannerKey(prev => prev + 1);
         }, 500);
-        
+
       } catch (e: any) {
         setErrorMessage(`Error checking asset: ${e.message}`);
         setShowErrorModal(true);
@@ -220,7 +220,7 @@ export default function ScannerPage() {
     // --------------------------------------------
     // PATH 2: ASSET / LOCATION / DEPARTMENT (Your Logic)
     // --------------------------------------------
-    
+
     // Step A: First Scan (Location or Department)
     if (parentScan === null) {
       if (type === 'location' || type === 'department') {
@@ -235,13 +235,13 @@ export default function ScannerPage() {
           return;
         }
         setParentScan({ type: type, id: scannedCode, name: data.name || scannedCode });
-        
+
       } else {
         // Asset Scan Mode
         setScannedItem(item);
         setPageState('confirmation');
       }
-    } 
+    }
     // Step B: Second Scan (Tagging Asset to Parent)
     else {
       const { data: assetData, error: assetError } = await supabase
@@ -268,7 +268,7 @@ export default function ScannerPage() {
         // Updated Data
         const updatedAssetData = {
           ...assetData,
-          [parentScan.type + '_id']: parentScan.id 
+          [parentScan.type + '_id']: parentScan.id
         };
 
         setSubmittedData({ item: updatedAssetData, page: `Tagged to ${parentScan.name}` });
@@ -315,9 +315,9 @@ export default function ScannerPage() {
       // Process items
       for (const item of validItems) {
         if (item.action === 'ASSIGN') {
-           // You might need to adjust this ID generation logic depending on your DB
+          // You might need to adjust this ID generation logic depending on your DB
           const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-          
+
           await supabase.from('staff_asset').insert({
             id: newId, // Remove this line if your DB auto-generates IDs
             staff_id: staffData.staff_id,
@@ -332,9 +332,9 @@ export default function ScannerPage() {
 
       // Success!
       // Note: We need to construct a fake 'item' for the success page since it's a bulk action
-      setSubmittedData({ 
-        item: { name: `${validItems.length} items processed`, code: 'BULK' }, 
-        page: 'Staff Assignment' 
+      setSubmittedData({
+        item: { name: `${validItems.length} items processed`, code: 'BULK' },
+        page: 'Staff Assignment'
       });
       setPageState('success');
       setCart([]);
@@ -353,7 +353,7 @@ export default function ScannerPage() {
   const handleAssetUpdate = async (newData: any) => {
     // ... (Same logic as before)
     if (!scannedItem || type !== 'asset') { alert("Error"); return; }
-    
+
     try {
       const dataToUpdate = {
         condition: newData.condition,
@@ -373,7 +373,7 @@ export default function ScannerPage() {
 
     try {
       const dataToInsert: any = {
-        asset_id: scannedItem.code, 
+        asset_id: scannedItem.code,
         name: newData.name,
         description: newData.description,
         condition: newData.condition,
@@ -383,7 +383,7 @@ export default function ScannerPage() {
         category: newData.category,
         model: newData.model,
       };
-      
+
       if (parentScan) {
         dataToInsert[parentScan.type + '_id'] = parentScan.id;
       }
@@ -400,10 +400,10 @@ export default function ScannerPage() {
   // ============================================================
   // RENDER
   // ============================================================
-  
+
   if (pageState === 'success') {
     const scanType = (submittedData?.page === 'New Asset Registered' || submittedData?.page.startsWith('Tagged'))
-      ? submittedData.page 
+      ? submittedData.page
       : configs[type].title.split(" ")[0];
 
     return (
@@ -419,10 +419,10 @@ export default function ScannerPage() {
     return (
       <ConfirmationContent
         item={scannedItem}
-        tableName={'asset'} 
+        tableName={'asset'}
         onBack={() => setPageState('scanning')}
-        onSubmit={handleAssetUpdate} 
-        onCreate={handleAssetCreate} 
+        onSubmit={handleAssetUpdate}
+        onCreate={handleAssetCreate}
         parentScan={parentScan}
       />
     );
@@ -439,7 +439,7 @@ export default function ScannerPage() {
       />
 
       {/* --- IRENE'S COMPONENTS --- */}
-      
+
       {/* 1. Staff Confirmation Modal */}
       {showStaffModal && staffData && (
         <StaffConfirmedModal
@@ -476,19 +476,18 @@ export default function ScannerPage() {
                 {cart.map((item) => (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between p-3 rounded border ${
-                      item.action === 'ERROR' ? 'bg-red-50 border-red-300' :
+                    className={`flex items-center justify-between p-3 rounded border ${item.action === 'ERROR' ? 'bg-red-50 border-red-300' :
                       item.action === 'ASSIGN' ? 'bg-green-50 border-green-300' :
-                      'bg-orange-50 border-orange-300'
-                    }`}
+                        'bg-orange-50 border-orange-300'
+                      }`}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">
                         {item.asset.name}
                       </p>
                       <p className="text-xs font-bold">
-                        {item.action === 'ASSIGN' ? 'Assigning to Staff' : 
-                         item.action === 'UNASSIGN' ? 'Removing from Staff' : 'Error: Owned by others'}
+                        {item.action === 'ASSIGN' ? 'Assigning to Staff' :
+                          item.action === 'UNASSIGN' ? 'Removing from Staff' : 'Error: Owned by others'}
                       </p>
                       {item.action === 'ERROR' && (
                         <p className="text-xs text-red-600">Owner: {item.currentOwner}</p>

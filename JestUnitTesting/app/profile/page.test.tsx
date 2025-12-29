@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import ProfilePage from '@/app/profile/page';
-import { useSession } from '@/components/SessionProvider';
+import { useSession } from '@/components/sessionProvider';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
@@ -127,7 +127,7 @@ describe('ProfilePage', () => {
   it('shows loading state while fetching assets', async () => {
     (useSession as jest.Mock).mockReturnValue({ session: mockSession });
     (global.fetch as jest.Mock).mockImplementation(
-      () => new Promise(() => {}) // Never resolves
+      () => new Promise(() => { }) // Never resolves
     );
 
     render(<ProfilePage />);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from '@/components/SessionProvider'
+import { useSession } from '@/components/sessionProvider'
 
 // Hardcoded admin emails (temporary until role management is fully implemented)
 const ADMIN_EMAILS = [

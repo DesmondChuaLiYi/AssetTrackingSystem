@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/Breadcrumb'
+import Breadcrumb from '@/components/ui/breadcrumb'
 import RealtimeChart from '@/components/charts/realtimeChart'
 import {
   ComputerDesktopIcon,
@@ -48,14 +48,14 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      
+
       // Fetch all data in parallel
       const [assetsRes, departmentsRes, staffRes, locationsRes] = await Promise.all([
         fetch('/api/assets?limit=1'),
         fetch('/api/department'),
         fetch('/api/staff/list'),
         fetch('/api/location')
-      ])  
+      ])
 
       const [assetsData, departmentsData, staffData, locationsData] = await Promise.all([
         assetsRes.json(),
@@ -90,9 +90,9 @@ export default function DashboardPage() {
     {
       id: 'assets',
       label: 'Assets',
-      tableName: 'asset',  
+      tableName: 'asset',
       title: 'Total Assets',
-      valueKey: 'count', 
+      valueKey: 'count',
       labelKey: 'category',
       chartType: 'line' as const,
       color: '#3b82f6',
@@ -102,7 +102,7 @@ export default function DashboardPage() {
     {
       id: 'departments',
       label: 'Departments',
-      tableName: 'department',  
+      tableName: 'department',
       title: 'Department Stats',
       valueKey: 'total',
       chartType: 'line' as const,
@@ -112,7 +112,7 @@ export default function DashboardPage() {
     {
       id: 'locations',
       label: 'Locations',
-      tableName: 'location', 
+      tableName: 'location',
       title: 'Location Analytics',
       valueKey: 'count',
       chartType: 'bar' as const,
@@ -129,28 +129,28 @@ export default function DashboardPage() {
       value: stats.totalAssets,
       icon: ComputerDesktopIcon,
       color: 'bg-blue-500',
-      href: '/admin/assetTracking/Assets'
+      href: '/admin/assetTracking/assets'
     },
     {
       title: 'Departments',
       value: stats.totalDepartments,
       icon: BuildingOfficeIcon,
       color: 'bg-green-500',
-      href: '/admin/assetManage/departments'
+      href: '/admin/assetTracking/department/units'
     },
     {
       title: 'Staff Members',
       value: stats.totalStaff,
       icon: UsersIcon,
       color: 'bg-purple-500',
-      href: '/admin/staff/addStaff'
+      href: '/admin/staff/list'
     },
     {
       title: 'Locations',
       value: stats.totalLocations,
       icon: MapPinIcon,
       color: 'bg-orange-500',
-      href: '/admin/assetManage/locations'
+      href: '/admin/location/rooms'
     }
   ]
 
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumb */}
           <Breadcrumb />
-          
+
           {/* Page Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
@@ -224,21 +224,21 @@ export default function DashboardPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button
-                onClick={() => router.push('/admin/assetTracking/Assets')}
+                onClick={() => router.push('/admin/assetTracking/assets')}
                 className="p-4 text-left border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 <h3 className="font-medium text-gray-900">View All Assets</h3>
                 <p className="text-sm text-gray-600 mt-1">Manage and track all assets</p>
               </button>
               <button
-                onClick={() => router.push('/admin/staff/List')}
+                onClick={() => router.push('/admin/staff/list')}
                 className="p-4 text-left border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 <h3 className="font-medium text-gray-900">Manage Staff</h3>
                 <p className="text-sm text-gray-600 mt-1">Add or update staff members</p>
               </button>
               <button
-                onClick={() => router.push('/admin/department/Units')}
+                onClick={() => router.push('/admin/department/units')}
                 className="p-4 text-left border border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-colors"
               >
                 <h3 className="font-medium text-gray-900">Departments</h3>
@@ -271,7 +271,7 @@ export default function DashboardPage() {
 
               {/* Realtime Chart with key prop for forced re-render */}
               {activeChart && (
-                <RealtimeChart 
+                <RealtimeChart
                   key={`${selectedChart}-${chartKey}`}
                   config={{
                     tableName: activeChart.tableName,

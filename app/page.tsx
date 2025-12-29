@@ -3,9 +3,9 @@
 import { useSession as useNextAuthSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/components/SessionProvider";
+import { useSession } from "@/components/sessionProvider";
 import { useEffect, useState, useRef } from "react";
-import { useToast } from '@/components/ui/Toast';
+import { useToast } from '@/components/ui/toast';
 
 export default function LoginPage() {
   const { data: nextAuthSession, status } = useNextAuthSession();
@@ -161,10 +161,10 @@ export default function LoginPage() {
             disabled={sessionLoading || isInitializing}
           >
             <svg className="w-5 h-5" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10 0H0V10H10V0Z" fill="#F25022"/>
-              <path d="M21 0H11V10H21V0Z" fill="#7FBA00"/>
-              <path d="M10 11H0V21H10V11Z" fill="#00A4EF"/>
-              <path d="M21 11H11V21H21V11Z" fill="#FFB900"/>
+              <path d="M10 0H0V10H10V0Z" fill="#F25022" />
+              <path d="M21 0H11V10H21V0Z" fill="#7FBA00" />
+              <path d="M10 11H0V21H10V11Z" fill="#00A4EF" />
+              <path d="M21 11H11V21H21V11Z" fill="#FFB900" />
             </svg>
             {sessionLoading || isInitializing ? 'Loading...' : 'Sign in with Microsoft'}
           </button>

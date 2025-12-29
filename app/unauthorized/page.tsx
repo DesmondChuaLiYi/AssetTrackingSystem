@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useSession } from "@/components/SessionProvider";
+import { useSession } from "@/components/sessionProvider";
 import { ShieldExclamationIcon } from "@heroicons/react/24/outline";
 
 export default function UnauthorizedPage() {
