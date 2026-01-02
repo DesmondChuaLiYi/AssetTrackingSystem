@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Update staff status to 'rejected'
     const { data: updatedStaff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .update({
         status: 'rejected',
         updated_dt: new Date().toISOString()

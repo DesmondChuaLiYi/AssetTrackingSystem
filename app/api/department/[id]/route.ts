@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { data, error } = await supabase
-      .from('department')
+      .from('Department')
       .select('*')
       .eq('department_id', params.id)
       .single()
@@ -24,11 +24,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const body = await request.json()
     const { department_id, ...updateData } = body
-    
+
     updateData.updated_dt = new Date().toISOString()
 
     const { data, error } = await supabase
-      .from('department')
+      .from('Department')
       .update(updateData)
       .eq('department_id', params.id)
       .select()

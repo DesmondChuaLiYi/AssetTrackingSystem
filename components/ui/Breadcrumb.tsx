@@ -28,13 +28,13 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
     let currentPath = ''
     pathSegments.forEach((segment, index) => {
       currentPath += `/${segment}`
-      
+
       // Convert segment to readable label
       let label = segment
         .split(/[-_]/) // Split on hyphens and underscores
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
-      
+
       // Special cases for common paths
       const labelMap: { [key: string]: string } = {
         'admin': 'Admin',
@@ -43,13 +43,13 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
         'addStaff': 'Add Staff',
         'dashboard': 'Dashboard'
       }
-      
+
       if (labelMap[segment]) {
         label = labelMap[segment]
       }
 
       // Determine if item should be clickable
-      const isClickable = index === pathSegments.length - 1 ? false : 
+      const isClickable = index === pathSegments.length - 1 ? false :
         !['assetTracking'].includes(segment) // Asset Tracking is not clickable
 
       breadcrumbs.push({
@@ -68,7 +68,7 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
     <nav className="flex mb-5" aria-label="Breadcrumb">
       <ol className="inline-flex items-center space-x-1 md:space-x-3">
         {breadcrumbs.map((item, index) => (
-          <li key={item.href} className="inline-flex items-center">
+          <li key={`${item.href}-${index}`} className="inline-flex items-center">
             {index > 0 && (
               <ChevronRightIcon className="w-4 h-4 text-gray-400 mx-1" />
             )}

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
     let query = supabase
-      .from('asset')
+      .from('Asset')
       .select(`
         *,
         location:location_id(name, description),
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('GET /api/assets error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to fetch assets',
         details: error
       },
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // }
 
     const { data, error } = await supabase
-      .from('asset')
+      .from('Asset')
       .insert([{
         asset_id: body.asset_id,
         name: body.name,
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('POST /api/assets error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to create asset',
         details: error
       },
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
     if (updateData.category) updateObject.category = updateData.category
 
     const { data, error } = await supabase
-      .from('asset')
+      .from('Asset')
       .update(updateObject)
       .eq('asset_id', asset_id)
       .select(`
@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('PUT /api/assets error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to update asset',
         details: error
       },
@@ -201,7 +201,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('asset')
+      .from('Asset')
       .delete()
       .eq('asset_id', asset_id)
 
@@ -214,7 +214,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('DELETE /api/assets error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to delete asset',
         details: error
       },

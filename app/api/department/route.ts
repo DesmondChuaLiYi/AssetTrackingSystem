@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
     let query = supabase
-      .from('department')
+      .from('Department')
       .select('*', { count: 'exact' })
 
     // Apply search filter
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('GET /api/department error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to fetch departments',
         details: error
       },
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('department')
+      .from('Department')
       .insert([{
         ...departmentData,
         created_dt: new Date().toISOString(),
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('POST /api/department error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to create department',
         success: false
       },
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 export async function PUT() {
   try {
     const { data, error } = await supabase
-      .from('department')
+      .from('Department')
       .select('*')
       .order('department_id', { ascending: true })
 
@@ -101,7 +101,7 @@ export async function PUT() {
   } catch (error) {
     console.error('GET /api/departments error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to fetch departments',
         details: error
       },
@@ -122,7 +122,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('department')
+      .from('Department')
       .delete()
       .eq('department_id', id)
 
@@ -135,7 +135,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('DELETE /api/department error:', error)
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to delete department',
         success: false
       },

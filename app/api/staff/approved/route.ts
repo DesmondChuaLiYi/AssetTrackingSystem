@@ -9,7 +9,7 @@ export async function GET() {
   try {
     // Fetch all approved staff
     const { data: approvedStaff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .select('*')
       .eq('status', 'approved')
       .order('created_dt', { ascending: false })

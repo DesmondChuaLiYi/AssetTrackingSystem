@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new staff member
     const { data: staff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .insert([
         {
           staff_id,

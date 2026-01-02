@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Look up staff by email
     const { data: staff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .select('*')
       .eq('email', email)
       .single()
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // If approved and microsoft_user_id is null, update it (first login)
     if (staff.status === 'approved' && !staff.microsoft_user_id && microsoftUserId) {
       const { data: updatedStaff, error: updateError } = await supabase
-        .from('staff')
+        .from('Staff')
         .update({
           microsoft_user_id: microsoftUserId,
           updated_dt: new Date().toISOString()

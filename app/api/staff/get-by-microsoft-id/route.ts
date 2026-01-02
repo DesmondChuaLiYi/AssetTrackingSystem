@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Look up staff by Microsoft user ID
     const { data: staff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .select('*')
       .eq('microsoft_user_id', microsoftUserId)
       .single()

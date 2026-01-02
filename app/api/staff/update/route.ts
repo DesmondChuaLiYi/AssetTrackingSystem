@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Update staff member
     const { data: staff, error } = await supabase
-      .from('staff')
+      .from('Staff')
       .update({
         name,
         email,

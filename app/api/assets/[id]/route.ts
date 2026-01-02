@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { data, error } = await supabase
-      .from('asset')
+      .from('Asset')
       .select(`
         *,
         location:location_id(location_id, name),
@@ -28,12 +28,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const body = await request.json()
     const { asset_id, ...updateData } = body // Remove asset_id from update data
-    
+
     // Add updated_dt timestamp
     updateData.updated_dt = new Date().toISOString()
 
     const { data, error } = await supabase
-      .from('asset')
+      .from('Asset')
       .update(updateData)
       .eq('asset_id', params.id)
       .select(`

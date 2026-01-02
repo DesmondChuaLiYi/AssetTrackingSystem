@@ -90,7 +90,7 @@ export default function DashboardPage() {
     {
       id: 'assets',
       label: 'Assets',
-      tableName: 'asset',
+      tableName: 'Asset',
       title: 'Total Assets',
       valueKey: 'count',
       labelKey: 'category',
@@ -102,7 +102,7 @@ export default function DashboardPage() {
     {
       id: 'departments',
       label: 'Departments',
-      tableName: 'department',
+      tableName: 'Department',
       title: 'Department Stats',
       valueKey: 'total',
       chartType: 'line' as const,
@@ -112,7 +112,7 @@ export default function DashboardPage() {
     {
       id: 'locations',
       label: 'Locations',
-      tableName: 'location',
+      tableName: 'Location',
       title: 'Location Analytics',
       valueKey: 'count',
       chartType: 'bar' as const,
@@ -205,13 +205,13 @@ export default function DashboardPage() {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <div className="text-2xl font-bold text-gray-900">
                         {loading ? (
                           <div className="animate-pulse bg-gray-200 h-8 w-12 rounded"></div>
                         ) : (
                           card.value.toLocaleString()
                         )}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 </div>
