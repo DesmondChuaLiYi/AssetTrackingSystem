@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession as useNextAuthSession, signIn, signOut } from "next-auth/react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/sessionProvider";
 import { useEffect, useState, useRef } from "react";
@@ -132,13 +131,10 @@ export default function LoginPage() {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
-            <Image
+            <img
               src="/logo-long-full.svg"
               alt="Swinburne University of Technology"
-              width={180}
-              height={60}
-              priority
-              className="object-contain"
+              className="h-15 w-auto"
             />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">

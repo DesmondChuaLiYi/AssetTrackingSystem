@@ -73,13 +73,13 @@ export default function ConfirmationContent({
     const fetchDropdownData = async () => {
       try {
         const { data: locData, error: locError } = await supabase
-          .from('location')
+          .from('Location')
           .select('location_id, name');
         if (locError) throw locError;
         setLocations(locData || []);
 
         const { data: deptData, error: deptError } = await supabase
-          .from('department')
+          .from('Department')
           .select('department_id, name');
         if (deptError) throw deptError;
         setDepartments(deptData || []);

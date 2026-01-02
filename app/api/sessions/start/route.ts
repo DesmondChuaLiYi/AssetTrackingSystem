@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Create new session record
     const { data: session, error } = await supabase
-      .from('sessions')
+      .from('Sessions')
       .insert([
         {
           staff_id: staffId,

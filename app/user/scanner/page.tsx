@@ -130,7 +130,7 @@ export default function ScannerPage() {
         try {
           // 1. Validate Staff ID
           const { data: existingStaff, error } = await supabase
-            .from('staff')
+            .from('Staff')
             .select('*')
             .eq('staff_id', scannedCode)
             .maybeSingle();
@@ -143,7 +143,7 @@ export default function ScannerPage() {
 
           // 2. Count assets currently owned
           const { count } = await supabase
-            .from('staff_asset') // Assuming this join table exists
+            .from('StaffAsset') // Assuming this join table exists
             .select('*', { count: 'exact', head: true })
             .eq('staff_id', scannedCode);
 
@@ -168,7 +168,7 @@ export default function ScannerPage() {
 
         // 2. Check if asset exists in DB
         const { data: existingAsset, error: assetError } = await supabase
-          .from('asset')
+          .from('Asset')
           .select('*')
           .eq('asset_id', scannedCode)
           .maybeSingle();
@@ -181,7 +181,7 @@ export default function ScannerPage() {
 
         // 3. Check current ownership status
         const { data: assignments } = await supabase
-          .from('staff_asset')
+          .from('StaffAsset')
           .select('*')
           .eq('asset_id', scannedCode);
 
@@ -245,7 +245,7 @@ export default function ScannerPage() {
     // Step B: Second Scan (Tagging Asset to Parent)
     else {
       const { data: assetData, error: assetError } = await supabase
-        .from('asset')
+        .from('Asset')
         .select()
         .eq('asset_id', scannedCode)
         .single();
@@ -259,7 +259,7 @@ export default function ScannerPage() {
 
       try {
         const { error: updateError } = await supabase
-          .from('asset')
+          .from('Asset')
           .update({ [config.idColumn]: parentScan.id, updated_at: new Date().toISOString() })
           .eq('asset_id', scannedCode);
 
@@ -318,7 +318,7 @@ export default function ScannerPage() {
           // You might need to adjust this ID generation logic depending on your DB
           const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-          await supabase.from('staff_asset').insert({
+          await supabase.from('StaffAsset').insert({
             id: newId, // Remove this line if your DB auto-generates IDs
             staff_id: staffData.staff_id,
             asset_id: item.asset.asset_id
@@ -326,7 +326,7 @@ export default function ScannerPage() {
 
         } else if (item.action === 'UNASSIGN') {
           // Remove from staff_asset table
-          await supabase.from('staff_asset').delete().eq('id', item.assignmentId);
+          await supabase.from('StaffAsset').delete().eq('id', item.assignmentId);
         }
       }
 
@@ -361,7 +361,7 @@ export default function ScannerPage() {
         department_id: newData.department_id,
         updated_at: new Date().toISOString()
       };
-      const { error } = await supabase.from('asset').update(dataToUpdate).eq(config.idColumn, scannedItem.code);
+      const { error } = await supabase.from('Asset').update(dataToUpdate).eq(config.idColumn, scannedItem.code);
       if (error) throw error;
       setSubmittedData({ item: { ...newData, ...dataToUpdate }, page: type });
       setPageState('success');
@@ -388,7 +388,7 @@ export default function ScannerPage() {
         dataToInsert[parentScan.type + '_id'] = parentScan.id;
       }
 
-      const { error } = await supabase.from('asset').insert(dataToInsert);
+      const { error } = await supabase.from('Asset').insert(dataToInsert);
       if (error) throw error;
       setSubmittedData({ item: dataToInsert, page: 'New Asset Registered' });
       setPageState('success');

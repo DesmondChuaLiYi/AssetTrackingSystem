@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     let query = supabase
-      .from('sessions')
+      .from('Sessions')
       .update({
         logout_time: new Date().toISOString(),
         status: 'ended'
