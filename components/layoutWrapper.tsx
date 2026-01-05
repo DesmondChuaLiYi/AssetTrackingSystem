@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import NavBar from './navbar/navbar'
 import { ReactNode, useState, useEffect } from 'react'
-import { useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/Toast'
 
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const pathname = usePathname()

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import ConfirmationContent from '@/components/scanner/confirmationContext';
+import ConfirmationContent from '@/components/scanner/ConfirmationContext';
 import '@testing-library/jest-dom';
 
 // --- 1. MOCK SUPABASE ---

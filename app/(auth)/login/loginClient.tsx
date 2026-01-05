@@ -3,7 +3,7 @@
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '@/components/ui/Toast';
 
 export default function LoginClient() {
   const { data: session, status } = useSession();

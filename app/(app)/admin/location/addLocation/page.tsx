@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicAdd from '@/components/dynamicAdd'
+import DynamicAdd from '@/components/DynamicAdd'
 
 const addLocationConfig = {
   entityName: 'location',

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
-import Breadcrumb from '@/components/ui/breadcrumb'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -177,8 +177,8 @@ export default function ApprovalsPage() {
               <button
                 onClick={() => setActiveTab('pending')}
                 className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'pending'
-                    ? 'border-b-2 border-yellow-600 text-yellow-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-yellow-600 text-yellow-600'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 <div className="flex items-center gap-2">
@@ -189,8 +189,8 @@ export default function ApprovalsPage() {
               <button
                 onClick={() => setActiveTab('approved')}
                 className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'approved'
-                    ? 'border-b-2 border-green-600 text-green-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-green-600 text-green-600'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 <div className="flex items-center gap-2">
@@ -201,8 +201,8 @@ export default function ApprovalsPage() {
               <button
                 onClick={() => setActiveTab('rejected')}
                 className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'rejected'
-                    ? 'border-b-2 border-red-600 text-red-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-b-2 border-red-600 text-red-600'
+                  : 'text-gray-500 hover:text-gray-700'
                   }`}
               >
                 <div className="flex items-center gap-2">

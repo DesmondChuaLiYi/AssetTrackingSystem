@@ -1,7 +1,7 @@
 // app/user/page.tsx
 'use client';
 
-import WelcomeContent from '@/components/scanner/welcomeContent';
+import WelcomeContent from '@/components/scanner/WelcomeContent';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 

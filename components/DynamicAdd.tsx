@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/breadcrumb'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 
 interface FormFieldConfig {
   key: string

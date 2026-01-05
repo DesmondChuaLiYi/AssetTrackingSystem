@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicPage, { DynamicPageConfig } from '@/components/dynamicPage'
+import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
 const assetsConfig: DynamicPageConfig = {
   entityName: 'asset',
@@ -33,8 +33,8 @@ const assetsConfig: DynamicPageConfig = {
       key: 'condition', label: 'Condition', sortable: false,
       render: (v: string) => (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${v === 'In-use' ? 'bg-green-100 text-green-800' :
-            v === 'In-store' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
+          v === 'In-store' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-red-100 text-red-800'
           }`}>{v}</span>
       )
     },

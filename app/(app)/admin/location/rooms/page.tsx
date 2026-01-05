@@ -1,6 +1,6 @@
 'use client'
 
-import DynamicPage, { DynamicPageConfig } from '@/components/dynamicPage'
+import DynamicPage, { DynamicPageConfig } from '@/components/DynamicPage'
 
 const config: DynamicPageConfig = {
   entityName: 'location',

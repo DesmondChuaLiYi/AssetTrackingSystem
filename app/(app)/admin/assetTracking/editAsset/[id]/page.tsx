@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import DynamicEdit from '@/components/dynamicEdit'
+import DynamicEdit from '@/components/DynamicEdit'
 
 const editAssetConfig = {
   entityName: 'asset',

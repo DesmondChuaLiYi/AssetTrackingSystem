@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import RealtimeChart from '@/components/charts/realtimeChart';
+import RealtimeChart from '@/components/charts/RealtimeChart';
 
 // Mock Supabase - define everything INSIDE the factory function
 jest.mock('@supabase/supabase-js', () => {
@@ -17,7 +17,7 @@ jest.mock('@supabase/supabase-js', () => {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
           order: jest.fn(() => ({
-            limit: jest.fn(() => 
+            limit: jest.fn(() =>
               Promise.resolve({
                 data: [
                   { id: 1, count: 10, created_dt: '2024-01-15T10:00:00Z' },
@@ -75,7 +75,7 @@ describe('RealtimeChart', () => {
     await waitFor(() => {
       expect(screen.getByText('Total Assets')).toBeInTheDocument();
     }, { timeout: 5000 });
-    
+
     unmount();
   });
 
@@ -87,11 +87,11 @@ describe('RealtimeChart', () => {
 
   it('renders line chart when chartType is line', async () => {
     const { unmount } = render(<RealtimeChart config={defaultConfig} />);
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('line-chart')).toBeInTheDocument();
     }, { timeout: 5000 });
-    
+
     unmount();
   });
 });

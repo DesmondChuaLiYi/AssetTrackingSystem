@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/breadcrumb'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 
 export default function ProfilePage() {
   const router = useRouter()

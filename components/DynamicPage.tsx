@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useRouter } from 'next/navigation'
-import Breadcrumb from '@/components/ui/breadcrumb'
-import DataTable from '@/components/ui/datatable'
+import Breadcrumb from '@/components/ui/Breadcrumb'
+import DataTable from '@/components/ui/DataTable'
 import { configEasing } from 'recharts/types/animation/easing'
 
 export interface DynamicPageConfig {
