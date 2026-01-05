@@ -1,8 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import { useSession as useNextAuthSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import LoginPage from '@/app/page';
-import { useSession } from '@/components/sessionProvider';
 import { useToast } from '@/components/ui/toast';
 
 // Mock dependencies
@@ -14,10 +13,6 @@ jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
   signIn: jest.fn(),
   signOut: jest.fn(),
-}));
-
-jest.mock('@/components/SessionProvider', () => ({
-  useSession: jest.fn(),
 }));
 
 jest.mock('@/components/ui/Toast', () => ({
@@ -50,29 +45,23 @@ describe('LoginPage', () => {
   });
 
   it('renders login page with Microsoft sign in button', () => {
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
-    });
-    (useSession as jest.Mock).mockReturnValue({
-      session: null,
-      startSession: mockStartSession,
-      isLoading: false,
     });
 
     render(<LoginPage />);
 
     expect(screen.getByText('Asset Tracking System')).toBeInTheDocument();
     expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
-    expect(screen.getByText('Register for Access')).toBeInTheDocument();
+    expect(screen.getByText('Register for access')).toBeInTheDocument();
   });
 
   it('shows loading state when session is loading', () => {
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'loading',
     });
-    (useSession as jest.Mock).mockReturnValue({
       session: null,
       startSession: mockStartSession,
       isLoading: false,
@@ -84,7 +73,7 @@ describe('LoginPage', () => {
   });
 
   it('shows loading state when sessionProvider is loading', () => {
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
     });
@@ -100,7 +89,7 @@ describe('LoginPage', () => {
   });
 
   it('calls signIn when Microsoft sign in button is clicked', () => {
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
     });
@@ -130,7 +119,7 @@ describe('LoginPage', () => {
       json: () => Promise.resolve({ success: true, staff: mockStaff }),
     });
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: '104385730@students.swinburne.edu.my',
@@ -167,7 +156,7 @@ describe('LoginPage', () => {
       json: () => Promise.resolve({ success: true, staff: mockStaff }),
     });
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: 'staff@example.com',
@@ -202,13 +191,13 @@ describe('LoginPage', () => {
 
     // Mock signOut to change status to unauthenticated to prevent infinite loop
     (signOut as jest.Mock).mockImplementation(async () => {
-      (useNextAuthSession as jest.Mock).mockReturnValue({
+      (useSession as jest.Mock).mockReturnValue({
         data: null,
         status: 'unauthenticated',
       });
     });
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: 'unregistered@example.com',
@@ -239,7 +228,7 @@ describe('LoginPage', () => {
 
     const consoleError = jest.spyOn(console, 'error').mockImplementation();
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: 'test@example.com',
@@ -275,7 +264,7 @@ describe('LoginPage', () => {
       role: 'admin',
     };
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: '104385730@students.swinburne.edu.my',
@@ -308,7 +297,7 @@ describe('LoginPage', () => {
       role: 'staff',
     };
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: {
         user: {
           email: 'staff@example.com',
@@ -343,7 +332,7 @@ describe('LoginPage', () => {
 
     const removeItemSpy = jest.spyOn(Storage.prototype, 'removeItem');
 
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
     });
@@ -362,7 +351,7 @@ describe('LoginPage', () => {
   });
 
   it('renders registration link', () => {
-    (useNextAuthSession as jest.Mock).mockReturnValue({
+    (useSession as jest.Mock).mockReturnValue({
       data: null,
       status: 'unauthenticated',
     });

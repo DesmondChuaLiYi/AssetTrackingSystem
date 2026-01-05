@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import LogoutButton from '../logoutButton';
 import { HomeIcon } from 'lucide-react';
-import { useSession } from '../sessionProvider';
+import { useSession } from "next-auth/react";
 
 const adminModules = [
   { name: 'Home', icon: HomeIcon, href: '/admin/dashboard' },
@@ -66,7 +66,7 @@ const sidebarVariants: Variants = {
 };
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (value: boolean) => void }) {
-  const { session } = useSession();
+  const { data: session } = useSession();
   const pathname = usePathname();
 
   const adminEmails = [
@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
     '104401021@students.swinburne.edu.my',
     '104401173@students.swinburne.edu.my',
   ];
-  const userRole = session?.email && adminEmails.includes(session.email) ? 'admin' : 'user';
+  const userRole = session?.user.email && adminEmails.includes(session.user.email) ? 'admin' : 'user';
 
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);

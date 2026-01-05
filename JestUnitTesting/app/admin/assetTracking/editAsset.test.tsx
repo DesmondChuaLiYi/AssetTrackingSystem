@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import EditAssetPage from '@/app/admin/assetTracking/editAsset/[id]/page';
+import EditAssetPage from '@/app/(app)/admin/assetTracking/editAsset/[id]/page';
 
 // Mock useParams
 jest.mock('next/navigation', () => ({

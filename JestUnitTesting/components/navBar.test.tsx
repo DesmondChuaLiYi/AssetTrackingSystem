@@ -2,14 +2,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { usePathname } from 'next/navigation';
 import Navbar from '@/components/navbar/navbar';
-import { useSession } from '@/components/sessionProvider';
+import { useSession } from 'next-auth/react';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
 }));
 
-jest.mock('@/components/SessionProvider', () => ({
+jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
 }));
 
@@ -30,14 +30,16 @@ jest.mock('@/components/navbar/sideBar', () => ({
 describe('Navbar', () => {
   const mockSetSidebarOpen = jest.fn();
   const mockSession = {
-    name: 'Test User',
-    email: 'test@example.com',
+    user: {
+      name: 'Test User',
+      email: 'test@example.com',
+    }
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     (usePathname as jest.Mock).mockReturnValue('/admin/dashboard');
-    (useSession as jest.Mock).mockReturnValue({ session: mockSession });
+    (useSession as jest.Mock).mockReturnValue({ data: mockSession });
 
     Object.defineProperty(window, 'innerWidth', {
       writable: true,

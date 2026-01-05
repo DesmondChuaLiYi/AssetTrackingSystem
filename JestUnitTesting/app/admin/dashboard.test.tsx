@@ -1,14 +1,14 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import DashboardPage from '@/app/admin/dashboard/page';
-import { useSession } from '@/components/sessionProvider';
+import DashboardPage from '@/app/(app)/admin/dashboard/page';
+import { useSession } from 'next-auth/react';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock('@/components/SessionProvider', () => ({
+jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
 }));
 

@@ -1,83 +1,56 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 
-// Hardcoded admin emails (temporary until role management is fully implemented)
-const ADMIN_EMAILS = [
-  '104385730@students.swinburne.edu.my',
-  '104401021@students.swinburne.edu.my',
-  '104401173@students.swinburne.edu.my',
-]
+export default withAuth(
+  function middleware(request: NextRequestWithAuth) {
+    const { pathname } = request.nextUrl;
+    const token = request.nextauth.token;
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // Get session cookie (contains role information)
-  const sessionCookie = request.cookies.get('user_session')
-  const hasSession = !!sessionCookie
-
-  let userRole: string | null = null
-  let userEmail: string | null = null
-
-  if (sessionCookie) {
-    try {
-      const sessionData = JSON.parse(sessionCookie.value)
-      userRole = sessionData.role
-      userEmail = sessionData.email
-    } catch (error) {
-      // Invalid cookie, treat as no session
-      console.error('Invalid session cookie:', error)
+    // Redirect /dashboard to role-based dashboard
+    if (pathname === '/dashboard') {
+      if (token?.role === 'admin') {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+      }
+      return NextResponse.redirect(new URL('/user/dashboard', request.url));
     }
-  }
 
-  // Public routes that don't require authentication
-  const publicRoutes = ['/', '/register', '/api/auth', '/api/sessions']
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
-
-  if (isPublicRoute) {
-    return NextResponse.next()
-  }
-
-  // Protected routes - require authentication
-  if (!hasSession || !userRole) {
-    // No session or role → redirect to login
-    console.log(`[Middleware] No session for ${pathname}, redirecting to login`)
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    url.searchParams.set('error', 'unauthorized')
-    return NextResponse.redirect(url)
-  }
-
-  // Admin routes - require admin role or admin email
-  if (pathname.startsWith('/admin')) {
-    const isAdmin = userRole === 'admin' || (userEmail && ADMIN_EMAILS.includes(userEmail))
-
-    if (!isAdmin) {
-      // User is not admin → show unauthorized page
-      console.log(`[Middleware] User (role: '${userRole}', email: '${userEmail}') attempted to access admin route: ${pathname}`)
-      const url = request.nextUrl.clone()
-      url.pathname = '/unauthorized'
-      return NextResponse.redirect(url)
+    // Protect /admin routes
+    if (pathname.startsWith('/admin')) {
+      if (token?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
     }
-  }
 
-  // User routes - any authenticated user can access
-  if (pathname.startsWith('/user')) {
-    // Already checked hasSession above, so allowed
-  }
+    // Protect /user routes
+    if (pathname.startsWith('/user')) {
+      if (!token) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+    }
 
-  // Allow the request to proceed
-  return NextResponse.next()
-}
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        if (req.nextUrl.pathname.startsWith('/(auth)')) {
+          return true;
+        }
+        if (req.nextUrl.pathname.startsWith('/(app)')) {
+          return !!token;
+        }
+        if (req.nextUrl.pathname === '/dashboard') {
+          return !!token; // Allow access but will redirect
+        }
+        return true;
+      },
+    },
+  }
+);
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder (public assets)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
-}
+};

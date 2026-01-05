@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import AddLocationPage from '@/app/admin/location/addLocation/page';
+import AddLocationPage from '@/app/(app)/admin/location/addLocation/page';
 
 // Mock DynamicAdd component
 jest.mock('@/components/DynamicAdd', () => {

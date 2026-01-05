@@ -10,10 +10,10 @@ import { Package, Users, MapPin, Building2, CheckCircle, AlertCircle, ShoppingCa
 
 // --- CONFIGURATION ---
 const configs = {
-  asset: { title: "Asset Scanner", description: "Scan asset QR codes or barcodes", icon: Package, idColumn: "asset_id" },
-  staff: { title: "Staff ID Scanner", description: "Scan staff identification codes", icon: Users, idColumn: "staff_id" },
-  location: { title: "Location Scanner", description: "Scan location QR codes or barcodes", icon: MapPin, idColumn: "location_id" },
-  department: { title: "Department Scanner", description: "Scan department codes", icon: Building2, idColumn: "department_id" },
+  asset: { title: "Asset Scanner", description: "Scan asset QR codes or barcodes", icon: Package, idColumn: "asset_id", tableName: "Asset" },
+  staff: { title: "Staff ID Scanner", description: "Scan staff identification codes", icon: Users, idColumn: "staff_id", tableName: "Staff" },
+  location: { title: "Location Scanner", description: "Scan location QR codes or barcodes", icon: MapPin, idColumn: "location_id", tableName: "Location" },
+  department: { title: "Department Scanner", description: "Scan department codes", icon: Building2, idColumn: "department_id", tableName: "Department" },
 };
 
 // ============================================
@@ -191,7 +191,7 @@ export default function ScannerPage() {
     // --------------------------------------------
     if (parentScan === null) {
       if (type === 'location' || type === 'department') {
-        const { data, error } = await supabase.from(type).select().ilike(config.idColumn, scannedCode.trim()).single();
+        const { data, error } = await supabase.from(config.tableName).select().ilike(config.idColumn, scannedCode.trim()).single();
         if (error || !data) { alert(`Error: ${type} ID "${scannedCode}" not found.`); return; }
         setParentScan({ type: type, id: scannedCode, name: data.name || scannedCode });
       } else {
@@ -262,7 +262,7 @@ export default function ScannerPage() {
           if (item.action === 'ASSIGN') {
             const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             await supabase
-            .from('staff_asset')
+            .from('StaffAsset')
             .insert({ id: newId, staff_id: staffData.staff_id, asset_id: item.asset.asset_id });
           } else if (item.action === 'UNASSIGN') {
             await supabase
@@ -277,9 +277,9 @@ export default function ScannerPage() {
       if ((type === 'location' || type === 'department') && parentScan) {
         for (const item of validItems) {
           // Update all items in the cart to the Parent ID
-          await supabase.from('asset').update({ 
+          await supabase.from('Asset').update({ 
             [config.idColumn]: parentScan.id, // e.g. location_id or department_id
-            updated_at: new Date().toISOString() 
+            updated_dt: new Date().toISOString() 
           }).eq('asset_id', item.asset.asset_id);
         }
       }
@@ -300,14 +300,14 @@ export default function ScannerPage() {
     }
   };
 
-  const handleAssetUpdate = async (newData: any) => { /* ... unchanged ... */
+  const handleAssetUpdate = async (newData: any) => {
     if (!scannedItem || type !== 'asset') { alert("Error"); return; }
     try {
       const dataToUpdate = { 
         condition: newData.condition, 
         location_id: newData.location_id, 
         department_id: newData.department_id, 
-        updated_at: new Date().toISOString() 
+        updated_dt: new Date().toISOString() 
       };
 
       const { error } = await supabase
@@ -321,12 +321,12 @@ export default function ScannerPage() {
     } catch (e: any) { alert(e.message); }
   };
 
-  const handleAssetCreate = async (newData: any) => { /* ... unchanged ... */ 
+  const handleAssetCreate = async (newData: any) => {
     if (!scannedItem) { alert("Error"); return; }
     try {
       const dataToInsert: any = {
         asset_id: scannedItem.code, name: newData.name, description: newData.description, condition: newData.condition,
-        created_at: new Date().toISOString(), location_id: newData.location_id, department_id: newData.department_id,
+        created_dt: new Date().toISOString(), location_id: newData.location_id, department_id: newData.department_id,
         category: newData.category, model: newData.model,
       };
       if (parentScan) dataToInsert[parentScan.type + '_id'] = parentScan.id;
@@ -348,7 +348,9 @@ export default function ScannerPage() {
   }
 
   if (pageState === 'confirmation') {
-    return <ConfirmationContent item={scannedItem} tableName={'asset'} onBack={() => setPageState('scanning')} onSubmit={handleAssetUpdate} onCreate={handleAssetCreate} parentScan={parentScan} />;
+    // Changed by Desmond @ 5-Jan-26 : Changed the tableName from asset to config.tableName, same goes for confirmationContext.tsx
+    return <ConfirmationContent item={scannedItem} tableName={config.tableName} onBack={() => setPageState('scanning')} onSubmit={handleAssetUpdate} onCreate={handleAssetCreate} parentScan={parentScan} />;
+    // End
   }
 
   return (

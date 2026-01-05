@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from '@/components/sessionProvider'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/breadcrumb'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
@@ -33,7 +33,7 @@ interface DynamicEditProps {
 }
 
 export default function DynamicEdit({ config, recordId }: DynamicEditProps) {
-  const { session } = useSession()
+  const { data: session } = useSession()
   const router = useRouter()
   const [formData, setFormData] = useState<any>({})
   const [relatedData, setRelatedData] = useState<{ [key: string]: any[] }>({})

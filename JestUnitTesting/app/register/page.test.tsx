@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import RegisterPage from '@/app/register/page';
+import RegisterPage from '@/app/(auth)/register/page';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({

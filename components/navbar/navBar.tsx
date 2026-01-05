@@ -9,7 +9,7 @@ import {
   Bars3Icon,
 } from '@heroicons/react/24/outline';
 import LogoutButton from '../logoutButton';
-import { useSession } from '../sessionProvider';
+import { useSession } from "next-auth/react";
 
 // Dynamically import Sidebar with SSR disabled
 const Sidebar = dynamic(() => import('./sidebar'), { ssr: false });
@@ -22,7 +22,7 @@ interface NavBarProps {
 export default function Navbar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
-  const { session } = useSession();
+  const { data: session } = useSession();
 
   const [isMobile, setIsMobile] = useState(false);
   const prevPathname = useRef(pathname);
@@ -49,8 +49,8 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
     if (isMobile && sidebarOpen) setIsProfileOpen(false);
   }, [sidebarOpen, isMobile]);
 
-  const userName = session?.name || 'User';
-  const userEmail = session?.email || 'No email available';
+  const userName = session?.user.name || 'User';
+  const userEmail = session?.user.email || 'No email available';
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

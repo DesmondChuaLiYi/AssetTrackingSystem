@@ -1,14 +1,14 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
-import ProfilePage from '@/app/profile/page';
-import { useSession } from '@/components/sessionProvider';
+import ProfilePage from '@/app/(app)/profile/page';
+import { useSession } from 'next-auth/react';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock('@/components/SessionProvider', () => ({
+jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
 }));
 

@@ -6,7 +6,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import {
   QrCode, Barcode,
   ChevronLeft,
-  XCircle // <-- Add this import
+  XCircle 
 } from 'lucide-react';
 
 export default function ScannerContent({
@@ -15,7 +15,7 @@ export default function ScannerContent({
   icon: Icon,
   onItemScanned,
   onBack,
-  parentScan, // <-- It now accepts this prop
+  parentScan,
 }: {
   title: string;
   description: string;
@@ -49,7 +49,7 @@ export default function ScannerContent({
           const scanner = new Html5Qrcode(scannerRegionId);
           scannerRef.current = scanner;
 
-          const config = { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
+          const config = { fps: 30, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
 
           const onScanSuccess = (decodedText: string) => {
             stopScanning(); // Stop immediately

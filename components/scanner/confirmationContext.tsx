@@ -90,7 +90,9 @@ export default function ConfirmationContent({
     };
     
     const fetchAssetDetails = async () => {
-      if (!item || !item.code || tableName !== "asset") {
+      // Changed by Desmond @ 5-Jan-26 : Removed tableName hardcoding
+      if (!item || !item.code) {
+      // End
         setMode('error');
         setError("Invalid asset data provided.");
         return;

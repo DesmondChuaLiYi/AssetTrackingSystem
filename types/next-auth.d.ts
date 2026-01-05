@@ -7,12 +7,29 @@ declare module "next-auth" {
       email?: string | null
       image?: string | null
       microsoftUserId?: string
+      role?: string
+      staffId?: string
+      departmentId?: string
+      mobileNo?: string
     }
+  }
+  
+  interface User {
+    microsoftUserId?: string
+    role?: string
+    staffId?: string
+    departmentId?: string
+    mobileNo?: string
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     microsoftUserId?: string
+    role?: string
+    staffId?: string
+    departmentId?: string
+    mobileNo?: string
+    name?: string
   }
 }

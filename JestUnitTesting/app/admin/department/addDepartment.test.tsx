@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import AddDepartmentPage from '@/app/admin/department/addDepartment/page';
+import AddDepartmentPage from '@/app/(app)/admin/department/addDepartment/page';
 
 // Mock DynamicAdd component
 jest.mock('@/components/DynamicAdd', () => {

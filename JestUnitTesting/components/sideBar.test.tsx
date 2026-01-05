@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/navbar/sidebar';
-import { useSession } from '@/components/sessionProvider';
+import { useSession } from 'next-auth/react';
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
@@ -10,7 +10,7 @@ jest.mock('next/navigation', () => ({
   })),
 }));
 
-jest.mock('@/components/SessionProvider', () => ({
+jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
 }));
 

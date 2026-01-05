@@ -1,35 +1,30 @@
-// app/layout.tsx
+// Root layout for the application which includes metadata and global styles
 import type { Metadata } from "next";
-import "./styles/globals.css";
+import "./globals.css";
 import { NextAuthProvider } from "@/components/auth/nextAuthProvider";
-import { SessionProvider } from "@/components/sessionProvider";
 import { ToastProvider } from "@/components/ui/toast";
-import LayoutWrapper from "@/components/layoutWrapper";
 
 export const metadata: Metadata = {
   title: "Asset Tracking System",
-  description: "IT Asset Tracking System with QR codes and barcodes",
+  description: "Swinburne Asset Tracking System for staff and IT department",
   icons: {
     icon: '/favicon.ico'
   },
+  referrer: 'strict-origin-when-cross-origin',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body className="antialiased bg-white text-black">
         <NextAuthProvider>
-          <SessionProvider>
-            <ToastProvider>
-              <LayoutWrapper>
-                {children}
-              </LayoutWrapper>
-            </ToastProvider>
-          </SessionProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </NextAuthProvider>
       </body>
     </html>

@@ -1,13 +1,13 @@
 'use client'
 
-import { useSession } from '@/components/sessionProvider'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/breadcrumb'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { session } = useSession()
+  const { data: session, status } = useSession()
   const [assignedAssets, setAssignedAssets] = useState<any[]>([])
   const [isLoadingAssets, setIsLoadingAssets] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -21,7 +21,8 @@ export default function ProfilePage() {
   // Fetch assigned assets when session is available
   useEffect(() => {
     const fetchAssets = async () => {
-      if (!session?.staffId) {
+      const staffId = (session?.user as any)?.staffId
+      if (!staffId) {
         setIsLoadingAssets(false)
         return
       }
@@ -30,7 +31,7 @@ export default function ProfilePage() {
         const response = await fetch('/api/staff/assets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ staffId: session.staffId })
+          body: JSON.stringify({ staffId })
         })
 
         const data = await response.json()
@@ -79,7 +80,7 @@ export default function ProfilePage() {
                   User Name:
                 </label>
                 <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-md flex-1">
-                  {session?.name || 'Loading...'}
+                  {status === 'loading' ? 'Loading...' : session?.user?.name || 'N/A'}
                 </div>
               </div>
 
@@ -89,7 +90,7 @@ export default function ProfilePage() {
                   Email:
                 </label>
                 <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-md flex-1">
-                  {session?.email || 'N/A'}
+                  {status === 'loading' ? 'Loading...' : session?.user?.email || 'N/A'}
                 </div>
               </div>
 
@@ -99,7 +100,7 @@ export default function ProfilePage() {
                   Staff ID:
                 </label>
                 <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-md flex-1">
-                  {session?.staffId || 'N/A'}
+                  {status === 'loading' ? 'Loading...' : session?.user?.staffId || 'N/A'}
                 </div>
               </div>
 
@@ -109,7 +110,7 @@ export default function ProfilePage() {
                   Mobile:
                 </label>
                 <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-md flex-1">
-                  {session?.mobileNo || 'N/A'}
+                  {status === 'loading' ? 'Loading...' : session?.user?.mobileNo || 'N/A'}
                 </div>
               </div>
 
@@ -119,7 +120,7 @@ export default function ProfilePage() {
                   Department:
                 </label>
                 <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-md flex-1">
-                  {session?.departmentId || 'N/A'}
+                  {status === 'loading' ? 'Loading...' : session?.user?.departmentId || 'N/A'}
                 </div>
               </div>
 

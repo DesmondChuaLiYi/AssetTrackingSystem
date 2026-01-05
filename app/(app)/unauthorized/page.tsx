@@ -2,17 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useSession } from "@/components/sessionProvider";
 import { ShieldExclamationIcon } from "@heroicons/react/24/outline";
 
 export default function UnauthorizedPage() {
   const router = useRouter();
-  const { endSession } = useSession();
 
   const handleReturnToLogin = async () => {
-    // Clear session and logout
-    await endSession();
-    await signOut({ callbackUrl: '/' });
+    // Sign out and redirect to login
+    await signOut({ callbackUrl: '/login' });
   };
 
   return (
