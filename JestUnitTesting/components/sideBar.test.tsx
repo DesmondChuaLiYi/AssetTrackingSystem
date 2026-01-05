@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
-import Sidebar from '@/components/navbar/sidebar';
+import Sidebar from '@/components/navbar/sideBar';
 import { useSession } from 'next-auth/react';
 
 jest.mock('next/navigation', () => ({

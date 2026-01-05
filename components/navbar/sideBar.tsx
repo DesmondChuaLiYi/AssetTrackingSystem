@@ -12,7 +12,7 @@ import {
   UsersIcon,
   ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
-import LogoutButton from '../logoutButton';
+import LogoutButton from '../LogoutButton';
 import { HomeIcon } from 'lucide-react';
 import { useSession } from "next-auth/react";
 

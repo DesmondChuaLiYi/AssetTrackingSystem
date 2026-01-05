@@ -8,11 +8,11 @@ import {
   CogIcon,
   Bars3Icon,
 } from '@heroicons/react/24/outline';
-import LogoutButton from '../logoutButton';
+import LogoutButton from '../LogoutButton';
 import { useSession } from "next-auth/react";
 
 // Dynamically import Sidebar with SSR disabled
-const Sidebar = dynamic(() => import('./sidebar'), { ssr: false });
+const Sidebar = dynamic(() => import('./sideBar'), { ssr: false });
 
 interface NavBarProps {
   sidebarOpen: boolean;

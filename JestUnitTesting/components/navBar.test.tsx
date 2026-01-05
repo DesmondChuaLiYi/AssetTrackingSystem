@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { usePathname } from 'next/navigation';
-import Navbar from '@/components/navbar/navbar';
+import Navbar from '@/components/navbar/navBar';
 import { useSession } from 'next-auth/react';
 
 // Mock dependencies
