@@ -89,6 +89,7 @@ export default function ScannerPage() {
   const [scannedItem, setScannedItem] = useState<any>(null);
   const [submittedData, setSubmittedData] = useState<{ item: any, page: string } | null>(null);
   const [scannerKey, setScannerKey] = useState(0);
+  const [shouldStartScanning, setShouldStartScanning] = useState(false);
 
   // Location/Department/Asset State
   const [parentScan, setParentScan] = useState<{ type: string, id: string, name: string } | null>(null);
@@ -116,7 +117,7 @@ export default function ScannerPage() {
   // MAIN LOGIC: HANDLE SCAN
   // ============================================================
   const handleItemScanned = async (item: any) => {
-    const scannedCode = item.code;
+    const scannedCode = item.code.trim();
 
     // --------------------------------------------
     // PATH 1: STAFF SCANNING
@@ -131,7 +132,7 @@ export default function ScannerPage() {
             .maybeSingle();
 
           if (error || !existingStaff) {
-            setErrorMessage(`Staff ID not found: ${scannedCode}`);
+            setErrorMessage(`Staff ID not found: ${scannedCode}\n\nPlease verify the staff ID exists in the database.`);
             setShowErrorModal(true);
             return;
           }
@@ -181,7 +182,7 @@ export default function ScannerPage() {
         if (ownedBySomeoneElse) action = 'ERROR';
 
         setCart(prev => [...prev, { id: Date.now(), asset: existingAsset, action, currentOwner: currentAssignment?.staff_id, assignmentId: currentAssignment?.id }]);
-        setTimeout(() => { setScannerKey(prev => prev + 1); }, 500); // Restart scanner
+        // No need to restart scanner, it continues automatically
       } catch (e: any) { setErrorMessage(`Error: ${e.message}`); setShowErrorModal(true); }
       return;
     }
@@ -244,9 +245,17 @@ export default function ScannerPage() {
   };
 
   // --- HANDLERS ---
-  const handleStaffContinue = () => { setShowStaffModal(false); setScannerKey(prev => prev + 1); };
+  const handleStaffContinue = () => {
+    setShowStaffModal(false);
+    // Trigger scanner to start
+    setShouldStartScanning(true);
+  };
   const removeFromCart = (id: number) => { setCart(prev => prev.filter(item => item.id !== id)); };
-  const handleErrorClose = () => { setShowErrorModal(false); setErrorMessage(''); setScannerKey(prev => prev + 1); };
+  const handleErrorClose = () => {
+    setShowErrorModal(false);
+    setErrorMessage('');
+    // Don't increment key on error close
+  };
 
   const handleSubmitCart = async () => {
     // If no items or (no staff AND no parentScan), exit
@@ -355,7 +364,22 @@ export default function ScannerPage() {
 
   return (
     <div className="relative">
-      <ScannerContent key={scannerKey} {...config} onItemScanned={handleItemScanned} onBack={() => window.location.href = '/user/dashboard'} parentScan={parentScan} />
+      <ScannerContent
+        key={scannerKey}
+        {...(staffData ? {
+          title: "Asset Scanner",
+          description: `Scan assets to assign/unassign for ${staffData.name}`,
+          icon: Package,
+          idColumn: "asset_id",
+          tableName: "Asset"
+        } : config)}
+        onItemScanned={handleItemScanned}
+        onBack={() => window.location.href = '/user/dashboard'}
+        parentScan={parentScan}
+        autoStart={!!staffData}
+        shouldStartScanning={shouldStartScanning}
+        onScanningStarted={() => setShouldStartScanning(false)}
+      />
       {showStaffModal && staffData && <StaffConfirmedModal staff={staffData} assetCount={staffData.currentAssetCount} onContinue={handleStaffContinue} />}
       {showErrorModal && <ErrorModal message={errorMessage} onClose={handleErrorClose} />}
 

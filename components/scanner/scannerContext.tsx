@@ -16,35 +16,79 @@ export default function ScannerContent({
   onItemScanned,
   onBack,
   parentScan,
+  autoStart = false,
+  shouldStartScanning = false,
+  onScanningStarted,
 }: {
   title: string;
   description: string;
   icon: React.ElementType;
   onItemScanned: (item: any) => Promise<void>;
   onBack: () => void;
-  parentScan: { type: string, id: string, name: string } | null; // <-- Prop type
+  parentScan: { type: string, id: string, name: string } | null;
+  autoStart?: boolean;
+  shouldStartScanning?: boolean;
+  onScanningStarted?: () => void;
 }) {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(false); // Always start as false
   const [scannerError, setScannerError] = useState<string | null>(null);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerRegionId = "qr-reader";
+  const onItemScannedRef = useRef(onItemScanned);
+  const continuousModeRef = useRef(false); // Track if we're in continuous mode
+  const scannerRegionId = "qr-reader"; // Use fixed ID
+  const lastScannedCodeRef = useRef<string | null>(null);
+  const lastScannedTimeRef = useRef<number>(0);
+
+  // Keep the callback ref up to date
+  useEffect(() => {
+    onItemScannedRef.current = onItemScanned;
+  }, [onItemScanned]);
+
+  // Handle external trigger to start scanning
+  useEffect(() => {
+    if (shouldStartScanning && !isScanning) {
+      continuousModeRef.current = autoStart; // Set continuous mode based on autoStart
+      setIsScanning(true);
+      onScanningStarted?.();
+    }
+  }, [shouldStartScanning, isScanning, onScanningStarted, autoStart]);
 
   const safeStopAndClear = async (inst: Html5Qrcode | null) => {
     if (!inst) return;
     try {
-      if ((inst as any).isScanning) {
-        const maybe = (inst.stop as any)();
-        if (maybe && typeof maybe.then === "function") await maybe;
+      const state = await (inst as any).getState();
+      if (state === 2) { // 2 = SCANNING state
+        await (inst as any).stop();
       }
-    } catch (e) { console.warn("Error stopping scanner", e); }
-    try { (inst.clear as any)(); } catch (e) { console.warn("Error clearing", e); }
+    } catch (e) {
+      // If getState doesn't work, try to stop anyway
+      try {
+        await (inst as any).stop();
+      } catch (stopError) {
+        // Silently handle
+      }
+    }
+    try {
+      (inst as any).clear();
+    } catch (e) {
+      // Silently handle
+    }
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     if (isScanning) {
       const startScanner = async () => {
-        if (scannerRef.current) return;
+        // Clean up any existing scanner first
+        if (scannerRef.current) {
+          await safeStopAndClear(scannerRef.current);
+          scannerRef.current = null;
+        }
+
+        if (!isMounted) return;
+
         try {
           const scanner = new Html5Qrcode(scannerRegionId);
           scannerRef.current = scanner;
@@ -52,19 +96,42 @@ export default function ScannerContent({
           const config = { fps: 30, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
 
           const onScanSuccess = (decodedText: string) => {
-            stopScanning(); // Stop immediately
-            
+            if (!isMounted) return;
+
+            // Debounce: Ignore duplicate scans within 2 seconds
+            const now = Date.now();
+            if (lastScannedCodeRef.current === decodedText && now - lastScannedTimeRef.current < 2000) {
+              return; // Ignore duplicate scan
+            }
+
+            // Update last scanned tracking
+            lastScannedCodeRef.current = decodedText;
+            lastScannedTimeRef.current = now;
+
             const newItem = {
               id: Date.now(),
               code: decodedText,
               time: new Date().toLocaleTimeString(),
-              name: `${title.split(" ")[0]} - ${decodedText}`,
+              name: `Item - ${decodedText}`,
             };
 
             const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGgU+mtn0xG8qBSuBzvLZiTYIGWe77OWfTRAMUKnj7K5iHAY5j9n0xXksBS");
             audio.play().catch(() => {});
 
-            onItemScanned(newItem);
+            onItemScannedRef.current(newItem);
+
+            // In continuous mode: pause briefly then auto-resume
+            // In normal mode: stop completely
+            if (continuousModeRef.current) {
+              setIsScanning(false); // Pause scanner (don't call stopScanning - it resets continuous mode)
+              setTimeout(() => {
+                if (isMounted && continuousModeRef.current) {
+                  setIsScanning(true); // Resume scanning
+                }
+              }, 1000); // 1 second pause before resuming
+            } else {
+              stopScanning(); // Stop completely
+            }
           };
 
           await (scanner as any).start(
@@ -74,22 +141,32 @@ export default function ScannerContent({
             () => {}
           );
         } catch (error: any) {
-          setScannerError(error.message || "Camera access denied.");
-          setIsScanning(false);
+          if (isMounted) {
+            setScannerError(error.message || "Camera access denied.");
+            setIsScanning(false);
+          }
         }
       };
       startScanner();
     }
 
     return () => {
+      isMounted = false;
       const inst = scannerRef.current;
       scannerRef.current = null;
       safeStopAndClear(inst);
     };
-  }, [isScanning, title, onItemScanned]);
+  }, [isScanning]);
 
-  const handleStartClick = () => { setScannerError(null); setIsScanning(true); };
-  const stopScanning = () => setIsScanning(false);
+  const handleStartClick = () => {
+    setScannerError(null);
+    continuousModeRef.current = autoStart; // Set continuous mode based on autoStart
+    setIsScanning(true);
+  };
+  const stopScanning = () => {
+    setIsScanning(false);
+    continuousModeRef.current = false; // Exit continuous mode when stopping
+  };
 
   const handleBack = () => {
     if (isScanning) stopScanning();
