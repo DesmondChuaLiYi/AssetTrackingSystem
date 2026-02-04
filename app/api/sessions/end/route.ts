@@ -1,6 +1,6 @@
 // app/api/sessions/end/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 export async function POST(request: NextRequest) {
   try {

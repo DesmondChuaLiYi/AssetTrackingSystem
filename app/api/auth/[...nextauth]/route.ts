@@ -1,11 +1,7 @@
 // app/api/auth/[...nextauth]/route.ts
-/*
-  - route.ts are not normal modules
-  - They are special files where Next.js is very strict about
-  - what are allowed to export.
-  - In app/api/__/route.ts, we can only export HTTP hanlers such as
-  - GET, POST, PUT, DELETE and etc.
-  - And small set of special config fields like runtime or revalidate.
+/* Commented by Desmond @ 24-Jan-2026
+  - This file contains the NextAuth handler for authentication
+  - It should remain public for authentication
 */
 import NextAuth, { AuthOptions } from "next-auth" // NextAuth handler
 import { authOptions } from "@/lib/auth"; // Import auth config

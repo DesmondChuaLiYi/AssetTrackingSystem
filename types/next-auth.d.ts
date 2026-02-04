@@ -9,11 +9,11 @@ declare module "next-auth" {
       microsoftUserId?: string
       role?: string
       staffId?: string
-      departmentId?: string
-      mobileNo?: string
+      departmentId?: string | null
+      mobileNo?: string | null
     }
   }
-  
+
   interface User {
     microsoftUserId?: string
     role?: string
@@ -28,8 +28,8 @@ declare module "next-auth/jwt" {
     microsoftUserId?: string
     role?: string
     staffId?: string
-    departmentId?: string
-    mobileNo?: string
+    departmentId?: string | null
+    mobileNo?: string | null
     name?: string
   }
 }

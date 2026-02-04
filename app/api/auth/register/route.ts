@@ -1,5 +1,10 @@
+// app/api/auth/register/route.ts
+/* Commented by Desmond @ 24-Jan-2026
+  - This route should remain public for user registration
+  - It is also protected by middleware.ts
+*/
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin as supabase } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Check if email already exists
     const { data: existingStaff, error: checkError } = await supabase
-      .from('staff')
+      .from('Staff')
       .select('email, status')
       .eq('email', email)
       .single()
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new staff registration (status defaults to 'pending')
     const { data: newStaff, error: insertError } = await supabase
-      .from('staff')
+      .from('Staff')
       .insert([
         {
           staff_id,

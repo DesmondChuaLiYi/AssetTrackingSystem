@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase/client";
 import {
   ChevronLeft,
   CheckCircle,
@@ -8,8 +8,8 @@ import {
   AlertCircle,
   Save,
   PackagePlus,
-  MapPin, 
-  Building2, 
+  MapPin,
+  Building2,
 } from "lucide-react";
 
 // (Types are unchanged)
@@ -27,18 +27,18 @@ export default function ConfirmationContent({
   onBack,
   onSubmit,
   onCreate,
-  parentScan, // <-- ADD THIS PROP
+  parentScan,
 }: {
   item: any;
   tableName: string;
   onBack: () => void;
   onSubmit: (data: {
-    condition: string, 
+    condition: string,
     location_id: string | null,
     department_id: string | null,
     name: string, category: string, model: string, asset_id: string
-  }) => Promise<void>; 
-  onCreate: (data: { 
+  }) => Promise<void>;
+  onCreate: (data: {
     name: string, description: string, condition: string,
     location_id: string | null, department_id: string | null,
     category: string, model: string
@@ -47,19 +47,19 @@ export default function ConfirmationContent({
 }) {
   const [mode, setMode] = useState<'loading' | 'editing' | 'registering' | 'error'>('loading');
   const [assetDetails, setAssetDetails] = useState<Asset | null>(null);
-  
+
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [condition, setCondition] = useState("In-use");
   const [newCategory, setNewCategory] = useState('');
   const [newModel, setNewModel] = useState('');
-  
+
   const [locations, setLocations] = useState<Location[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  
-  const [selectedLocation, setSelectedLocation] = useState(''); 
-  const [selectedDepartment, setSelectedDepartment] = useState(''); 
-  
+
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+
   const [error, setError] = useState<string | null>(null);
 
   const conditionOptions = [
@@ -88,20 +88,20 @@ export default function ConfirmationContent({
         console.error("Error fetching dropdown data:", err);
       }
     };
-    
+
     const fetchAssetDetails = async () => {
       // Changed by Desmond @ 5-Jan-26 : Removed tableName hardcoding
       if (!item || !item.code) {
-      // End
+        // End
         setMode('error');
         setError("Invalid asset data provided.");
         return;
       }
-      
+
       setMode('loading');
       setError(null);
-      await fetchDropdownData(); 
-      
+      await fetchDropdownData();
+
       try {
         const { data, error } = await supabase
           .from(tableName)
@@ -110,9 +110,9 @@ export default function ConfirmationContent({
           .single();
 
         if (error && error.code === 'PGRST116') {
-          setMode('registering'); 
-          setCondition('In-use'); 
-        } 
+          setMode('registering');
+          setCondition('In-use');
+        }
         else if (error) {
           throw error;
         }
@@ -141,7 +141,7 @@ export default function ConfirmationContent({
         condition,
         location_id: selectedLocation || null,
         department_id: selectedDepartment || null,
-        name: assetDetails?.name || 'N/A', 
+        name: assetDetails?.name || 'N/A',
         category: assetDetails?.category || 'N/A',
         model: assetDetails?.model || 'N/A',
         asset_id: assetDetails?.asset_id || item.code
@@ -151,11 +151,11 @@ export default function ConfirmationContent({
         alert("Please fill in all required fields: Asset Name, Category, and Model.");
         return;
       }
-      onCreate({ 
-        name: newName, 
-        description: newDescription, 
+      onCreate({
+        name: newName,
+        description: newDescription,
         condition,
-        location_id: selectedLocation || null, 
+        location_id: selectedLocation || null,
         department_id: selectedDepartment || null,
         category: newCategory,
         model: newModel
@@ -173,7 +173,7 @@ export default function ConfirmationContent({
           <label htmlFor="assetLocation" className="text-sm font-medium text-gray-700 flex items-center gap-1">
             <MapPin className="w-4 h-4" /> Location (Optional)
           </label>
-          <select 
+          <select
             id="assetLocation"
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
@@ -188,14 +188,14 @@ export default function ConfirmationContent({
           </select>
         </div>
       )}
-      
+
       {/* Only show Department dropdown if we are NOT in a Department Scan flow */}
       {(!parentScan || parentScan.type !== 'department') && (
         <div>
           <label htmlFor="assetDept" className="text-sm font-medium text-gray-700 flex items-center gap-1">
             <Building2 className="w-4 h-4" /> Department (Optional)
           </label>
-          <select 
+          <select
             id="assetDept"
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -223,11 +223,10 @@ export default function ConfirmationContent({
         {conditionOptions.map((option) => (
           <label
             key={option.value}
-            className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-              condition === option.value
+            className={`flex-1 p-4 border-2 rounded-lg cursor-pointer transition-all ${condition === option.value
                 ? "border-red-600 bg-red-50 shadow-md"
                 : "border-gray-300 hover:border-gray-400"
-            }`}
+              }`}
           >
             <input
               type="radio"
@@ -243,7 +242,7 @@ export default function ConfirmationContent({
       </div>
     </div>
   );
-  
+
   // (renderFormContent is unchanged)
   const renderFormContent = () => {
     if (mode === 'loading') {
@@ -253,16 +252,16 @@ export default function ConfirmationContent({
     if (mode === 'error') {
       return (
         <div className="p-8">
-            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
-              <strong className="flex items-center justify-center gap-2">
-                <AlertCircle className="w-5 h-5" /> Error
-              </strong>
-              <p>{error}</p>
-            </div>
+          <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center">
+            <strong className="flex items-center justify-center gap-2">
+              <AlertCircle className="w-5 h-5" /> Error
+            </strong>
+            <p>{error}</p>
+          </div>
         </div>
       );
     }
-    
+
     if (mode === 'editing') {
       return (
         <div className="p-6 lg:p-8 space-y-6">
@@ -281,7 +280,7 @@ export default function ConfirmationContent({
                 <label className="text-sm font-medium text-gray-500">Category</label>
                 <p className="text-lg text-gray-800">{assetDetails?.category || 'N/A'}</p>
               </div>
-               <div>
+              <div>
                 <label className="text-sm font-medium text-gray-500">Model</label>
                 <p className="text-lg text-gray-800">{assetDetails?.model || 'N/A'}</p>
               </div>
@@ -290,94 +289,94 @@ export default function ConfirmationContent({
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Update Association</h3>
-             {renderDropdownSelectors()}
+            {renderDropdownSelectors()}
           </div>
-         
-          {renderConditionSelector()} 
+
+          {renderConditionSelector()}
         </div>
       );
     }
-    
+
     if (mode === 'registering') {
       return (
-         <div className="p-6 lg:p-8 space-y-6">
-           <div className="p-4 bg-blue-50 border border-blue-300 text-blue-800 rounded-lg text-center">
-              <strong className="flex items-center justify-center gap-2">
-                <PackagePlus className="w-5 h-5" />
-                New Asset
-              </strong>
-              <p>This Asset ID was not found. Please register it.</p>
-           </div>
-           
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Register New Asset</h3>
+        <div className="p-6 lg:p-8 space-y-6">
+          <div className="p-4 bg-blue-50 border border-blue-300 text-blue-800 rounded-lg text-center">
+            <strong className="flex items-center justify-center gap-2">
+              <PackagePlus className="w-5 h-5" />
+              New Asset
+            </strong>
+            <p>This Asset ID was not found. Please register it.</p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Register New Asset</h3>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Asset ID</label>
+              <p className="text-lg text-gray-800 font-mono p-2 bg-gray-100 rounded">{item?.code}</p>
+            </div>
+            <div>
+              <label htmlFor="assetName" className="text-sm font-medium text-gray-700">Asset Name (Required)</label>
+              <input
+                id="assetName"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+                className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                placeholder="e.g., Dell Latitude 5420"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Asset ID</label>
-                <p className="text-lg text-gray-800 font-mono p-2 bg-gray-100 rounded">{item?.code}</p>
-              </div>
-              <div>
-                <label htmlFor="assetName" className="text-sm font-medium text-gray-700">Asset Name (Required)</label>
-                <input 
-                  id="assetName"
+                <label htmlFor="assetCategory" className="text-sm font-medium text-gray-700">Category (Required)</label>
+                <input
+                  id="assetCategory"
                   type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
                   required
                   className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-                  placeholder="e.g., Dell Latitude 5420"
+                  placeholder="e.g., Laptop, Furniture"
                 />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="assetCategory" className="text-sm font-medium text-gray-700">Category (Required)</label>
-                  <input 
-                    id="assetCategory"
-                    type="text"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    required
-                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-                    placeholder="e.g., Laptop, Furniture"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="assetModel" className="text-sm font-medium text-gray-700">Model (Required)</label>
-                  <input 
-                    id="assetModel"
-                    type="text"
-                    value={newModel}
-                    onChange={(e) => setNewModel(e.target.value)}
-                    required
-                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-                    placeholder="e.g., Latitude 5420, Moma Water"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label htmlFor="assetDesc" className="text-sm font-medium text-gray-700">Description</label>
-                <textarea 
-                  id="assetDesc"
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
+                <label htmlFor="assetModel" className="text-sm font-medium text-gray-700">Model (Required)</label>
+                <input
+                  id="assetModel"
+                  type="text"
+                  value={newModel}
+                  onChange={(e) => setNewModel(e.target.value)}
+                  required
                   className="w-full p-2 border border-gray-300 rounded-lg mt-1"
-                  rows={3}
-                  placeholder="e.g., 14-inch laptop, 16GB RAM, 512GB SSD"
+                  placeholder="e.g., Latitude 5420, Moma Water"
                 />
               </div>
-
-              {renderDropdownSelectors()}
             </div>
-            
-           {renderConditionSelector()}
-         </div>
+
+            <div>
+              <label htmlFor="assetDesc" className="text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                id="assetDesc"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                rows={3}
+                placeholder="e.g., 14-inch laptop, 16GB RAM, 512GB SSD"
+              />
+            </div>
+
+            {renderDropdownSelectors()}
+          </div>
+
+          {renderConditionSelector()}
+        </div>
       );
     }
-    
+
     return null;
   };
-  
+
   // (getSubmitButton is unchanged)
   const getSubmitButton = () => {
     if (mode === 'editing') {
@@ -403,13 +402,13 @@ export default function ConfirmationContent({
       );
     }
     return (
-       <button
-          type="submit"
-          disabled
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium shadow-md bg-gray-300 text-gray-500 cursor-not-allowed"
-        >
-          Submit
-        </button>
+      <button
+        type="submit"
+        disabled
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium shadow-md bg-gray-300 text-gray-500 cursor-not-allowed"
+      >
+        Submit
+      </button>
     );
   }
 
@@ -432,7 +431,7 @@ export default function ConfirmationContent({
             </div>
             {renderFormContent()}
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-md">
             <div className="px-4 lg:px-6 py-4 bg-gray-50">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

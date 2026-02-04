@@ -1,21 +1,56 @@
 // app/api/assets/route.ts
-import { supabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
+/**
+ * In the API routes, we should not use client Supabase because
+ * - client.ts uses the anon key
+ * - the anon key relies on RLS
+ * - the API routes should not trust client RLS
+ * - we already validate the session using apiAuth.ts
+ */
+import { supabaseAdmin } from '@/lib/supabase/server'
+import { validateSession } from '@/lib/apiAuth'
+
+// Allowed asset condition values
+const ALLOWED_CONDITIONS = ['In-use', 'In-store', 'Spoiled'] as const
+type AssetCondition = typeof ALLOWED_CONDITIONS[number]
 
 // GET - Fetch assets with search and pagination
 export async function GET(request: NextRequest) {
+  const authResult = await validateSession()
+
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
-    const searchField = searchParams.get('searchField') || 'name'
-    const condition = searchParams.get('condition') || ''
-    const sortBy = searchParams.get('sortBy') || 'created_dt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    let query = supabase
-      .from('Asset')
+    const page = Math.max(parseInt(searchParams.get('page') || '1'), 1)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50)
+
+    const search = searchParams.get('search') || ''
+    const condition = searchParams.get('condition') || ''
+
+    const allowedSearchFields = ['name', 'model', 'category']
+    const searchField = allowedSearchFields.includes(
+      searchParams.get('searchField') || ''
+    )
+      ? searchParams.get('searchField')!
+      : 'name'
+
+    const allowedSortFields = ['created_dt', 'updated_dt', 'name']
+    const sortBy = allowedSortFields.includes(
+      searchParams.get('sortBy') || ''
+    )
+      ? searchParams.get('sortBy')!
+      : 'created_dt'
+
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'
+
+    const allowedConditions = ['In-use', 'In-store', 'Spoiled']
+
+    let query = supabaseAdmin // Use Supabase admin to query the table
+      .from('Asset') // Fetch from Asset table
       .select(`
         *,
         location:location_id(name, description),
@@ -23,19 +58,13 @@ export async function GET(request: NextRequest) {
       `, { count: 'exact' })
 
     // Apply condition filter
-    if (condition) {
+    if (condition && allowedConditions.includes(condition)) {
       query = query.eq('condition', condition)
     }
 
     // Apply search filter
     if (search) {
-      if (searchField === 'location') {
-        query = query.ilike('location.name', `%${search}%`)
-      } else if (searchField === 'department') {
-        query = query.ilike('department.name', `%${search}%`)
-      } else {
-        query = query.ilike(searchField, `%${search}%`)
-      }
+      query = query.ilike(searchField, `%${search}%`)
     }
 
     // Add sorting
@@ -49,8 +78,11 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query
 
     if (error) {
-      console.error('Supabase query error:', error)
-      throw error
+      console.error('Asset fetch error:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch assets' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
@@ -58,13 +90,10 @@ export async function GET(request: NextRequest) {
       totalItems: count || 0,
       totalPages: Math.ceil((count || 0) / limit)
     })
-  } catch (error) {
+  } catch (error) { // Catch any error
     console.error('GET /api/assets error:', error)
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Failed to fetch assets',
-        details: error
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -72,12 +101,18 @@ export async function GET(request: NextRequest) {
 
 // POST - Create new asset
 export async function POST(request: NextRequest) {
+  const authResult = await validateSession()
+
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const body = await request.json()
 
     if (!body.asset_id || !body.name || !body.model || !body.category) {
       return NextResponse.json(
-        { error: 'Missing required fields: asset_id, name, model, category' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
@@ -89,7 +124,7 @@ export async function POST(request: NextRequest) {
     //   )
     // }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('Asset')
       .insert([{
         asset_id: body.asset_id,
@@ -97,27 +132,34 @@ export async function POST(request: NextRequest) {
         model: body.model,
         description: body.description || '',
         condition: body.condition || 'In-use',
-        location_id: body.location_id,
-        department_id: body.department_id,
+        location_id: body.location_id || null,
+        department_id: body.department_id || null,
         category: body.category,
         created_dt: new Date().toISOString(),
         updated_dt: new Date().toISOString()
       }])
       .select()
+      .single()
 
     if (error) {
-      console.error('Supabase insert error:', error)
+      if (error.code === '23505') { // Unique key constraint violation
+        return NextResponse.json(
+          { error: 'Asset already exists' },
+          { status: 400 }
+        )
+      }
       throw error
     }
 
-    return NextResponse.json(data[0], { status: 201 })
+    return NextResponse.json(
+      { success: true, data},
+      { status: 201 }
+    )
+
   } catch (error) {
     console.error('POST /api/assets error:', error)
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Failed to create asset',
-        details: error
-      },
+      { error: 'Internal server error'},
       { status: 500 }
     )
   }
@@ -125,9 +167,15 @@ export async function POST(request: NextRequest) {
 
 // PUT - Update asset by ID
 export async function PUT(request: NextRequest) {
+  const authResult = await validateSession()
+
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+  
   try {
     const body = await request.json()
-    const { asset_id, ...updateData } = body
+    const { asset_id } = body
 
     if (!asset_id) {
       return NextResponse.json(
@@ -136,52 +184,50 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    console.log('Updating asset:', asset_id, 'with data:', updateData)
+    const allowedFields = [
+      'name',
+      'model',
+      'description',
+      'condition',
+      'location_id',
+      'department_id',
+      'category',
+    ]
 
-    // Prepare update object with only valid fields
-    const updateObject: any = {
-      updated_dt: new Date().toISOString()
+    const updateData: Record<string, any> = {}
+
+    for (const field of allowedFields) {
+      if (field in body) updateData[field] = body[field]
     }
 
-    // Only include fields that are provided and valid
-    if (updateData.name) updateObject.name = updateData.name
-    if (updateData.model) updateObject.model = updateData.model
-    if (updateData.description !== undefined) updateObject.description = updateData.description
-    if (updateData.condition) updateObject.condition = updateData.condition
-    if (updateData.location_id) updateObject.location_id = updateData.location_id
-    if (updateData.department_id) updateObject.department_id = updateData.department_id
-    if (updateData.category) updateObject.category = updateData.category
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
 
-    const { data, error } = await supabase
+    updateData.updated_dt = new Date().toISOString()
+
+    const { data, error } = await supabaseAdmin
       .from('Asset')
-      .update(updateObject)
+      .update(updateData)
       .eq('asset_id', asset_id)
-      .select(`
-        *,
-        location:location_id(name, description),
-        department:department_id(name)
-      `)
+      .select()
+      .single()
 
     if (error) {
       console.error('Supabase update error:', error)
       throw error
     }
 
-    if (!data || data.length === 0) {
-      return NextResponse.json(
-        { error: 'Asset not found' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(data[0])
+    return NextResponse.json(
+      { success: true, data}
+    )
   } catch (error) {
     console.error('PUT /api/assets error:', error)
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Failed to update asset',
-        details: error
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -189,6 +235,12 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete asset by ID
 export async function DELETE(request: NextRequest) {
+  const authResult = await validateSession('admin')
+
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const asset_id = searchParams.get('asset_id')
@@ -200,7 +252,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('Asset')
       .delete()
       .eq('asset_id', asset_id)
@@ -210,14 +262,12 @@ export async function DELETE(request: NextRequest) {
       throw error
     }
 
-    return NextResponse.json({ success: true, message: 'Asset deleted successfully' })
+    return NextResponse.json(
+      { success: true, message: 'Asset deleted successfully' })
   } catch (error) {
     console.error('DELETE /api/assets error:', error)
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Failed to delete asset',
-        details: error
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

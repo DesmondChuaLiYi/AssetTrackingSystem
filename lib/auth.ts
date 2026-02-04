@@ -2,7 +2,15 @@
 // This is a config file for NextAuth authentication
 import { AuthOptions } from "next-auth" // Tells TypeScript what shape our auth config must have
 import AzureADProvider from "next-auth/providers/azure-ad" // Allows people to log in using Microsoft accounts (Azure Active Directory)
-import { supabase } from "./supabase"
+import { supabaseAdmin } from "@/lib/supabase/server" // Import Supabase admin client for database access"
+
+// Define the staff data that we are fetching from the database
+type staffData = {
+    staff_id: string
+    role: string
+    department_id: string | null
+    mobile_no: string | null
+}
 
 export const authOptions: AuthOptions = { // Creating auth config and export it
     providers: [
@@ -25,7 +33,7 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
     callbacks: {
         // jwt callback runs when a JWT token is created or updated
         async jwt({ token, account, profile }) {
-            if (account && profile) {
+            if (account && profile) { // On first sign in
                 // Store the trusted Microsoft user ID in the token (oid)
                 // to match the microsoft_user_id in the staff table
                 token.microsoftUserId =
@@ -36,17 +44,19 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
 
             // Load staff data from the database once per session
             if (token.email && !token.role) { // If we have the email but no role
-                const { data: staff } = await supabase // Query from the Staff table
-                .from("Staff") // Table name
-                .select("role, department_id, mobile_no, staff_id") // Column names
-                .eq("email", token.email) // Match the email
-                .single() // Only grab one result
-            
-                if (staff) { // If staff is found, attach more info to the token
-                    token.role = staff.role
-                    token.departmentId = staff.department_id
-                    token.mobileNo = staff.mobile_no
-                    token.staffId = staff.staff_id
+                const { data, error } = await supabaseAdmin // Query from the Staff table
+                    .from("Staff") // Table name
+                    .select("staff_id, role, department_id, mobile_no") // Column names
+                    .eq("email", token.email) // Match the email
+                    .single<staffData>() // Only grab one result, using the staffData type
+
+                if (!error && data) { // Only proceed when no error 
+                    token.staffId = data.staff_id
+                    token.role = data.role
+                    token.departmentId = data.department_id
+                    token.mobileNo = data.mobile_no
+                } else if (error) { // Error output
+                    console.error("Error fetching staff data:", error.message)
                 }
             }
 
@@ -58,8 +68,8 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
             if (session.user) { // If user info exists in the session
                 // The microsoftUserId and role are attached from the JWT token
                 session.user.microsoftUserId = token.microsoftUserId as string // Add Microsoft user ID to session
-                session.user.role = token.role as string // Add user role to session
                 session.user.staffId = token.staffId as string // Add staff ID to the session
+                session.user.role = token.role as string // Add user role to session
                 session.user.departmentId = token.departmentId as string // Add department ID to session
                 session.user.mobileNo = token.mobileNo as string // Add mobile number to session    
             }
