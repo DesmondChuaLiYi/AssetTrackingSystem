@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import NavBar from './navbar/navbar'
+import NavBar from  './navbar/navbar'
 import { ReactNode, useState, useEffect } from 'react'
 import { useToast } from '@/components/ui/toast'
 

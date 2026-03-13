@@ -333,8 +333,71 @@ export interface Database {
                 }
                 Relationships: []
             }
-        }
 
+            Maintenance: {
+                Row: {
+                    id: string;
+                    asset_id: string;
+                    location_id: string;
+                    condition_status: 'In-use' | 'In-store' | 'Spoiled';
+                    maintenance_needed: boolean;
+                    priority: 'none' | 'low' | 'medium' | 'high';
+                    ai_response: string;
+                    image_url?: string | null;  
+                    actioned_at?: string | null;    
+                    approval_status?: 'pending' | 'approved' | 'rejected'; 
+                    assessed_at: string;
+                    assessed_by: string | null;
+                    created_dt: string;
+                    updated_dt: string;
+                };
+                Insert: {
+                    id?: string;
+                    asset_id: string;
+                    location_id: string;
+                    condition_status: 'In-use' | 'In-store' | 'Spoiled';
+                    maintenance_needed?: boolean;
+                    priority?: 'none' | 'low' | 'medium' | 'high';
+                    approval_status?: 'pending' | 'approved' | 'rejected'; 
+                    image_url?: string | null;       
+                    actioned_at?: string | null;    
+                    assessed_at?: string;
+                    assessed_by?: string | null;
+                    created_dt?: string;
+                    updated_dt?: string;
+                };
+                Update: {
+                    id?: string;
+                    asset_id?: string;
+                    location_id?: string;
+                    condition_status?: 'In-use' | 'In-store' | 'Spoiled';
+                    maintenance_needed?: boolean;
+                    priority?: 'none' | 'low' | 'medium' | 'high';
+                    approval_status?: 'pending' | 'approved' | 'rejected';
+                    image_url?: string | null;       
+                    actioned_at?: string | null;    
+                    ai_response?: string;
+                    assessed_at?: string;
+                    assessed_by?: string | null;
+                    created_dt?: string;
+                    updated_dt?: string;
+                };
+                Relationships: [
+                    {
+                    foreignKeyName: "maintenance_assessments_asset_id_fkey";
+                    columns: ["asset_id"];
+                    referencedRelation: "Asset";
+                    referencedColumns: ["asset_id"];
+                    },
+                    {
+                    foreignKeyName: "maintenance_assessments_location_id_fkey";
+                    columns: ["location_id"];
+                    referencedRelation: "Location";
+                    referencedColumns: ["location_id"];
+                    }
+                ];
+            };
+        }
         /* 
             Commented by Desmond @ 21-Jan-2026: Start
             - The following functions were added to resolve an issue in the API routes
@@ -366,4 +429,39 @@ export interface Database {
 
         // Commented by Desmond @ 21-Jan-2026: End
     }
+}
+
+export interface MaintenanceAssessment {
+  id: string;
+  asset_id: string;          
+  location_id: string;       
+  condition_status: 'In-use' | 'In-store' | 'Spoiled';
+  maintenance_needed: boolean;
+  priority: 'none' | 'low' | 'medium' | 'high';
+  ai_response: string;
+  image_url?: string | null;           
+  approval_status?: 'pending' | 'approved' | 'rejected';           
+  actioned_at?: string | null;       
+  assessed_at: string;
+  assessed_by: string | null;
+  created_dt: string;
+  updated_dt: string;
+}
+
+export interface AssessmentInput {
+  asset_id: string;          
+  location_id: string;       
+  condition_status: 'In-use' | 'In-store' | 'Spoiled';
+  maintenance_needed: boolean;
+  priority: 'none' | 'low' | 'medium' | 'high';
+  ai_response: string;
+  assessed_by: string | null;
+}
+
+export interface AiAssessmentResult {
+  condition:'In-use' | 'In-store' | 'Spoiled';
+  maintenanceNeeded: boolean;
+  priority: 'none' | 'low' | 'medium' | 'high';
+  issues: string[];
+  fullResponse: string;
 }

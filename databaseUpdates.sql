@@ -64,3 +64,29 @@ COMMENT ON COLUMN staff.microsoft_user_id IS 'Azure AD Object ID (OID), populate
 -- Verification queries (optional - run these to check)
 -- SELECT * FROM staff LIMIT 5;
 -- SELECT get_next_staff_id();
+
+-- To store asset feedback from GEMINI AI 
+create table if not exists maintenance_assessments (
+  id uuid primary key default gen_random_uuid(),
+  asset_id text references assets(asset_id) not null,
+  location_id text references locations(location_id) not null,
+  condition_status text check (condition_status in ('In-use', 'In-store', 'Spoiled')) not null,
+  maintenance_needed boolean not null default false,
+  priority text check (priority in ('none', 'low', 'medium', 'high')) not null default 'none',
+  ai_response text not null,
+  assessed_at timestamp with time zone default now(),
+  assessed_by uuid references auth.users(id),
+  
+  created_dt timestamp with time zone default now(),
+  updated_dt timestamp with time zone default now()
+);
+
+-- Indexes for performance
+create index idx_maintenance_assessments_asset on maintenance_assessments(asset_id);
+create index idx_maintenance_assessments_location on maintenance_assessments(location_id);
+create index idx_maintenance_assessments_date on maintenance_assessments(assessed_at desc);
+
+-- Update assets table to track last assessment (if columns don't exist)
+-- Note: You already have 'condition' column, we'll update that
+alter table assets 
+add column if not exists last_assessed_at timestamp with time zone;

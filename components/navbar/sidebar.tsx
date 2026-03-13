@@ -12,7 +12,7 @@ import {
   UsersIcon,
   ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
-import LogoutButton from '../LogoutButton';
+import LogoutButton from '../logoutButton';
 import { HomeIcon } from 'lucide-react';
 import { useSession } from "next-auth/react";
 
@@ -24,6 +24,7 @@ const adminModules = [
     href: '/admin/assetTracking',
     dropdown: [
       { label: 'Assets', path: 'assets' },
+      { label: 'Maintenance', path: 'maintainApprove' },
     ],
   },
   {

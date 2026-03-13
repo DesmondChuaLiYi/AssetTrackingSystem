@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import RealtimeChart from '@/components/charts/RealtimeChart';
+import RealtimeChart from '@/components/charts/realtimeChart';
 
 // Mock Supabase - define everything INSIDE the factory function
 jest.mock('@supabase/supabase-js', () => {

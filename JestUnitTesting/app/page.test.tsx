@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import LoginPage from '@/app/page';
-import { useToast } from '@/components/ui/Toast';
+import { useToast } from '@/components/ui/toast';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({

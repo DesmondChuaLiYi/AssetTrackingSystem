@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from "react";
+import { Database } from '@/lib/supabase/types';
 import { supabase } from "@/lib/supabase/client";
 import {
   ChevronLeft,
@@ -18,8 +19,8 @@ type Asset = {
   location_id: string; department_id: string;
   condition: string; category: string; model: string;
 };
-type Location = { location_id: string; name: string; };
-type Department = { department_id: string; name: string; };
+type Department = Database['public']['Tables']['Department']['Row'];
+type Location = Database['public']['Tables']['Location']['Row'];  
 
 export default function ConfirmationContent({
   item,
@@ -74,15 +75,15 @@ export default function ConfirmationContent({
       try {
         const { data: locData, error: locError } = await supabase
           .from('Location')
-          .select('location_id, name');
+          .select('*');
         if (locError) throw locError;
-        setLocations(locData || []);
+          setLocations(locData || []);
 
         const { data: deptData, error: deptError } = await supabase
           .from('Department')
-          .select('department_id, name');
+          .select('*');
         if (deptError) throw deptError;
-        setDepartments(deptData || []);
+          setDepartments(deptData || []);
 
       } catch (err: any) {
         console.error("Error fetching dropdown data:", err);
@@ -104,7 +105,7 @@ export default function ConfirmationContent({
 
       try {
         const { data, error } = await supabase
-          .from(tableName)
+          .from(tableName as "Asset" | "Location" | "Department" | "Staff" | "StaffAsset" | "Sessions" | "Maintenance")
           .select()
           .eq("asset_id", item.code)
           .single();
@@ -117,10 +118,11 @@ export default function ConfirmationContent({
           throw error;
         }
         else if (data) {
-          setAssetDetails(data as Asset);
-          setCondition(data.condition || "In-use");
-          setSelectedLocation(data.location_id || '');
-          setSelectedDepartment(data.department_id || '');
+          const typedData = data as Asset;
+          setAssetDetails(typedData);
+          setCondition(typedData.condition || "In-use");
+          setSelectedLocation(typedData.location_id || '');
+          setSelectedDepartment(typedData.department_id || '');
           setMode('editing');
         }
 
