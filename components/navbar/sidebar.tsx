@@ -70,12 +70,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
   const { data: session } = useSession();
   const pathname = usePathname();
 
-  const adminEmails = [
-    '104385730@students.swinburne.edu.my',
-    '104401021@students.swinburne.edu.my',
-    '104401173@students.swinburne.edu.my',
-  ];
-  const userRole = session?.user.email && adminEmails.includes(session.user.email) ? 'admin' : 'user';
+  const userRole = session?.user.role ?? 'user';
 
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);

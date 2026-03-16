@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import ScannerContent from '@/components/scanner/scannerContext';
+import ScannerContent from '@/components/scanner/ScannerContext';
 import SuccessContent from '@/components/scanner/successContent';
 import ConfirmationContent from '@/components/scanner/confirmationContext';
 import { Package, Users, MapPin, Building2, CheckCircle, AlertCircle, ShoppingCart, Trash2, X } from 'lucide-react';
