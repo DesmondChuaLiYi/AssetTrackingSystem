@@ -1,102 +1,125 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { z } from 'zod';
-
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-
-const getQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(10),
-  search: z.string().optional().default(''),
-  searchField: z.enum(['name', 'location_id']).default('name'),
-  sortBy: z.enum(['created_dt', 'name', 'location_id']).default('created_dt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
-
-const postSchema = z.object({
-  name: z.string().min(1, 'Location name is required').max(100),
-  description: z.string().max(255).optional(),
-});
-
-const deleteSchema = z.object({
-  location_id: z.string().uuid('Invalid Location ID'),
-});
-
-async function authenticateUser() {
-  const cookieStore = await cookies();
-  const supabaseAuth = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    cookies: { get(name: string) { return cookieStore.get(name)?.value; } },
-  });
-  const { data: { session }, error } = await supabaseAuth.auth.getSession();
-  if (error || !session) throw new Error('Unauthorized');
-  return session.user;
-}
+import { supabase } from '@/lib/supabase/client'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    await authenticateUser();
-    const { searchParams } = new URL(request.url);
-    const validatedParams = getQuerySchema.parse(Object.fromEntries(searchParams.entries()));
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const search = searchParams.get('search') || ''
+    const searchField = searchParams.get('searchField') || 'name'
+    const sortBy = searchParams.get('sortBy') || 'created_dt'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    let query = supabaseAdmin.from('Location').select('*', { count: 'exact' });
+    let query = supabase
+      .from('Location')
+      .select('*', { count: 'exact' })
 
-    if (validatedParams.search) {
-      query = query.ilike(validatedParams.searchField, `%${validatedParams.search}%`);
+    // Apply search filter fo UUID
+    if (search) {
+      query = query.ilike(searchField, `%${search}%`)
     }
 
-    query = query.order(validatedParams.sortBy, { ascending: validatedParams.sortOrder === 'asc' });
+    // Add sorting
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' })
 
-    const from = (validatedParams.page - 1) * validatedParams.limit;
-    const to = from + validatedParams.limit - 1;
-    query = query.range(from, to);
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
 
-    const { data, error, count } = await query;
-    if (error) throw error;
+    const { data, error, count } = await query
+
+    if (error) throw error
 
     return NextResponse.json({
       data: data || [],
       totalItems: count || 0,
-      totalPages: Math.ceil((count || 0) / validatedParams.limit)
-    });
+      totalPages: Math.ceil((count || 0) / limit)
+    })
   } catch (error) {
-    if (error instanceof z.ZodError) return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
-    return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 });
+    console.error('GET /api/location error:', error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to fetch locations',
+        details: error
+      },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    await authenticateUser();
-    const body = await request.json();
-    const validatedData = postSchema.parse(body);
+    const body = await request.json()
+    const { department_id, ...locationData } = body  // Remove department_id if present
 
-    const { data, error } = await supabaseAdmin.from('Location')
-      .insert([{ ...validatedData, created_dt: new Date().toISOString(), updated_dt: new Date().toISOString() }])
-      .select().single();
+    if (!locationData.name) {
+      return NextResponse.json(
+        { error: 'Location name is required' },
+        { status: 400 }
+      )
+    }
 
-    if (error) throw error;
-    return NextResponse.json({ success: true, data }, { status: 201 });
+    const { data, error } = await supabase
+      .from('Location')
+      .insert([{
+        ...locationData,
+        created_dt: new Date().toISOString(),
+        updated_dt: new Date().toISOString()
+      }])
+      .select()
+
+    if (error) throw error
+
+    return NextResponse.json({
+      data: data[0],
+      success: true
+    })
   } catch (error) {
-    if (error instanceof z.ZodError) return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
-    return NextResponse.json({ error: 'Failed to create location' }, { status: 500 });
+    console.error('POST /api/location error:', error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to create location',
+        success: false
+      },
+      { status: 500 }
+    )
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    await authenticateUser();
-    const { searchParams } = new URL(request.url);
-    const validatedData = deleteSchema.parse({ location_id: searchParams.get('location_id') });
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('location_id') // Changed from 'id' to 'location_id'
 
-    const { error } = await supabaseAdmin.from('Location').delete().eq('location_id', validatedData.location_id);
-    if (error) throw error;
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Location ID is required' },
+        { status: 400 }
+      )
+    }
 
-    return NextResponse.json({ success: true, message: 'Location deleted successfully' });
+    const { error } = await supabase
+      .from('Location')
+      .delete()
+      .eq('location_id', id)
+
+    if (error) throw error
+
+    return NextResponse.json({
+      success: true,
+      message: 'Location deleted successfully'
+    })
   } catch (error) {
-    if (error instanceof z.ZodError) return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
-    return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 });
+    console.error('DELETE /api/location error:', error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to delete location',
+        success: false
+      },
+      { status: 500 }
+    )
   }
 }
 
