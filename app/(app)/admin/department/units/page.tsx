@@ -1,5 +1,7 @@
 'use client'
 
+// useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import DynamicPage, { DynamicPageConfig } from '@/components/dynamicPage'
 
 const config: DynamicPageConfig = {
@@ -42,5 +44,11 @@ const config: DynamicPageConfig = {
 }
 
 export default function DepartmentPage() {
+  // Block non-admins from accessing this page on the client side
+  const { isLoading, isAdmin } = useAdminAccess()
+
+  // Show nothing while checking session, or if user is not admin (hook will redirect them)
+  if (isLoading || !isAdmin) return null
+
   return <DynamicPage config={config} />
 }

@@ -1,5 +1,7 @@
 'use client'
 
+// useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useParams } from 'next/navigation'
 import DynamicEdit from '@/components/dynamicEdit'
 
@@ -39,8 +41,13 @@ const editAssetConfig = {
 }
 
 export default function EditAssetPage() {
+  // Block non-admins from accessing this page on the client side
+  const { isLoading, isAdmin } = useAdminAccess()
   const params = useParams()
   const id = params.id as string
+
+  // Show nothing while checking session, or if user is not admin (hook will redirect them)
+  if (isLoading || !isAdmin) return null
 
   return <DynamicEdit config={editAssetConfig} recordId={id} />
 }

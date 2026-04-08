@@ -1,5 +1,7 @@
 'use client';
 
+// useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { useState, useEffect } from 'react';
 import Breadcrumb from '@/components/ui/breadcrumb';
 import {
@@ -24,6 +26,9 @@ interface Assessment {
 }
 
 export default function MaintenanceReviewPage() {
+  // Block non-admins from accessing this page on the client side
+  const { isLoading: isAuthLoading, isAdmin } = useAdminAccess();
+
   const [pendingAssessments, setPendingAssessments] = useState<Assessment[]>([]);
   const [approvedAssessments, setApprovedAssessments] = useState<Assessment[]>([]);
   const [rejectedAssessments, setRejectedAssessments] = useState<Assessment[]>([]);
@@ -31,6 +36,9 @@ export default function MaintenanceReviewPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+
+  // Show nothing while checking session, or if user is not admin (hook will redirect them)
+  if (isAuthLoading || !isAdmin) return null;
 
   const breadcrumbItems = [
     { label: 'Home', href: '/admin/dashboard', isClickable: true },

@@ -1,5 +1,7 @@
 'use client'
 
+// useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import DynamicAdd from '@/components/dynamicAdd'
 
 const addAssetConfig = {
@@ -38,5 +40,11 @@ const addAssetConfig = {
 }
 
 export default function AddAssetPage() {
+  // Block non-admins from accessing this page on the client side
+  const { isLoading, isAdmin } = useAdminAccess()
+
+  // Show nothing while checking session, or if user is not admin (hook will redirect them)
+  if (isLoading || !isAdmin) return null
+
   return <DynamicAdd config={addAssetConfig} />
 }

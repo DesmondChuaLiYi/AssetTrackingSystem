@@ -1,5 +1,7 @@
 'use client'
 
+// useAuth - checks if the user is logged in, redirect to /login if not
+import { useAuth } from '@/hooks/useAuth'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -7,6 +9,10 @@ import Breadcrumb from '@/components/ui/breadcrumb'
 
 export default function ProfilePage() {
   const router = useRouter()
+
+  // Ensures only authenticated users can view this page
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
+
   const { data: session, status } = useSession()
   const [assignedAssets, setAssignedAssets] = useState<any[]>([])
   const [isLoadingAssets, setIsLoadingAssets] = useState(true)
@@ -48,6 +54,9 @@ export default function ProfilePage() {
 
     fetchAssets()
   }, [session])
+
+  // Show nothing while checking session, or if user is not logged in (useAuth will redirect to /login)
+  if (isAuthLoading || !isAuthenticated) return null
 
   // Show max 3 assets, with "View All" if more than 3
   const displayAssets = assignedAssets.slice(0, 3)

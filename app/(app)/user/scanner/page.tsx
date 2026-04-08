@@ -1,8 +1,29 @@
 'use client';
 
+// useAuth - ensures only logged-in users can access this page, redirects others to /login
+import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+
+// All database operations go through our API route instead of calling Supabase directly
+// This prevents table names, column names and raw queries from showing in the browser Network tab
+const scannerFetch = {
+  // Lookup a record by scanned code (GET request with query params)
+  lookup: async (table: string, idColumn: string, scannedCode: string) => {
+    const params = new URLSearchParams({ table, idColumn, scannedCode })
+    const res = await fetch(`/api/scanner?${params}`)
+    return res.json()
+  },
+  // All write operations use POST with an action field
+  post: async (body: Record<string, unknown>) => {
+    const res = await fetch('/api/scanner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return res.json()
+  },
+}
 import ScannerContent from '@/components/scanner/scannerContext';
 import SuccessContent from '@/components/scanner/successContent';
 import ConfirmationContent from '@/components/scanner/confirmationContext';
@@ -81,8 +102,14 @@ function ErrorModal({ message, onClose }: any) {
 // MAIN SCANNER PAGE
 // ============================================
 export default function ScannerPage() {
+  // Block unauthenticated users from accessing this page, redirect to /login
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
+
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
+
+  // Show nothing while checking session, or if not logged in (useAuth will redirect them)
+  if (isAuthLoading || !isAuthenticated) return null;
 
   // Shared State
   const [pageState, setPageState] = useState('scanning');
@@ -125,24 +152,19 @@ export default function ScannerPage() {
     if (type === 'staff') {
       if (!staffData) {
         try {
-          const { data: existingStaff, error } = await supabase
-            .from('Staff')
-            .select('*')
-            .eq('staff_id', scannedCode)
-            .maybeSingle();
+          // Lookup staff record via API (no direct Supabase call)
+          const staffResult = await scannerFetch.lookup('Staff', 'staff_id', scannedCode);
 
-          if (error || !existingStaff) {
+          if (!staffResult.success || !staffResult.data) {
             setErrorMessage(`Staff ID not found: ${scannedCode}\n\nPlease verify the staff ID exists in the database.`);
             setShowErrorModal(true);
             return;
           }
 
-          const { count } = await supabase
-            .from('StaffAsset')
-            .select('*', { count: 'exact', head: true })
-            .eq('staff_id', scannedCode);
+          // Get how many assets this staff member currently owns
+          const countResult = await scannerFetch.post({ action: 'count_staff_assets', staffId: scannedCode });
 
-          setStaffData({ ...existingStaff, currentAssetCount: count || 0 });
+          setStaffData({ ...staffResult.data, currentAssetCount: countResult.count || 0 });
           setShowStaffModal(true);
         } catch (e: any) { setErrorMessage(`Error validating staff: ${e.message}`); setShowErrorModal(true); }
         return;
@@ -156,24 +178,20 @@ export default function ScannerPage() {
           return;
         }
 
-        const { data: existingAsset, error: assetError } = await supabase
-          .from('Asset')
-          .select('*')
-          .eq('asset_id', scannedCode)
-          .maybeSingle();
+        // Lookup asset via API
+        const assetResult = await scannerFetch.lookup('Asset', 'asset_id', scannedCode);
 
-        if (assetError || !existingAsset) {
+        if (!assetResult.success || !assetResult.data) {
           setErrorMessage(`Asset not found: ${scannedCode}`);
           setShowErrorModal(true);
           return;
         }
 
-        const { data: assignments } = await supabase
-          .from('StaffAsset')
-          .select('*')
-          .eq('asset_id', scannedCode);
+        // Check if asset is already assigned to someone
+        const assignResult = await scannerFetch.post({ action: 'check_asset_assignment', assetId: scannedCode });
+        const assignments = assignResult.data ?? [];
 
-        const currentAssignment = assignments?.[0] || null;
+        const currentAssignment = assignments[0] || null;
         const ownedByThisStaff = currentAssignment?.staff_id === staffData.staff_id;
         const ownedBySomeoneElse = !!currentAssignment && !ownedByThisStaff;
 
@@ -181,7 +199,7 @@ export default function ScannerPage() {
         if (ownedByThisStaff) action = 'UNASSIGN';
         if (ownedBySomeoneElse) action = 'ERROR';
 
-        setCart(prev => [...prev, { id: Date.now(), asset: existingAsset, action, currentOwner: currentAssignment?.staff_id, assignmentId: currentAssignment?.id }]);
+        setCart(prev => [...prev, { id: Date.now(), asset: assetResult.data, action, currentOwner: currentAssignment?.staff_id, assignmentId: currentAssignment?.id }]);
         // No need to restart scanner, it continues automatically
       } catch (e: any) { setErrorMessage(`Error: ${e.message}`); setShowErrorModal(true); }
       return;
@@ -192,9 +210,10 @@ export default function ScannerPage() {
     // --------------------------------------------
     if (parentScan === null) {
       if (type === 'location' || type === 'department') {
-        const { data, error } = await supabase.from(config.tableName).select().ilike(config.idColumn, scannedCode.trim()).single();
-        if (error || !data) { alert(`Error: ${type} ID "${scannedCode}" not found.`); return; }
-        setParentScan({ type: type, id: scannedCode, name: data.name || scannedCode });
+        // Lookup location or department via API
+        const result = await scannerFetch.lookup(config.tableName, config.idColumn, scannedCode.trim());
+        if (!result.success || !result.data) { alert(`Error: ${type} ID "${scannedCode}" not found.`); return; }
+        setParentScan({ type: type, id: scannedCode, name: result.data.name || scannedCode });
       } else {
         // Normal Asset Scan Mode
         setScannedItem(item);
@@ -212,14 +231,10 @@ export default function ScannerPage() {
           return;
         }
 
-        // 2. Validate Asset
-        const { data: assetData, error: assetError } = await supabase
-          .from('Asset')
-          .select()
-          .eq('asset_id', scannedCode)
-          .maybeSingle();
+        // 2. Validate Asset via API
+        const assetResult = await scannerFetch.lookup('Asset', 'asset_id', scannedCode);
 
-        if (assetError || !assetData) {
+        if (!assetResult.success || !assetResult.data) {
           // Treating "Not Found" as an error prevents disrupting the bulk flow.
           setErrorMessage(`Asset "${scannedCode}" not found in database.`);
           setShowErrorModal(true);
@@ -229,7 +244,7 @@ export default function ScannerPage() {
         // 3. Add to Cart with 'TAG' action
         setCart(prev => [...prev, {
           id: Date.now(),
-          asset: assetData,
+          asset: assetResult.data,
           action: 'TAG',
           target: parentScan.name // For display purposes
         }]);
@@ -269,15 +284,11 @@ export default function ScannerPage() {
       if (type === 'staff' && staffData) {
         for (const item of validItems) {
           if (item.action === 'ASSIGN') {
-            const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            await supabase
-              .from('StaffAsset')
-              .insert({ id: newId, staff_id: staffData.staff_id, asset_id: item.asset.asset_id });
+            // Assign asset to staff via API
+            await scannerFetch.post({ action: 'assign', staffId: staffData.staff_id, assetId: item.asset.asset_id });
           } else if (item.action === 'UNASSIGN') {
-            await supabase
-              .from('StaffAsset')
-              .delete()
-              .eq('id', item.assignmentId);
+            // Remove asset assignment via API
+            await scannerFetch.post({ action: 'unassign', assignmentId: item.assignmentId });
           }
         }
       }
@@ -285,11 +296,13 @@ export default function ScannerPage() {
       // --- LOCATION / DEPARTMENT LOGIC ---
       if ((type === 'location' || type === 'department') && parentScan) {
         for (const item of validItems) {
-          // Update all items in the cart to the Parent ID
-          await supabase.from('Asset').update({
-            [config.idColumn]: parentScan.id, // e.g. location_id or department_id
-            updated_dt: new Date().toISOString()
-          }).eq('asset_id', item.asset.asset_id);
+          // Tag asset to a location or department via API
+          await scannerFetch.post({
+            action: 'tag_asset',
+            assetId: item.asset.asset_id,
+            field: config.idColumn, // e.g. location_id or department_id
+            value: parentScan.id,
+          });
         }
       }
 
@@ -319,12 +332,23 @@ export default function ScannerPage() {
         updated_dt: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('Asset')
-        .update(dataToUpdate)
-        .eq(config.idColumn, scannedItem.code);
+      // Update asset condition/location/department via API instead of direct Supabase call
+      const result = await scannerFetch.post({
+        action: 'tag_asset',
+        assetId: scannedItem.code,
+        field: 'location_id', // tag_asset handles one field at a time, so we do location first
+        value: newData.location_id,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error || 'Update failed');
+
+      // Also update department and condition via the assets API
+      await fetch(`/api/assets/${scannedItem.code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToUpdate),
+      });
+
       setSubmittedData({ item: { ...newData, ...dataToUpdate }, page: type });
       setPageState('success');
     } catch (e: any) { alert(e.message); }
@@ -334,16 +358,23 @@ export default function ScannerPage() {
     if (!scannedItem) { alert("Error"); return; }
     try {
       const dataToInsert: any = {
-        asset_id: scannedItem.code, name: newData.name, description: newData.description, condition: newData.condition,
-        created_dt: new Date().toISOString(), location_id: newData.location_id, department_id: newData.department_id,
-        category: newData.category, model: newData.model,
+        action: 'create_asset',
+        asset_id: scannedItem.code,
+        name: newData.name,
+        description: newData.description,
+        condition: newData.condition,
+        category: newData.category,
+        model: newData.model,
+        location_id: newData.location_id,
+        department_id: newData.department_id,
       };
+      // If scanning under a parent (location/department), link to it
       if (parentScan) dataToInsert[parentScan.type + '_id'] = parentScan.id;
-      const { error } = await supabase
-        .from('Asset')
-        .insert(dataToInsert);
 
-      if (error) throw error;
+      // Create new asset via API instead of direct Supabase call
+      const result = await scannerFetch.post(dataToInsert);
+      if (!result.success) throw new Error(result.error || 'Create failed');
+
       setSubmittedData({ item: dataToInsert, page: 'New Asset Registered' });
       setPageState('success');
       setParentScan(null);
