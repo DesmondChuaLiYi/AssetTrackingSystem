@@ -6,12 +6,15 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // All database operations go through our API route instead of calling Supabase directly
+// This prevents table names, column names and raw queries from showing in the browser Network tab
 const scannerFetch = {
+   // Lookup a record by scanned code (GET request with query params)
   lookup: async (table: string, idColumn: string, scannedCode: string) => {
     const params = new URLSearchParams({ table, idColumn, scannedCode })
     const res = await fetch(`/api/scanner?${params}`)
     return res.json()
   },
+   // All write operations use POST with an action field
   post: async (body: Record<string, unknown>) => {
     const res = await fetch('/api/scanner', {
       method: 'POST',
@@ -99,10 +102,12 @@ function ErrorModal({ message, onClose }: any) {
 // MAIN SCANNER PAGE
 // ============================================
 export default function ScannerPage() {
+  // Block unauthenticated users from accessing this page, redirect to /login
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
 
+  // Show nothing while checking session, or if not logged in (useAuth will redirect them)
   if (isAuthLoading || !isAuthenticated) return null;
 
   // Shared State
