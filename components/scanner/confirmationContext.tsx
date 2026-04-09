@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef } from "react";
 import { Database } from '@/lib/supabase/types';
-import { supabase } from "@/lib/supabase/client";
+// Removed direct Supabase client import — all database calls now go through API routes
+// to prevent table names and queries from leaking in the browser Network tab
 import {
   ChevronLeft,
   CheckCircle,
@@ -156,12 +157,17 @@ export default function ConfirmationContent({
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const { data: locData } = await supabase.from('Location').select('*');
-        setLocations(locData || []);
-        const { data: deptData } = await supabase.from('Department').select('*');
-        setDepartments(deptData || []);
+        // Fetch locations via our API route instead of calling Supabase directly
+        const locRes = await fetch('/api/location');
+        const locJson = await locRes.json();
+        setLocations(locJson.data || []);
+
+        // Fetch departments via our API route instead of calling Supabase directly
+        const deptRes = await fetch('/api/department');
+        const deptJson = await deptRes.json();
+        setDepartments(deptJson.data || []);
       } catch (err: any) {
-        console.error("Error fetching dropdown data:", err);
+        console.error({ message: "Error fetching dropdown data" });
       }
     };
 
@@ -176,24 +182,26 @@ export default function ConfirmationContent({
       await fetchDropdownData();
 
       try {
-        const { data, error } = await supabase
-          .from(tableName as "Asset" | "Location" | "Department" | "Staff" | "StaffAsset" | "Sessions" | "Maintenance")
-          .select()
-          .eq("asset_id", item.code)
-          .single();
+        // Fetch asset details via /api/scanner instead of calling Supabase directly
+        const params = new URLSearchParams({ table: 'Asset', idColumn: 'asset_id', scannedCode: item.code });
+        const res = await fetch(`/api/scanner?${params}`);
+        const result = await res.json();
 
-        if (error && error.code === 'PGRST116') {
+        if (!result.success) {
+          // Asset not found — switch to register mode so user can create it
           setMode('registering');
           setCondition('In-use');
-        } else if (error) {
-          throw error;
-        } else if (data) {
-          const typedData = data as Asset;
+        } else if (result.data) {
+          const typedData = result.data as Asset;
           setAssetDetails(typedData);
           setCondition(typedData.condition || "In-use");
           setSelectedLocation(typedData.location_id || '');
           setSelectedDepartment(typedData.department_id || '');
           setMode('editing');
+        } else {
+          // data is null means asset does not exist yet
+          setMode('registering');
+          setCondition('In-use');
         }
       } catch (err: any) {
         setMode('error');
