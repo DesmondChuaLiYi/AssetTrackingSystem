@@ -16,6 +16,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { assessmentId } = payloadSchema.parse(body);
 
+    if (!assessmentId) {
+      return NextResponse.json({ success: false, error: 'Missing assessmentId' }, { status: 400 });
+    }
+
+    // Update the approval_status to approved and save the timestamp (WC)
+    // Image is kept for 30 days (need to change to 1 year actually)
     const { error } = await supabaseAdmin
       .from('Maintenance')
       .update({

@@ -1,54 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateSession } from '@/lib/apiAuth';
-import { z } from 'zod';
-import { assessFurnitureCondition } from '@/lib/ai/geminiService';
-import { saveAssessment } from '@/lib/supabase/assessmentService';
+// get the selected AI model from aiFactory folder
+import { getAiProvider } from '@/lib/ai/aiFactory';
 
-const payloadSchema = z.object({
-  image: z.string().min(1, 'Image data is required'),
-  assetId: z.string().uuid('Invalid Asset ID'),
-  locationId: z.string().uuid('Invalid Location ID'),
-  userId: z.string().uuid().optional().nullable(),
-  mimeType: z.string().optional(),
-}).strict();
-
+// API route to assess asset condition using Gemini AI (WC)
 export async function POST(request: NextRequest) {
-  // Standard user auth: Any logged-in staff can submit an assessment
-  const authResult = await validateSession();
-  if (!authResult.authorized) return authResult.response;
+  console.log('ENV CHECK:', {
+    supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    geminiKey: !!process.env.GEMINI_API_KEY,
+  });
 
   try {
     const body = await request.json();
-    const validatedData = payloadSchema.parse(body);
+    const { image, assetId, locationId, mimeType } = body;
+    // validate required fields are return error 400 is missing required fields (WC)
+    if (!image || !assetId || !locationId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: image, assetId, locationId' },
+        { status: 400 }
+      );
+    }
 
-    const aiResult = await assessFurnitureCondition(validatedData.image, validatedData.mimeType);
+    const ai = getAiProvider();
+    const aiResult = await ai.assessAssetCondition(image, mimeType);
 
-    const savedAssessment = await saveAssessment({
-      asset_id: validatedData.assetId,
-      location_id: validatedData.locationId,
-      condition_status: aiResult.condition,
-      maintenance_needed: aiResult.maintenanceNeeded,
-      priority: aiResult.priority,
-      ai_response: aiResult.fullResponse,
-      assessed_by: validatedData.userId || null,
-    }, validatedData.image);
-
+    //Save assessment while asset and location ID matches in the database (WC)
     return NextResponse.json({
       success: true,
       assessment: {
-        id: savedAssessment.id,
         condition: aiResult.condition,
         maintenanceNeeded: aiResult.maintenanceNeeded,
         priority: aiResult.priority,
         issues: aiResult.issues,
-        assessedAt: savedAssessment.assessed_at,
+        fullResponse: aiResult.fullResponse,
       },
     });
-  } catch (error: any) {
-    console.error('Assessment API error:', { message: error?.message });
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
+
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('INVALID_ASSET:')) {
+      const detail = error.message.replace('INVALID_ASSET: ', '');
+      // The asset is not in the predefined list of acceptable assets, return 422 with details and accepted assets list (WC)
+      return NextResponse.json(
+        {
+          error: 'Invalid asset image',
+          detail,
+          acceptedAssets: [
+            'Chair', 'Table', 'Whiteboard', 'Laptop',
+            'Desktop computer', 'Monitor', 'CPU', 'Mouse', 'Keyboard',
+          ],
+        },
+        { status: 422 }
+      );
     }
-    return NextResponse.json({ error: 'Failed to process assessment' }, { status: 500 });
+
+    console.error('Assessment API error:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to process assessment',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }
