@@ -426,7 +426,8 @@ export default function DataTable({
                 data.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
                     {columns.map(col => (
-                      <td key={col.key} className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                      // Removed whitespace-nowrap to allow text wrapping and prevent overflow issues - WC
+                      <td key={col.key} className="px-6 py-4 text-sm text-gray-900">
                         {col.render ? col.render(row[col.key], row) : row[col.key]}
                       </td>
                     ))}
