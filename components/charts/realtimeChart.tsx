@@ -164,16 +164,16 @@ function CustomTooltip({ active, payload, label }: any) {
   const total = payload.reduce((s: number, p: any) => s + (p.value || 0), 0);
   return (
     <div className="bg-white border border-gray-100 rounded-xl shadow-lg p-3 text-sm min-w-[150px]">
-      <div className="font-medium text-gray-700 dark:text-gray-200 mb-2">{label}</div>
+      <div className="font-medium text-gray-700 mb-2">{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} className="flex justify-between gap-4 items-center py-0.5">
           <span className="font-medium" style={{ color: p.color || p.fill }}>{p.name}</span>
-          <span className="font-semibold text-gray-800 dark:text-gray-100">{p.value}</span>
+          <span className="font-semibold text-gray-800">{p.value}</span>
         </div>
       ))}
-      <div className="border-t border-gray-100 mt-2 pt-1.5 flex justify-between text-gray-400 font-medium">
+      <div className="border-t border-gray-100 mt-2 pt-1.5 flex justify-between text-gray-500 font-medium">
         <span>Total</span>
-        <span className="font-semibold text-gray-700 dark:text-gray-200">{total}</span>
+        <span className="font-semibold text-gray-700">{total}</span>
       </div>
     </div>
   );
@@ -474,12 +474,12 @@ export default function RealtimeChart({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: -24, bottom: entityView !== 'assets' ? 36 : 4 }} barCategoryGap="28%">
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} interval={0} angle={entityView !== 'assets' ? -25 : 0} textAnchor={entityView !== 'assets' ? 'end' : 'middle'} height={entityView !== 'assets' ? 48 : 20} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="time" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} interval={0} angle={0} textAnchor='middle' height={entityView !== 'assets' ? 48 : 20} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-              <Bar dataKey="Spoiled"  name="Spoiled"  fill={CONDITION_COLORS['Spoiled']}  stackId="a" />
+              <Bar dataKey="Spoiled" name="Spoiled" fill={CONDITION_COLORS['Spoiled']}  stackId="a" />
               <Bar dataKey="In-store" name="In-store" fill={CONDITION_COLORS['In-store']} stackId="a" />
-              <Bar dataKey="In-use"   name="In-use"   fill={CONDITION_COLORS['In-use']}   stackId="a" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="In-use" name="In-use" fill={CONDITION_COLORS['In-use']}   stackId="a" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
