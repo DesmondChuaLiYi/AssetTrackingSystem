@@ -313,7 +313,8 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
             {/* Commented by Desmond @ 20-April-26 - Hidden 'X' button and some reasoning */}
             {/* Well, you can't view the 'X' button on mobile, but I don't dare to remove this section for now */}
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
-              {/* <span className="text-xl font-bold invisible">Placeholder</span> */}
+              {/* Placeholder text that I also don't dare to remove as it would screw up the layout */}
+              <span className="text-xl font-bold invisible">Placeholder</span>
               {isMobile && (
                 <button onClick={() => setIsOpen(false)} className="text-red-600 hover:text-red-800">
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
