@@ -25,10 +25,9 @@ const addAssetConfig: dynamicAddConfig = {
   pageTitle: 'Add Asset',
   backUrl: '/admin/assetTracking/assets', // URL to go back to the page after adding new record or cancelling
   // List of form fields, each maps to a db column and a form input
+  // ------------------- Form fields ------------------------
   formFields: [
-    // Table: Asset
-    // Columns: --- refer below ---
-    // asset_id (PK)
+    // ------------- asset_id (PK) ------------------
     {
       key: 'asset_id',
       label: 'Asset ID',
@@ -37,7 +36,7 @@ const addAssetConfig: dynamicAddConfig = {
       placeholder: 'e.g. SN12345678 (max 30 chars)'
     },
 
-    // name
+    // -------------- name -------------------
     { 
       key: 'name', 
       label: 'Name', 
@@ -46,7 +45,7 @@ const addAssetConfig: dynamicAddConfig = {
       placeholder: 'e.g. Lenovo ThinkPad (max 30 chars)'
     },
     
-    // model
+    // -------------- model ----------------
     { 
       key: 'model', 
       label: 'Model', 
@@ -55,7 +54,7 @@ const addAssetConfig: dynamicAddConfig = {
       placeholder: 'e.g. X1 Carbon Gen 9 (max 30 chars)' 
     },
 
-    // description
+    // --------------- description ----------------
     { 
       key: 'description', 
       label: 'Description', 
@@ -64,7 +63,7 @@ const addAssetConfig: dynamicAddConfig = {
       placeholder: 'Additional details about the asset (max 60 chars)'
     },
 
-    // category
+    // -------------- category -------------------
     { 
       key: 'category', 
       label: 'Category', 
@@ -73,7 +72,7 @@ const addAssetConfig: dynamicAddConfig = {
       placeholder: 'e.g. Laptop, Chair (max 50 chars)'
      },
 
-    // condition
+    // --------------- condition -------------------
     {
       key: 'condition',
       label: 'Condition',
@@ -85,7 +84,7 @@ const addAssetConfig: dynamicAddConfig = {
       ]
     },
 
-    // location_id (FK)
+    // ------------------ location_id (FK) -----------------
     // Made optional by removing required
     // Options are populated dynamically using /api/location in DynamicAdd
     { 
@@ -94,7 +93,7 @@ const addAssetConfig: dynamicAddConfig = {
       type: 'select' as const 
     },
 
-    // department_id (FK)
+    // ------------------department_id (FK) ----------------
     // Made optional by removing required
     // Options are populated dynamically using /api/department in DynamicAdd
     { 

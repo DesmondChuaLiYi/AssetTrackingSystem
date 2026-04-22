@@ -116,7 +116,7 @@ const assetsConfig: dynamicPageConfig = {
   ],
   // ------------------------ Table columns ------------------------
   columns: [
-    // asset_id
+    // ------------------- asset_id (PK) --------------------
     {
       key: 'asset_id',
       label: 'Asset ID',
@@ -124,7 +124,8 @@ const assetsConfig: dynamicPageConfig = {
       // Render the component here
       render: (v: unknown) => <span className="font-medium text-gray-900">{String(v)}</span>
     },
-    // barcode column
+
+    // --------------- tag_path (URL for barcode) ------------
     {
       key: 'tag_path',
       label: 'Barcode',
@@ -134,13 +135,29 @@ const assetsConfig: dynamicPageConfig = {
         <BarcodeThumbnail tagPath={typeof value === 'string' ? value : null} />
       ),
     },
-    // name
-    { key: 'name', label: 'Asset Name', sortable: true },
-    // model
-    { key: 'model', label: 'Model', sortable: false },
-    // category
-    { key: 'category', label: 'Category', sortable: false },
-    // condition
+
+    // ------------------- name --------------------
+    { 
+      key: 'name', 
+      label: 'Asset Name', 
+      sortable: true 
+    },
+
+    // ------------------ model -------------------
+    { 
+      key: 'model', 
+      label: 'Model', 
+      sortable: false 
+    },
+
+    // --------------- category ------------------
+    { 
+      key: 'category', 
+      label: 'Category', 
+      sortable: false 
+    },
+
+    // -------------- condition ------------------
     {
       key: 'condition', label: 'Condition', sortable: false,
       render: (v: unknown) => (
@@ -150,21 +167,24 @@ const assetsConfig: dynamicPageConfig = {
           }`}>{String(v)}</span>
       )
     },
-    // location
+
+    // -------------- location (FK) --------------
     { key: 'location', label: 'Location', sortable: false, 
       render: (_: unknown, row: Record<string, unknown>) => {
         const loc = row.location as { name?: string } | null
         return loc?.name ?? 'N/A'
       },
     },
-    // department
+
+    // ------------- department (FK) --------------
     { key: 'department', label: 'Department', sortable: false, 
       render: (_: unknown, row: Record<string, unknown>) => {
         const dept = row.department as { name?: string } | null
         return dept?.name ?? 'N/A'
       },
     },
-    // created_dt
+
+    // --------------- created_dt -----------------
     {
       key: 'created_dt',
       label: 'Created Date',
@@ -179,7 +199,7 @@ const assetsConfig: dynamicPageConfig = {
   // These describes the inputs shown in the Add/Edit form page
   // The add form is rendered by dynamicAdd, the edit form by dynamicEdit
   formFields: [
-    // asset_id
+    // -------------- asset_id (PK) --------------
     {
       key: 'asset_id',
       label: 'Asset ID',
@@ -188,14 +208,39 @@ const assetsConfig: dynamicPageConfig = {
       required: true,
       placeholder: 'Enter asset barcode (e.g., ICT-LAPTOP-001)'
     },
-    // asset name
-    { key: 'name', label: 'Name', type: 'text' as const, required: true },
-    // model
-    { key: 'model', label: 'Model', type: 'text' as const, required: true },
-    // description
-    { key: 'description', label: 'Description', type: 'textarea' as const },
-    // category
-    { key: 'category', label: 'Category', type: 'text' as const, required: true },
+
+    // ---------------- name ------------------
+    { 
+      key: 'name', 
+      label: 'Name', 
+      type: 'text' as const, 
+      required: true 
+    },
+
+    // --------------- model ------------------
+    { 
+      key: 'model', 
+      label: 'Model', 
+      type: 'text' as const, 
+      required: true 
+    },
+    
+    // ------------- description --------------
+    { 
+      key: 'description', 
+      label: 'Description', 
+      type: 'textarea' as const 
+    },
+
+    // -------------- category ---------------
+    { 
+      key: 'category', 
+      label: 'Category', 
+      type: 'text' as const, 
+      required: true 
+    },
+
+    // ------------- condition ---------------
     {
       key: 'condition',
       label: 'Condition',
@@ -206,10 +251,20 @@ const assetsConfig: dynamicPageConfig = {
         { value: 'Spoiled', label: 'Spoiled' }
       ]
     },
-    // location_id
-    { key: 'location_id', label: 'Location', type: 'select' as const },
-    // department_id
-    { key: 'department_id', label: 'Department', type: 'select' as const }
+
+    // ----------- location_id (FK) --------------
+    { 
+      key: 'location_id', 
+      label: 'Location', 
+      type: 'select' as const 
+    },
+    
+    // ---------- department_id (FK) -------------
+    { 
+      key: 'department_id', 
+      label: 'Department', 
+      type: 'select' as const 
+    }
   ]
 }
 

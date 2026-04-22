@@ -149,8 +149,16 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
   // -------- Click-outside handler for profile dropdown ----------
   // useCallback ensures the function is not recreated on a new render
   const handleClickOutside = useCallback((event: MouseEvent) => {
-    // When the profile dropdown menu is active and the mouse down is NOT in the profile dropdown menu
-    if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+    const target = event.target as Node;
+
+    // Check if the mouse target is inside the profile dropdown menu
+    const isInsideDropdown = profileDropdownRef.current?.contains(target)
+
+    // Check if the mouse target is inside the logout confirmation modal
+    const isInsidePortal = (target as HTMLElement).closest('[data-portal-root="true"')
+
+    // When mouse down is NOT in the profile dropdown menu OR inside the logout confirmation modal
+    if (!isInsideDropdown && !isInsidePortal) {
       // Close the profile dropdown menu
       setIsProfileOpen(false);
     }

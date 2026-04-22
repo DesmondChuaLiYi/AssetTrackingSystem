@@ -420,11 +420,15 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
   // Field renderer to render different types of input fields based on the config
   const renderField = (field: formFieldConfig) => {
     const value = formData[field.key] || ''
-    const isTaken = isAssetForm && field.key === config.primaryKey && duplicateStatus === 'taken'
-    
     // When duplicateStatus is 'taken', the input field border changes to red to indicate duplicate
+    const isTaken = isAssetForm && field.key === config.primaryKey && duplicateStatus === 'taken'
+
+    // Commented by Desmond @ 22-April-26
+    // -------------------------------------------------------------------------------------------------------------------------------------
+    // -                     This is the BASE class for the input fields, change the attributes like column WIDTH here                     -
+    // -------------------------------------------------------------------------------------------------------------------------------------
     const baseClass = `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm transition-colors ${
-      isTaken ? 'border-red-400 focus:ring-red-500 bg-red-50' // When asset_id is taken
+      isTaken ? 'border-red-400 focus:ring-red-500 bg-red-50' // When asset_id is taken, field border becomes red
               : 'border-gray-300 focus:ring-red-500' // Normal state
     }`
 
@@ -554,6 +558,11 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
 
           <div className="bg-white shadow-sm rounded-lg border border-gray-200">
             <form onSubmit={handleSubmit} className="p-6">
+              {/* Commented by Desmond @ 22-April-26
+                // -------------------------------------------------------------------------------------------------------------------------------------
+                // -                     This is where you can change how many COLS are in a ROW for the INPUT FIELDS                                  -
+                // -------------------------------------------------------------------------------------------------------------------------------------
+              */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {config.formFields.map(field => (
                   // Text area spans both columns, while other fields take one column
