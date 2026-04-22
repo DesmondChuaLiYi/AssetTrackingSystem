@@ -1,8 +1,29 @@
 'use client';
 
+// useAuth - ensures only logged-in users can access this page, redirects others to /login
+import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+
+// All database operations go through our API route instead of calling Supabase directly
+// This prevents table names, column names and raw queries from showing in the browser Network tab
+const scannerFetch = {
+   // Lookup a record by scanned code (GET request with query params)
+  lookup: async (table: string, idColumn: string, scannedCode: string) => {
+    const params = new URLSearchParams({ table, idColumn, scannedCode })
+    const res = await fetch(`/api/scanner?${params}`)
+    return res.json()
+  },
+   // All write operations use POST with an action field
+  post: async (body: Record<string, unknown>) => {
+    const res = await fetch('/api/scanner', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return res.json()
+  },
+}
 import ScannerContent from '@/components/scanner/scannerContext';
 import SuccessContent from '@/components/scanner/successContent';
 import ConfirmationContent from '@/components/scanner/confirmationContext';
@@ -81,8 +102,13 @@ function ErrorModal({ message, onClose }: any) {
 // MAIN SCANNER PAGE
 // ============================================
 export default function ScannerPage() {
+  // Block unauthenticated users from accessing this page, redirect to /login
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const type = (searchParams.get('type') || 'asset') as keyof typeof configs;
+
+  // Show nothing while checking session, or if not logged in (useAuth will redirect them)
+  if (isAuthLoading || !isAuthenticated) return null;
 
   // Shared State
   const [pageState, setPageState] = useState('scanning');
@@ -120,29 +146,21 @@ export default function ScannerPage() {
     const scannedCode = item.code.trim();
 
     // --------------------------------------------
-    // PATH 1: STAFF SCANNING
+    // PATH 1: STAFF SCANNING (Cart Workflow)
     // --------------------------------------------
     if (type === 'staff') {
       if (!staffData) {
         try {
-          const { data: existingStaff, error } = await supabase
-            .from('Staff')
-            .select('*')
-            .eq('staff_id', scannedCode)
-            .maybeSingle();
+          const staffResult = await scannerFetch.lookup('Staff', 'staff_id', scannedCode);
 
-          if (error || !existingStaff) {
+          if (!staffResult.success || !staffResult.data) {
             setErrorMessage(`Staff ID not found: ${scannedCode}\n\nPlease verify the staff ID exists in the database.`);
             setShowErrorModal(true);
             return;
           }
 
-          const { count } = await supabase
-            .from('StaffAsset')
-            .select('*', { count: 'exact', head: true })
-            .eq('staff_id', scannedCode);
-
-          setStaffData({ ...existingStaff, currentAssetCount: count || 0 });
+          const countResult = await scannerFetch.post({ action: 'count_staff_assets', staffId: scannedCode });
+          setStaffData({ ...staffResult.data, currentAssetCount: countResult.count || 0 });
           setShowStaffModal(true);
         } catch (e: any) { setErrorMessage(`Error validating staff: ${e.message}`); setShowErrorModal(true); }
         return;
@@ -156,24 +174,18 @@ export default function ScannerPage() {
           return;
         }
 
-        const { data: existingAsset, error: assetError } = await supabase
-          .from('Asset')
-          .select('*')
-          .eq('asset_id', scannedCode)
-          .maybeSingle();
+        const assetResult = await scannerFetch.lookup('Asset', 'asset_id', scannedCode);
 
-        if (assetError || !existingAsset) {
+        if (!assetResult.success || !assetResult.data) {
           setErrorMessage(`Asset not found: ${scannedCode}`);
           setShowErrorModal(true);
           return;
         }
 
-        const { data: assignments } = await supabase
-          .from('StaffAsset')
-          .select('*')
-          .eq('asset_id', scannedCode);
+        const assignResult = await scannerFetch.post({ action: 'check_asset_assignment', assetId: scannedCode });
+        const assignments = assignResult.data ?? [];
 
-        const currentAssignment = assignments?.[0] || null;
+        const currentAssignment = assignments[0] || null;
         const ownedByThisStaff = currentAssignment?.staff_id === staffData.staff_id;
         const ownedBySomeoneElse = !!currentAssignment && !ownedByThisStaff;
 
@@ -181,8 +193,7 @@ export default function ScannerPage() {
         if (ownedByThisStaff) action = 'UNASSIGN';
         if (ownedBySomeoneElse) action = 'ERROR';
 
-        setCart(prev => [...prev, { id: Date.now(), asset: existingAsset, action, currentOwner: currentAssignment?.staff_id, assignmentId: currentAssignment?.id }]);
-        // No need to restart scanner, it continues automatically
+        setCart(prev => [...prev, { id: Date.now(), asset: assetResult.data, action, currentOwner: currentAssignment?.staff_id, assignmentId: currentAssignment?.id }]);
       } catch (e: any) { setErrorMessage(`Error: ${e.message}`); setShowErrorModal(true); }
       return;
     }
@@ -192,53 +203,44 @@ export default function ScannerPage() {
     // --------------------------------------------
     if (parentScan === null) {
       if (type === 'location' || type === 'department') {
-        const { data, error } = await supabase.from(config.tableName).select().ilike(config.idColumn, scannedCode.trim()).single();
-        if (error || !data) { alert(`Error: ${type} ID "${scannedCode}" not found.`); return; }
-        setParentScan({ type: type, id: scannedCode, name: data.name || scannedCode });
+        const result = await scannerFetch.lookup(config.tableName, config.idColumn, scannedCode);
+        if (!result.success || !result.data) { alert(`Error: ${type} ID "${scannedCode}" not found.`); return; }
+        setParentScan({ type: type, id: scannedCode, name: result.data.name || scannedCode });
       } else {
         // Normal Asset Scan Mode
         setScannedItem(item);
         setPageState('confirmation');
       }
-    }
-    // Step B: Second Scan (Tagging Asset)
+    } 
+    // Step B: Tagging an Asset to the Location/Department
     else {
-      // --- MODIFIED: CART MODE FOR TAGGING ---
       try {
-        // 1. Check duplicate
-        if (cart.some(c => c.asset.asset_id === scannedCode)) {
-          setErrorMessage(`Asset ${scannedCode} is already in the list!`);
-          setShowErrorModal(true);
+        const assetResult = await scannerFetch.lookup('Asset', 'asset_id', scannedCode);
+
+        if (!assetResult.success || !assetResult.data) {
+          // ASSET NOT FOUND: Proceed to Registration Screen seamlessly
+          setScannedItem(item);
+          setPageState('confirmation');
           return;
         }
 
-        // 2. Validate Asset
-        const { data: assetData, error: assetError } = await supabase
-          .from('Asset')
-          .select()
-          .eq('asset_id', scannedCode)
-          .maybeSingle();
+        // ASSET FOUND: Update immediately and show success (Cart skipped)
+        const result = await scannerFetch.post({
+          action: 'tag_asset',
+          assetId: scannedCode,
+          field: config.idColumn,
+          value: parentScan.id,
+        });
 
-        if (assetError || !assetData) {
-          // Treating "Not Found" as an error prevents disrupting the bulk flow.
-          setErrorMessage(`Asset "${scannedCode}" not found in database.`);
-          setShowErrorModal(true);
-          return;
-        }
+        if (!result.success) throw new Error(result.error || 'Update failed');
 
-        // 3. Add to Cart with 'TAG' action
-        setCart(prev => [...prev, {
-          id: Date.now(),
-          asset: assetData,
-          action: 'TAG',
-          target: parentScan.name // For display purposes
-        }]);
-
-        // 4. Restart Scanner Immediately
-        setTimeout(() => { setScannerKey(prev => prev + 1); }, 500);
+        const updatedAssetData = { ...assetResult.data, [parentScan.type + '_id']: parentScan.id };
+        setSubmittedData({ item: updatedAssetData, page: `Tagged to ${parentScan.name}` });
+        setPageState('success');
+        setParentScan(null);
 
       } catch (e: any) {
-        setErrorMessage(`Error checking asset: ${e.message}`);
+        setErrorMessage(`Error tagging asset: ${e.message}`);
         setShowErrorModal(true);
       }
     }
@@ -247,61 +249,37 @@ export default function ScannerPage() {
   // --- HANDLERS ---
   const handleStaffContinue = () => {
     setShowStaffModal(false);
-    // Trigger scanner to start
     setShouldStartScanning(true);
   };
   const removeFromCart = (id: number) => { setCart(prev => prev.filter(item => item.id !== id)); };
   const handleErrorClose = () => {
     setShowErrorModal(false);
     setErrorMessage('');
-    // Don't increment key on error close
   };
 
   const handleSubmitCart = async () => {
-    // If no items or (no staff AND no parentScan), exit
-    if (cart.length === 0 || (!staffData && !parentScan)) return;
+    if (cart.length === 0 || !staffData) return;
 
     try {
       const validItems = cart.filter(item => item.action !== 'ERROR');
       if (validItems.length === 0) { setErrorMessage('No valid items to submit!'); setShowErrorModal(true); return; }
 
-      // --- STAFF LOGIC ---
-      if (type === 'staff' && staffData) {
-        for (const item of validItems) {
-          if (item.action === 'ASSIGN') {
-            const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            await supabase
-              .from('StaffAsset')
-              .insert({ id: newId, staff_id: staffData.staff_id, asset_id: item.asset.asset_id });
-          } else if (item.action === 'UNASSIGN') {
-            await supabase
-              .from('StaffAsset')
-              .delete()
-              .eq('id', item.assignmentId);
-          }
+      // --- STAFF LOGIC ONLY ---
+      for (const item of validItems) {
+        if (item.action === 'ASSIGN') {
+          await scannerFetch.post({ action: 'assign', staffId: staffData.staff_id, assetId: item.asset.asset_id });
+        } else if (item.action === 'UNASSIGN') {
+          await scannerFetch.post({ action: 'unassign', assignmentId: item.assignmentId });
         }
       }
 
-      // --- LOCATION / DEPARTMENT LOGIC ---
-      if ((type === 'location' || type === 'department') && parentScan) {
-        for (const item of validItems) {
-          // Update all items in the cart to the Parent ID
-          await supabase.from('Asset').update({
-            [config.idColumn]: parentScan.id, // e.g. location_id or department_id
-            updated_dt: new Date().toISOString()
-          }).eq('asset_id', item.asset.asset_id);
-        }
-      }
-
-      // Success Reset
       setSubmittedData({
         item: { name: `${validItems.length} items processed`, code: 'BULK' },
-        page: parentScan ? `Tagged to ${parentScan.name}` : 'Staff Assignment'
+        page: 'Staff Assignment'
       });
       setPageState('success');
       setCart([]);
       setStaffData(null);
-      setParentScan(null);
 
     } catch (err: any) {
       setErrorMessage(`Error submitting: ${err.message}`);
@@ -319,12 +297,21 @@ export default function ScannerPage() {
         updated_dt: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('Asset')
-        .update(dataToUpdate)
-        .eq(config.idColumn, scannedItem.code);
+      const result = await scannerFetch.post({
+        action: 'tag_asset',
+        assetId: scannedItem.code,
+        field: 'location_id', 
+        value: newData.location_id,
+      });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error || 'Update failed');
+
+      await fetch(`/api/assets/${scannedItem.code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToUpdate),
+      });
+
       setSubmittedData({ item: { ...newData, ...dataToUpdate }, page: type });
       setPageState('success');
     } catch (e: any) { alert(e.message); }
@@ -334,17 +321,23 @@ export default function ScannerPage() {
     if (!scannedItem) { alert("Error"); return; }
     try {
       const dataToInsert: any = {
-        asset_id: scannedItem.code, name: newData.name, description: newData.description, condition: newData.condition,
-        created_dt: new Date().toISOString(), location_id: newData.location_id, department_id: newData.department_id,
-        category: newData.category, model: newData.model,
+        action: 'create_asset',
+        asset_id: scannedItem.code,
+        name: newData.name,
+        description: newData.description,
+        condition: newData.condition,
+        category: newData.category,
+        model: newData.model,
+        location_id: newData.location_id,
+        department_id: newData.department_id,
       };
       if (parentScan) dataToInsert[parentScan.type + '_id'] = parentScan.id;
-      const { error } = await supabase
-        .from('Asset')
-        .insert(dataToInsert);
 
-      if (error) throw error;
-      setSubmittedData({ item: dataToInsert, page: 'New Asset Registered' });
+      const result = await scannerFetch.post(dataToInsert);
+      if (!result.success) throw new Error(result.error || 'Create failed');
+
+      const successPageLabel = parentScan ? `Tagged to ${parentScan.name}` : 'New Asset Registered';
+      setSubmittedData({ item: dataToInsert, page: successPageLabel });
       setPageState('success');
       setParentScan(null);
     } catch (e: any) { alert(e.message); }
@@ -357,9 +350,9 @@ export default function ScannerPage() {
   }
 
   if (pageState === 'confirmation') {
-    // Changed by Desmond @ 5-Jan-26 : Changed the tableName from asset to config.tableName, same goes for confirmationContext.tsx
-    return <ConfirmationContent item={scannedItem} tableName={config.tableName} onBack={() => setPageState('scanning')} onSubmit={handleAssetUpdate} onCreate={handleAssetCreate} parentScan={parentScan} />;
-    // End
+    // FIX: Dynamic routing to ensure Location/Department parent scans look inside the Asset table, not themselves.
+    const targetTable = parentScan ? 'Asset' : config.tableName;
+    return <ConfirmationContent item={scannedItem} tableName={targetTable} onBack={() => setPageState('scanning')} onSubmit={handleAssetUpdate} onCreate={handleAssetCreate} parentScan={parentScan} />;
   }
 
   return (
@@ -383,8 +376,8 @@ export default function ScannerPage() {
       {showStaffModal && staffData && <StaffConfirmedModal staff={staffData} assetCount={staffData.currentAssetCount} onContinue={handleStaffContinue} />}
       {showErrorModal && <ErrorModal message={errorMessage} onClose={handleErrorClose} />}
 
-      {/* MODIFIED: Show Cart for Staff OR Location/Dept when active */}
-      {cart.length > 0 && (type === 'staff' || parentScan) && (
+      {/* Shopping Cart (ONLY for Staff Scan) */}
+      {cart.length > 0 && type === 'staff' && (
         <div className="mt-4 px-4 pb-20">
           <div className="bg-white border-2 border-red-600 rounded-lg shadow-lg">
             <div className="p-4">
@@ -395,8 +388,11 @@ export default function ScannerPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{item.asset.name}</p>
                       <p className="text-xs font-bold">
-                        {item.action === 'TAG' ? `Tagging to ${item.target}` : item.action}
+                        {item.action === 'ASSIGN' ? 'Assigning to Staff' : item.action === 'UNASSIGN' ? 'Removing from Staff' : 'Error: Owned by others'}
                       </p>
+                      {item.action === 'ERROR' && (
+                        <p className="text-xs text-red-600">Owner: {item.currentOwner}</p>
+                      )}
                     </div>
                     <button onClick={() => removeFromCart(item.id)} className="p-2 text-red-600 hover:bg-red-100 rounded ml-2"><Trash2 className="w-5 h-5" /></button>
                   </div>

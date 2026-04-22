@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const validatedParams = getQuerySchema.parse(Object.fromEntries(searchParams.entries()));
 
-    let query = supabaseAdmin.from('Location').select('*', { count: 'exact' });
+    let query = supabaseAdmin
+      .from('Location')
+      .select('*', { count: 'exact' })
 
     if (validatedParams.search) {
       query = query.ilike(validatedParams.searchField, `%${validatedParams.search}%`);

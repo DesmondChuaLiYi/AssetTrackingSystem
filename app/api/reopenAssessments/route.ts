@@ -16,6 +16,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { assessmentId } = payloadSchema.parse(body);
 
+    if (!assessmentId) {
+      return NextResponse.json({ success: false, error: 'Missing assessmentId' }, { status: 400 });
+    }
+
+    // Reset approval_status back to pending, clear actioned_dt, so if the admin wants accidentally approved/rejected, 
+    // they can reopen it and it will be treated as pending again (WC)
     const { error } = await supabaseAdmin
       .from('Maintenance')
       .update({

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Find all actioned records older than 365 days/ 1 year (WC)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 365);
 
@@ -23,10 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, deleted: 0 });
     }
 
+    // Extract file paths from image URLs in supabase (WC)
     const filePaths = oldRecords
       .map((r: any) => r.image_url?.split('/storage/v1/object/public/AssetImage/')[1]) 
       .filter(Boolean) as string[];
 
+    // Delete images from Supabase bucket (WC)
     if (filePaths.length > 0) {
       const { error: deleteError } = await supabaseAdmin.storage
         .from('AssetImage')
@@ -35,6 +38,7 @@ export async function GET(request: NextRequest) {
       if (deleteError) throw deleteError;
     }
 
+    // Clear image column from database records (WC)
     const ids = oldRecords.map((r: any) => r.id);
     await supabaseAdmin
       .from('Maintenance')            

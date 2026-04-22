@@ -99,16 +99,44 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data }, { status: 201 });
-  } catch (error: any) {
-    console.error('POST /api/department error:', { message: error?.message });
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Failed to create department' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      data: data
+    })
+  } catch (error) {
+    console.error('POST /api/department error:', error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to create department',
+        success: false
+      },
+      { status: 500 }
+    )
   }
 }
+export async function PUT() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('Department')
+      .select('*')
+      .order('department_id', { ascending: true })
 
+    if (error) throw error
+
+    return NextResponse.json({
+      data: data || []
+    })
+  } catch (error) {
+    console.error('GET /api/departments error:', error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to fetch departments',
+        details: error
+      },
+      { status: 500 }
+    )
+  }
+}
 export async function DELETE(request: NextRequest) {
   // RBAC: Only admins can delete departments
   const authResult = await validateSession('admin');

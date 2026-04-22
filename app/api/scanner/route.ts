@@ -1,0 +1,276 @@
+/** app/api/scanner/route.ts
+ * API route for all scanner operations
+ * Replaces direct Supabase client calls in the scanner page
+ * to prevent database queries and table structure from being
+ * visible in the browser's Network tab (developer tools)
+ */
+
+// NextRequest - the incoming request from the browser
+// NextResponse - the response we send back
+import { NextRequest, NextResponse } from 'next/server'
+
+// supabaseAdmin uses the service role key (server-side only)
+// Never exposed to the browser, unlike the anon key used by client.ts
+import { supabaseAdmin } from '@/lib/supabase/server'
+
+// validateSession checks if the user is logged in before allowing API access
+import { validateSession } from '@/lib/apiAuth'
+
+// Zod validates the request body so only expected fields are accepted
+import { z } from 'zod'
+
+// ============================================================
+// ZOD SCHEMAS — define what data each action expects
+// ============================================================
+
+// Lookup a single record by scanned code (used for staff, asset, location, department)
+const LookupSchema = z.object({
+  table: z.enum(['Staff', 'Asset', 'Location', 'Department']), // only allow known tables
+  idColumn: z.enum(['staff_id', 'asset_id', 'location_id', 'department_id']), // only known columns
+  scannedCode: z.string().min(1).max(100).trim(), // the scanned barcode/QR value
+})
+
+// Check how many assets a staff member currently owns
+const StaffAssetCountSchema = z.object({
+  action: z.literal('count_staff_assets'),
+  staffId: z.string().min(1).max(50).trim(),
+})
+
+// Check if an asset is already assigned to someone
+const AssetAssignmentSchema = z.object({
+  action: z.literal('check_asset_assignment'),
+  assetId: z.string().min(1).max(100).trim(),
+})
+
+// Assign an asset to a staff member
+const AssignSchema = z.object({
+  action: z.literal('assign'),
+  staffId: z.string().min(1).max(50).trim(),
+  assetId: z.string().min(1).max(100).trim(),
+})
+
+// Unassign an asset from a staff member
+const UnassignSchema = z.object({
+  action: z.literal('unassign'),
+  assignmentId: z.string().min(1).max(100).trim(),
+})
+
+// Update an asset's location or department
+const TagAssetSchema = z.object({
+  action: z.literal('tag_asset'),
+  assetId: z.string().min(1).max(100).trim(),
+  field: z.enum(['location_id', 'department_id']), // only allow these two fields to be updated
+  value: z.string().min(1).max(100).trim(),
+})
+
+// Create a brand new asset record
+const CreateAssetSchema = z.object({
+  action: z.literal('create_asset'),
+  asset_id: z.string().min(1).max(100).trim(),
+  name: z.string().min(1).max(200).trim(),
+  description: z.string().max(500).optional(),
+  condition: z.enum(['In-use', 'In-store', 'Spoiled']),
+  category: z.string().min(1).max(100).trim(),
+  model: z.string().min(1).max(100).trim(),
+  location_id: z.string().max(100).optional(),
+  department_id: z.string().max(100).optional(),
+})
+
+// ============================================================
+// GET — lookup a record by scanned code
+// Usage: /api/scanner?table=Asset&idColumn=asset_id&scannedCode=A001
+// ============================================================
+export async function GET(req: NextRequest) {
+  // Only logged-in users (staff or admin) can use the scanner
+  const auth = await validateSession()
+  if (!auth.authorized) return auth.response
+
+  // Read query parameters from the URL
+  const { searchParams } = new URL(req.url)
+  const raw = {
+    table: searchParams.get('table'),
+    idColumn: searchParams.get('idColumn'),
+    scannedCode: searchParams.get('scannedCode'),
+  }
+
+  // Validate the query parameters using Zod
+  const parsed = LookupSchema.safeParse(raw)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 })
+  }
+
+  const { table, idColumn, scannedCode } = parsed.data
+
+  // Query the database — supabaseAdmin bypasses RLS, safe because we already validated session above
+  const { data, error } = await supabaseAdmin
+    .from(table)
+    .select('*')
+    .eq(idColumn, scannedCode)
+    .maybeSingle()
+
+  if (error) {
+    // Only log the message, not the full error object (prevents DB structure leaking in server logs)
+    console.error({ message: error.message })
+    return NextResponse.json({ error: 'Database error' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, data })
+}
+
+// ============================================================
+// POST — all write/update operations
+// The 'action' field in the request body determines what to do
+// ============================================================
+export async function POST(req: NextRequest) {
+  // Only logged-in users can perform scanner write operations
+  const auth = await validateSession()
+  if (!auth.authorized) return auth.response
+
+  // Make sure the request has JSON content
+  const contentType = req.headers.get('content-type')
+  if (!contentType?.includes('application/json')) {
+    return NextResponse.json({ error: 'Content-Type must be application/json' }, { status: 415 })
+  }
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  // Read the action field to determine which operation to run
+  const action = (body as any)?.action
+
+  // ----------------------------------------
+  // ACTION: count_staff_assets
+  // Returns how many assets a staff member owns
+  // ----------------------------------------
+  if (action === 'count_staff_assets') {
+    const parsed = StaffAssetCountSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const { count, error } = await supabaseAdmin
+      .from('StaffAsset')
+      .select('*', { count: 'exact', head: true })
+      .eq('staff_id', parsed.data.staffId)
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, count: count ?? 0 })
+  }
+
+  // ----------------------------------------
+  // ACTION: check_asset_assignment
+  // Returns current assignment info for an asset
+  // ----------------------------------------
+  if (action === 'check_asset_assignment') {
+    const parsed = AssetAssignmentSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const { data, error } = await supabaseAdmin
+      .from('StaffAsset')
+      .select('*')
+      .eq('asset_id', parsed.data.assetId)
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, data: data ?? [] })
+  }
+
+  // ----------------------------------------
+  // ACTION: assign
+  // Assign an asset to a staff member
+  // ----------------------------------------
+  if (action === 'assign') {
+    const parsed = AssignSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const newId = `SA-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    const { error } = await supabaseAdmin
+      .from('StaffAsset')
+      .insert({ id: newId, staff_id: parsed.data.staffId, asset_id: parsed.data.assetId })
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  // ----------------------------------------
+  // ACTION: unassign
+  // Remove an asset assignment by assignment ID
+  // ----------------------------------------
+  if (action === 'unassign') {
+    const parsed = UnassignSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const { error } = await supabaseAdmin
+      .from('StaffAsset')
+      .delete()
+      .eq('id', parsed.data.assignmentId)
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  // ----------------------------------------
+  // ACTION: tag_asset
+  // Update an asset's location_id or department_id
+  // ----------------------------------------
+  if (action === 'tag_asset') {
+    const parsed = TagAssetSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const { error } = await supabaseAdmin
+      .from('Asset')
+      .update({
+        [parsed.data.field]: parsed.data.value,
+        updated_dt: new Date().toISOString()
+      })
+      .eq('asset_id', parsed.data.assetId)
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  // ----------------------------------------
+  // ACTION: create_asset
+  // Register a brand new asset into the database
+  // ----------------------------------------
+  if (action === 'create_asset') {
+    const parsed = CreateAssetSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+
+    const { action: _, ...assetData } = parsed.data // remove 'action' field before inserting
+    const { error } = await supabaseAdmin
+      .from('Asset')
+      .insert({ ...assetData, created_dt: new Date().toISOString() })
+
+    if (error) {
+      console.error({ message: error.message })
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  // If action doesn't match any known operation
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+}

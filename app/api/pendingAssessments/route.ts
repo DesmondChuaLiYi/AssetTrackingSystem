@@ -8,11 +8,13 @@ export async function GET() {
   if (!authResult.authorized) return authResult.response;
 
   try {
+    // shows all the asset with maintenance needed "Yes" (WC)
+    // The page will split them into pending / approved / rejected 
     const { data, error } = await supabaseAdmin
       .from('Maintenance')
       .select('*')
       .eq('maintenance_needed', true)
-      .order('assessed_at', { ascending: false });
+      .order('assessed_dt', { ascending: false });
 
     if (error) throw error;
 
