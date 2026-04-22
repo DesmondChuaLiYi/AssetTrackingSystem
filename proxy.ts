@@ -30,7 +30,6 @@ import { NextResponse } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
-import { DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 
 // Rate limiters
 /**
