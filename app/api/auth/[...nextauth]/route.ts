@@ -3,7 +3,7 @@
   - This file contains the NextAuth handler for authentication
   - It should remain public for authentication
 */
-import NextAuth, { AuthOptions } from "next-auth" // NextAuth handler
+import NextAuth from "next-auth" // NextAuth handler
 import { authOptions } from "@/lib/auth"; // Import auth config
 
 const handler = NextAuth(authOptions) // Create NextAuth handler with config

@@ -136,7 +136,7 @@ export default function DashboardPage() {
       value: stats.totalDepartments,
       icon: BuildingOfficeIcon,
       color: 'bg-green-500',
-      href: '/admin/assetTracking/department/units'
+      href: '/admin/department/units'
     },
     {
       title: 'Staff Members',
@@ -165,9 +165,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white"> {/* Commented by Desmond @ 14-April-26: Changed bg-gray-50 to bg-white */}
       <main className="p-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full mx-auto"> {/* Commented by Desmond @ 14-April-26: Changed width to w-full to display more content */}
           {/* Breadcrumb */}
           <Breadcrumb />
 

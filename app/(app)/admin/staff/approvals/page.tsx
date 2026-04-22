@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import Breadcrumb from '@/components/ui/breadcrumb'
 import {
@@ -23,7 +23,7 @@ interface PendingStaff {
 
 export default function ApprovalsPage() {
   const { session, isLoading: sessionLoading } = useAdminAccess()
-  const router = useRouter()
+  // const router = useRouter()
 
   const [pendingStaff, setPendingStaff] = useState<PendingStaff[]>([])
   const [approvedStaff, setApprovedStaff] = useState<PendingStaff[]>([])

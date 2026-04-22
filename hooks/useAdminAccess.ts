@@ -3,7 +3,7 @@
  */
 'use client' // Makes the page client component
 
-import { useEffect, useRef } from 'react' // useRef stores a value that doesn't reset on re-render
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation' // Redirect users to another page without re-rendering entire page
 import { useSession } from 'next-auth/react' // See the user logged in, session data and login status
 

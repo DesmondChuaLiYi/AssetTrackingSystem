@@ -54,7 +54,7 @@ export async function saveAssessment(
       const buffer = Buffer.from(imageBase64, 'base64');
       const fileName = `${input.asset_id}_${Date.now()}.jpg`;
 
-      const { data: uploadData, error: uploadError } = await supabaseAdmin
+      const { error: uploadError } = await supabaseAdmin
         .storage
         .from('AssetImage')
         .upload(fileName, buffer, {

@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         const ext = image_mime === 'image/png' ? 'png' : image_mime === 'image/webp' ? 'webp' : 'jpg';
         const fileName = `${asset_id}_${Date.now()}.${ext}`;
 
-        const { data: uploadData, error: uploadError } = await supabaseAdmin
+        const { error: uploadError } = await supabaseAdmin
           .storage
           .from('AssetImage')
           .upload(fileName, buffer, {

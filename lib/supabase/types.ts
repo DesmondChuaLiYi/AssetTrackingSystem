@@ -21,7 +21,7 @@ export type Json =
  * Set pre-determined asset condition to prevent incorrect or mismatched 
  * values from being entered into the database records.
  */
-export type AssetCondition = 'In-use' | 'In-store' | 'Spoiled'
+export type assetCondition = 'In-use' | 'In-store' | 'Spoiled'
 
 // Database interface: It represents the entire Supabase database schema
 // It is expected by "createClient<Database>" in client.ts and server.ts
@@ -126,6 +126,7 @@ export interface Database {
             Asset: {
                 Row: {
                     asset_id: string
+                    tag_path: string | null
                     // Commented by Desmond @ 11-Feb-2026 : Start
                     // Changed so that asset name, model and category cannot be null
                     name: string
@@ -133,7 +134,7 @@ export interface Database {
                     description: string | null
                     // Changed it so that the condition will only accept pre-determined
                     // values
-                    condition: AssetCondition
+                    condition: assetCondition
                     location_id: string | null
                     department_id: string | null
                     category: string
@@ -146,6 +147,7 @@ export interface Database {
                 }
                 Insert: {
                     asset_id: string
+                    tag_path?: string | null
                     // Commented by Desmond @ 11-Feb-2026 : Start
                     // Changed so that asset name, model and category cannot be null
                     name?: string
@@ -153,7 +155,7 @@ export interface Database {
                     description?: string | null
                     // Changed it so that the condition will only accept pre-determined
                     // values
-                    condition?: AssetCondition
+                    condition?: assetCondition
                     location_id?: string | null
                     department_id?: string | null
                     category?: string
@@ -164,6 +166,7 @@ export interface Database {
                 }
                 Update: {
                     asset_id?: string
+                    tag_path?: string | null
                     // Commented by Desmond @ 11-Feb-2026 : End
                     // Changed so that asset name, model and category cannot be null
                     name?: string
@@ -171,7 +174,7 @@ export interface Database {
                     description?: string | null
                     // Changed it so that the condition will only accept pre-determined
                     // values
-                    condition?: AssetCondition
+                    condition?: assetCondition
                     location_id?: string | null
                     department_id?: string | null
                     category?: string

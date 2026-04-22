@@ -22,7 +22,7 @@ import { validateSession } from '@/lib/apiAuth' // Validate the user session
  * @async - wait for DB and authenticated first
  * @param id - comes from [id] in the URL (e.g., asset_id)
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Await the params to get the id
   const { id } = await params;
 

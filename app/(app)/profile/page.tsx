@@ -4,11 +4,11 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/breadcrumb'
 
 export default function ProfilePage() {
-  const router = useRouter()
+  // const router = useRouter()
 
   // Ensures only authenticated users can view this page
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
@@ -16,13 +16,13 @@ export default function ProfilePage() {
   const { data: session, status } = useSession()
   const [assignedAssets, setAssignedAssets] = useState<any[]>([])
   const [isLoadingAssets, setIsLoadingAssets] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const [activeItem, setActiveItem] = useState<string | null>('/profile')
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-  const [isTopBarVisible, setIsTopBarVisible] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
+  // const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  // const [isProfileOpen, setIsProfileOpen] = useState(false)
+  // const [activeItem, setActiveItem] = useState<string | null>('/profile')
+  // const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+  // const [isTopBarVisible, setIsTopBarVisible] = useState(true)
+  // const [lastScrollY, setLastScrollY] = useState(0)
+  // const [isMobile, setIsMobile] = useState(false)
 
   // Fetch assigned assets when session is available
   useEffect(() => {

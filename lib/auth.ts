@@ -1,6 +1,6 @@
 // lib/auth.ts
 // This is a config file for NextAuth authentication
-import { AuthOptions } from "next-auth" // Tells TypeScript what shape our auth config must have
+import type { AuthOptions } from "next-auth" // Tells TypeScript what shape our auth config must have
 import AzureADProvider from "next-auth/providers/azure-ad" // Allows people to log in using Microsoft accounts (Azure Active Directory)
 import { supabaseAdmin } from "@/lib/supabase/server" // Import Supabase admin client for database access"
 

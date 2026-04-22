@@ -7,7 +7,9 @@ import { validateSession } from '@/lib/apiAuth';
 import { z } from 'zod';
 
 // Ensure the ID provided in the URL is a valid UUID format
-const idSchema = z.string().uuid('Invalid Location ID');
+// Commented by Desmond @ 23-April-26 : No, this isn't supposed to be UUID (for both Location and Department's API route), this will need to be changed
+// TODO: Fix location and department's /[id]/route.ts so that you can properly view, add, update and delete the location and department records
+const idSchema = z.string().min(1).max(30);
 
 // .strict() prevents mass assignment by dropping any fields not explicitly defined here
 const putSchema = z.object({
@@ -17,7 +19,7 @@ const putSchema = z.object({
   level: z.number().optional().nullable(),
 }).strict();
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Check that the user has a valid session before fetching
   const authResult = await validateSession();
   if (!authResult.authorized) return authResult.response;

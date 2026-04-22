@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from "react";
-import { Database } from '@/lib/supabase/types';
+import type { Database } from '@/lib/supabase/types';
 // Removed direct Supabase client import — all database calls now go through API routes
 // to prevent table names and queries from leaking in the browser Network tab
 import {
@@ -12,13 +12,10 @@ import {
   PackagePlus,
   MapPin,
   Building2,
-  SlidersHorizontal,
-  Cpu,
   Upload,
   Sparkles,
   PenLine,
   RefreshCw,
-  XCircle,
 } from "lucide-react";
 
 // Types (WC)

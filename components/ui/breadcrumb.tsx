@@ -26,7 +26,7 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
     ]
 
     let currentPath = ''
-    pathSegments.forEach((segment, index) => {
+    pathSegments.forEach((segment) => {
       currentPath += `/${segment}`
 
       // Convert segment to readable label
@@ -47,10 +47,6 @@ export default function Breadcrumb({ customItems }: BreadcrumbProps) {
       if (labelMap[segment]) {
         label = labelMap[segment]
       }
-
-      // Determine if item should be clickable
-      const isClickable = index === pathSegments.length - 1 ? false :
-        !['assetTracking'].includes(segment) // Asset Tracking is not clickable
 
       breadcrumbs.push({
         label,

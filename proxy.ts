@@ -30,6 +30,7 @@ import { NextResponse } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
+import { DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 
 // Rate limiters
 /**
@@ -88,6 +89,44 @@ const SENSITIVE_PREFIXES = ['/login', '/register', '/api/sessions']
 
 function isSensitivePath(pathname: string): boolean {
   return SENSITIVE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+}
+
+// Commented by Desmond @ 23-April-26
+// ------------------- Extracts the client IP safely --------------------
+function getClientIp(request: NextRequestWithAuth): string {
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  const realIp = request.headers.get('x-real-ip')
+
+  if (forwardedFor) {
+    // x-forwarded-for can contain multiple IPs: client, proxy1, proxy2
+    return forwardedFor.split(',')[0].trim()
+  }
+
+  if (realIp) {
+    return realIp
+  }
+
+  // Avoid shared bucket problem
+  return `anon-${request.headers.get("user-agent") ?? crypto.randomUUID()}`;
+}
+
+// ------------------ Safe rate limiting wrapper -----------------
+// We do not allow rate limiting to crash the app
+async function rateLimitCrashHandler (limiter: Ratelimit, key: string): Promise<{ success: boolean; reset:number }> {
+  try {
+    return await limiter.limit(key);
+  } catch (error) {
+    // Log the error to console when rate limiting fails
+    console.error("Rate limit failure:", error)
+
+    // Fail-open strategy - a system design approach where, upon failure, 
+    // a device or software defaults to an unrestricted or "open" state, 
+    // prioritizing operational availability and continuity over security
+    return {
+      success: true,
+      reset: Date.now()
+    }
+  }
 }
 
 // Security headers
@@ -199,15 +238,37 @@ function isPublicPath(pathname: string): boolean {
   return false
 }
 
-// Middleware
+// ------------------------ Middleware -------------------------
 export default withAuth(
   /** Commented by Desmond @ 18-Mar-26
    * By the time code reaches here, next-auth has confirmed the
    * user has a valid session token. Therefore we only need to check role
    */
-  function middleware(request: NextRequestWithAuth) {
+  async function middleware(request: NextRequestWithAuth) {
     const { pathname } = request.nextUrl;
     const token = request.nextauth.token;
+
+    // Extract client IP
+    const clientIp = getClientIp(request)
+
+    // Skip rate limiting for Next.js prefetch requests
+    if (request.headers.get("x-middleware-prefetch")) {
+      return NextResponse.next();
+    }
+
+    // ---------- Check the sensitive routes first for stricter rate limiting (stricter: 10/min) ----------
+    if (isSensitivePath(pathname)) {
+      const { success, reset } = await rateLimitCrashHandler(SENSITIVE_LIMIT, clientIp);
+      if (!success) {
+        return rateLimitResponse(reset)
+      }
+    }
+
+    // -------------- Check global limit for all requests (broader: 200/min) ----------------
+    const { success, reset } = await rateLimitCrashHandler(GLOBAL_LIMIT, clientIp);
+    if (!success) {
+      return rateLimitResponse(reset)
+    }
 
     // ------------------------------------------------------------------
     // /dashboard — redirect to the correct role-based dashboard

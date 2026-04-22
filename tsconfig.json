@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    // Base options
     "lib": [
       "dom",
       "dom.iterable",
@@ -16,22 +17,36 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+
+    // Modern best practices
+    /** Commented by Desmond @ 22-April-26
+     *  Forces you to use import type for types, 
+     *  which helps tools like SWC or ESBuild strip away type-only code more efficiently,
+     *  reducing the final bundle size. */
+    "verbatimModuleSyntax": true,
+    // Prevents cluttering code with unused variables
+    "noUnusedLocals": true,
+    // Ensures functions aren't holding onto data they don't use
+    "noUnusedParameters": true,
+    // Ensures all code paths in a function return a value
+    "noImplicitReturns": true,
+  
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    // Commented by Desmond @ 22-April-26
+    // 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0.
+    // "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
     "types": [
       "jest",
       "@testing-library/jest-dom"
     ],
-    "target": "ES2017"
+    "target": "esnext"
   },
   "include": [
     "next-env.d.ts",

@@ -15,7 +15,7 @@ const putSchema = z.object({
   description: z.string().max(255).optional(),
 }).strict(); 
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // Standard authentication check - requires any valid logged-in user
   const authResult = await validateSession();
   if (!authResult.authorized) return authResult.response;

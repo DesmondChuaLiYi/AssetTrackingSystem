@@ -105,14 +105,14 @@ export async function GET(request: NextRequest) {
 
     // Pagination with limits and a default number
     const page = Math.max(parseInt(searchParams.get('page') || '1'), 1)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100)
 
     // Limit the user input for the search field to prevent too long of an input
     const search = (searchParams.get('search') || '').slice(0, 100)
     const condition = searchParams.get('condition') || ''
 
     // Search and filters
-    const allowedSearchFields = ['name', 'model', 'category']
+    const allowedSearchFields = ['asset_id', 'name', 'model', 'category']
     const searchField = allowedSearchFields.includes(
       searchParams.get('searchField') || ''
     )
@@ -238,41 +238,38 @@ export async function POST(request: NextRequest) {
     // Save parsed data once it is validated by Zod
     const input = parsed.data
 
-    // if (!body.asset_id || !body.name || !body.model || !body.category) {
-    //   return NextResponse.json(
-    //     { error: 'Missing required fields' },
-    //     { status: 400 }
-    //   )
-    // }
-
-    /**
-     * Commented by Desmond @ 11-Feb-2026
-     * Validate the asset condition to make sure it is allowed to be inserted
-     * into the database
-     */
-    // if (body.condition && !ALLOWED_CONDITIONS.includes(body.condition)) {
-    //   return NextResponse.json(
-    //     { error: 'Invalid asset condition value. Must be In-use, In-store or Spoiled' },
-    //     { status: 400 }
-    //   )
-    // }
-
-    // if (!body.asset_id || !body.name || !body.model || !body.category || !body.location_id || !body.department_id) {
-    //   return NextResponse.json(
-    //     { error: 'Missing required fields: asset_id, name, model, category, location_id, department_id' },
-    //     { status: 400 }
-    //   )
-    // }
-
     // Set the default asset condition to 'In-use' if the condition is invalid
     const condition: AssetCondition = 
       isValidCondition(input.condition) ? input.condition : 'In-use'
+
+    /** Commented by Desmond @ 26-Mar-26
+     * Generate and save the barcode
+     */
+    let tagPath: string | null = null
+
+    try {
+      const { generateAndUploadBarcode } = await import('@/lib/barcode/barcode')
+      const barcodeResult = await generateAndUploadBarcode(input.asset_id, 'assets')
+      tagPath = barcodeResult.tagPath
+
+      console.log('Barcode created:', {
+        assetId: input.asset_id.substring(0, 10),
+        tagPath
+      })
+    } catch (barcodeError) {
+      console.error('Barcode generation failed (continuing):', {
+        assetId: input.asset_id.substring(0, 10),
+        error: (barcodeError as Error).message
+      })
+      // tagPath is still null
+    }
 
     // Build the database query
     const { data, error } = await supabaseAdmin
       .from('Asset')
       .insert([{ // Insert the record into the 'Asset' table
         asset_id: input.asset_id,
+        tag_path: tagPath,
         name: input.name,
         model: input.model,
         description: input.description || '',
@@ -311,7 +308,8 @@ export async function POST(request: NextRequest) {
      * ': any' is basically saying the error can be any data type 
      */
   } catch (error: any) {
-    console.error('POST /api/assets error:', { message: error?.message })
+    console.error('POST /api/assets error:', 
+      { message: error?.message })
     return serverError()
   }
 }
