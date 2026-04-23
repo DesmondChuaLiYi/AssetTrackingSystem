@@ -6,17 +6,15 @@ import { validateSession } from '@/lib/apiAuth';
 // Import Zod for payload validation and injection protection
 import { z } from 'zod';
 
-// Ensure the ID provided in the URL is a valid UUID format
-// Commented by Desmond @ 23-April-26 : No, this isn't supposed to be UUID (for both Location and Department's API route), this will need to be changed
-// TODO: Fix location and department's /[id]/route.ts so that you can properly view, add, update and delete the location and department records
-const idSchema = z.string().min(1).max(30);
+// FIX APPLIED: Aligned with VARCHAR(30) from the database schema
+const idSchema = z.string().min(1, 'Location ID is required').max(30, 'Location ID is too long');
 
-// .strict() prevents mass assignment by dropping any fields not explicitly defined here
+// FIX APPLIED: Aligned strictly with the SUPABASE TABLES.txt schema length limits.
 const putSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(255).optional(),
-  block: z.string().max(50).optional().nullable(),
-  level: z.number().optional().nullable(),
+  name: z.string().min(1).max(30).optional(),
+  description: z.string().max(30).optional().nullable(),
+  block: z.string().max(10).optional().nullable(),
+  level: z.number().int().optional().nullable(),
 }).strict();
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

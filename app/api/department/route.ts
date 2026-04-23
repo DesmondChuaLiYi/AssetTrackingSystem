@@ -16,15 +16,19 @@ const getQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
-// .strict() drops any extra fields sent by the user to prevent mass assignment
+// BUGFIX: Modified postSchema to accept custom department_id from the user/scanner.
+// Removed 'description' since it doesn't exist in the Department table in Supabase.
+// Aligned character lengths to match VARCHAR limits in Supabase.
 const postSchema = z.object({
-  name: z.string().min(1, 'Department name is required').max(100),
-  description: z.string().max(255).optional(),
+  department_id: z.string().min(1, 'Department ID is required').max(30),
+  name: z.string().min(1, 'Department name is required').max(60),
+  block: z.string().max(10).optional().nullable(),
+  level: z.number().int().optional().nullable(),
 }).strict();
 
-// Ensure the ID to delete is a valid UUID format
+// BUGFIX: Changed from .uuid() to standard string validation to support VARCHAR primary keys like "IT-01"
 const deleteSchema = z.object({
-  department_id: z.string().uuid('Invalid Department ID'),
+  department_id: z.string().min(1, 'Invalid Department ID').max(30),
 });
 
 export async function GET(request: NextRequest) {
@@ -83,14 +87,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = postSchema.parse(body); // Validate and sanitize incoming data
 
-    const newId = crypto.randomUUID(); // FIX: Generate a unique UUID for the new department
-
+    // BUGFIX: Removed crypto.randomUUID(). The department_id is now passed dynamically from validatedData.
+    
     // Execute database insert
     const { data, error } = await supabaseAdmin
       .from('Department')
       .insert([{
-        department_id: newId, // FIX: Pass the generated ID to satisfy TypeScript
-        ...validatedData,
+        ...validatedData, // This safely spreads the custom department_id, name, block, and level
         created_dt: new Date().toISOString(),
         updated_dt: new Date().toISOString()
       }])
@@ -103,8 +106,12 @@ export async function POST(request: NextRequest) {
       success: true,
       data: data
     })
-  } catch (error) {
-    console.error('POST /api/department error:', error)
+  } catch (error: any) {
+    // BUGFIX: Improved error logging to use safe message extraction
+    console.error('POST /api/department error:', { message: error?.message });
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
+    }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Failed to create department',
@@ -114,7 +121,13 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// BUGFIX: This PUT method was acting like a GET request and lacked auth. 
+// Standardized it as a fallback placeholder or you can remove it if PUT is handled in [id]/route.ts
 export async function PUT() {
+  const authResult = await validateSession('admin');
+  if (!authResult.authorized) return authResult.response;
+
   try {
     const { data, error } = await supabaseAdmin
       .from('Department')
@@ -126,8 +139,8 @@ export async function PUT() {
     return NextResponse.json({
       data: data || []
     })
-  } catch (error) {
-    console.error('GET /api/departments error:', error)
+  } catch (error: any) {
+    console.error('GET /api/departments error:', { message: error?.message });
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Failed to fetch departments',
@@ -137,6 +150,7 @@ export async function PUT() {
     )
   }
 }
+
 export async function DELETE(request: NextRequest) {
   // RBAC: Only admins can delete departments
   const authResult = await validateSession('admin');

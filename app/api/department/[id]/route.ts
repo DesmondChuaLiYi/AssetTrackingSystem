@@ -6,13 +6,15 @@ import { validateSession } from '@/lib/apiAuth';
 // Import Zod for payload validation and injection protection
 import { z } from 'zod';
 
-// Ensure the ID provided in the URL is a valid UUID format
-const idSchema = z.string().uuid('Invalid Department ID');
+// FIX APPLIED: Aligned with VARCHAR(30) from the database schema
+const idSchema = z.string().min(1, 'Department ID is required').max(30, 'Department ID is too long');
 
-// .strict() prevents mass assignment by dropping any fields not explicitly defined here
+// FIX APPLIED: Aligned strictly with the SUPABASE TABLES.txt schema.
+// Removed 'description' (does not exist in DB) and updated max lengths.
 const putSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(255).optional(),
+  name: z.string().min(1).max(60).optional(),
+  block: z.string().max(10).optional().nullable(),
+  level: z.number().int().optional().nullable(),
 }).strict(); 
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   try {
     const { id } = await params;
-    const validatedId = idSchema.parse(id); // Validate the UUID from the URL
+    const validatedId = idSchema.parse(id); // Validate the string ID from the URL
 
     const { data, error } = await supabaseAdmin
       .from('Department')
@@ -50,7 +52,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const { id } = await params;
-    const validatedId = idSchema.parse(id); // Validate the UUID from the URL
+    const validatedId = idSchema.parse(id); // Validate the string ID from the URL
     
     const body = await request.json();
     const validatedData = putSchema.parse(body); // Validate the JSON body

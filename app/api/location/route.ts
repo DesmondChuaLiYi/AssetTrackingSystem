@@ -12,15 +12,19 @@ const getQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// BUGFIX: Added location_id so users can input custom IDs. 
+// Aligned max lengths (name: 30, description: 30, block: 10) to exactly match SUPABASE TABLES.txt
 const postSchema = z.object({
-  name: z.string().min(1, 'Location name is required').max(100),
-  description: z.string().max(255).optional(),
-  block: z.string().max(50).optional().nullable(),
-  level: z.number().optional().nullable(),
+  location_id: z.string().min(1, 'Location ID is required').max(30),
+  name: z.string().min(1, 'Location name is required').max(30),
+  description: z.string().max(30).optional().nullable(),
+  block: z.string().max(10).optional().nullable(),
+  level: z.number().int().optional().nullable(),
 }).strict();
 
+// BUGFIX: Removed .uuid() requirement to support VARCHAR primary keys
 const deleteSchema = z.object({
-  location_id: z.string().uuid('Invalid Location ID'),
+  location_id: z.string().min(1, 'Invalid Location ID').max(30),
 });
 
 export async function GET(request: NextRequest) {
@@ -72,12 +76,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = postSchema.parse(body);
 
-    const newId = crypto.randomUUID(); // FIX: Generate required UUID
+    // BUGFIX: Removed crypto.randomUUID(). The location_id is now retrieved from validatedData.
 
     const { data, error } = await supabaseAdmin.from('Location')
       .insert([{ 
-        location_id: newId, // FIX: Pass the generated ID
-        ...validatedData, 
+        ...validatedData, // Safely spreads location_id, name, description, block, and level
         created_dt: new Date().toISOString(), 
         updated_dt: new Date().toISOString() 
       }])
