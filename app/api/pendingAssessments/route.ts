@@ -1,95 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { validateSession } from '@/lib/apiAuth';
 
-export async function GET(request: NextRequest) {
-  // Only admins can fetch the pending review queue
+export async function GET() {
+  // RBAC: Only admins can fetch the pending review queue
   const authResult = await validateSession('admin');
   if (!authResult.authorized) return authResult.response;
 
   try {
-    const { searchParams } = new URL(request.url);
+    // shows all the asset with maintenance needed "Yes" (WC)
+    // The page will split them into pending / approved / rejected 
+    const { data, error } = await supabaseAdmin
+      .from('Maintenance')
+      .select('*')
+      .eq('maintenance_needed', true)
+      .order('assessed_dt', { ascending: false });
 
-    // Pagination params with defaults and limits
-    const page  = Math.max(parseInt(searchParams.get('page')  || '1'),  1);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100);
+    if (error) throw error;
 
-    // Filtering params with basic validation and sanitization
-    const status = searchParams.get('status') || 'pending';   
-    const assetId = (searchParams.get('asset_id') || '').slice(0, 50);
-    const location = (searchParams.get('location') || '').slice(0, 100);
-    const condition = (searchParams.get('condition')|| '');
-
-    // Whitelist allowed status values, default to 'pending' if invalid
-    const allowedStatuses = ['pending', 'approved', 'rejected'];
-    const safeStatus = allowedStatuses.includes(status) ? status : 'pending';
-
-    // Whitelist allowed condition values, null if invalid (no filter applied)
-    const allowedConditions = ['In-use', 'In-store', 'Spoiled'];
-    const safeCondition = allowedConditions.includes(condition) ? (condition as 'In-use' | 'In-store' | 'Spoiled') : null;
-
-    // Build the base query for a given status with optional filters
-    const buildBase = (forStatus: 'pending' | 'approved' | 'rejected') => {
-      let q = supabaseAdmin
-        .from('Maintenance')
-        .select('*', { count: 'exact' })
-        .eq('maintenance_needed', true)
-        .eq('approval_status', forStatus);
-
-      // Apply optional filters if provided
-      if (assetId) q = q.ilike('asset_id', `%${assetId}%`);
-      if (location) q = q.ilike('location_id', `%${location}%`);
-      if (safeCondition) q = q.eq('condition_status', safeCondition);
-
-      return q;
-    };
-
-    // All done in parallel for efficiency
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    // Fetch the paginated results for the requested status, and counts for all tabs in parallel
-    const [pageResult, pendingCount, approvedCount, rejectedCount] = await Promise.all([
-      buildBase(safeStatus as 'pending' | 'approved' | 'rejected').order('assessed_dt', { ascending: false }).range(from, to),
-      
-      // Counts for all tabs, ignoring pagination, but applying the same filters for consistency
-      supabaseAdmin
-        .from('Maintenance')
-        .select('*', { count: 'exact', head: true })
-        .eq('maintenance_needed', true)
-        .eq('approval_status', 'pending'),
-
-      supabaseAdmin
-        .from('Maintenance')
-        .select('*', { count: 'exact', head: true })
-        .eq('maintenance_needed', true)
-        .eq('approval_status', 'approved'),
-
-      supabaseAdmin
-        .from('Maintenance')
-        .select('*', { count: 'exact', head: true })
-        .eq('maintenance_needed', true)
-        .eq('approval_status', 'rejected'),
-    ]);
-
-    // Handle errors and prepare the response
-    if (pageResult.error) throw pageResult.error;
-    
-    const totalItems = pageResult.count ?? 0;
-    const totalPages = Math.ceil(totalItems / limit);
-
-    return NextResponse.json({
-      success: true,
-      assessments: pageResult.data ?? [],
-      totalItems,
-      totalPages,
-      tabCounts: {
-        pending:  pendingCount.count  ?? 0,
-        approved: approvedCount.count ?? 0,
-        rejected: rejectedCount.count ?? 0,
-      },
-    });
-
+    return NextResponse.json({ success: true, assessments: data ?? [] });
   } catch (error: any) {
     console.error('Pending assessments fetch error:', { message: error?.message });
     return NextResponse.json({ success: false, error: 'Failed to fetch' }, { status: 500 });

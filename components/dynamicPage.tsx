@@ -26,55 +26,9 @@ import { useRouter } from 'next/navigation'
 import Breadcrumb from '@/components/ui/breadcrumb'
 import DataTable from '@/components/ui/dataTable'
 
-export interface DynamicPageConfig {
-  entityName: string // 'asset', 'location', 'department'
-  entityDisplayName: string // 'Assets', 'Locations', 'Departments'
-  entityDisplayNameSingular: string // 'Asset', 'Location', 'Department'
-  apiEndpoint: string // '/api/assets', '/api/locations', '/api/departments'
-  primaryKey: string // 'asset_id', 'location_id', 'department_id'
-  columns: any[]
-  formFields: FormFieldConfig[]
-  showAddButton?: boolean
-  showConditionFilter?: boolean
-  searchFields: { key: string; label: string }[]
-  defaultSortBy: string
-  pageTitle: string
-  pageDescription: string
-  addUrl?: string  // optional — pages without Add don't need this
-  editUrl?: string // optional — pages without Edit don't need this
-
-  // NEW: optional extensions for maintenance-style pages ──────────────────
-  tabsConfig?: TabConfig[]        // renders tabs above DataTable if provided
-  tabQueryParam?: string          // query param name sent to API (default: 'status')
-  customActions?: CustomAction[]  // replaces Edit/Delete buttons if provided
-  modalConfig?: ModalConfig       // renders a modal when a row is selected
-}
-
-// NEW: one entry per tab (e.g. Pending / Approved / Rejected)
-export interface TabConfig {
-  key: string           // value sent to API e.g. 'pending'
-  label: string         // display label
-  icon?: React.ReactNode
-  badgeKey?: string     // key inside tabCounts returned by API
-  activeColor?: string  // tailwind classes e.g. 'border-yellow-600 text-yellow-600'
-}
-
-// NEW: custom row action — used instead of Edit/Delete when customActions is set
-export interface CustomAction {
-  label: string
-  icon?: React.ReactNode
-  className: string
-  onClick: (row: any, refresh: () => void) => void
-  show?: (row: any, activeTab?: string) => boolean
-  disabled?: (row: any) => boolean
-}
-
-// NEW: modal config — DynamicPage manages selectedRow state internally
-export interface ModalConfig {
-  renderModal: (row: any, onClose: () => void) => React.ReactNode
-}
-
-interface FormFieldConfig {
+// -------------------------- Types -----------------------------
+interface formFieldConfig {
+  // Database column name - used as the key in formData and the PUT body
   key: string
   // Human-readable label shown above the input
   label: string
@@ -239,17 +193,7 @@ export default function DynamicPage({ config }: dynamicPageProps) {
   const [sortBy, setSortBy] = useState(config.defaultSortBy)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  const [showModal, setShowModal] = useState(false)
-  const [currentItem, setCurrentItem] = useState<any | null>(null)
-  const [formData, setFormData] = useState<any>({})
-
-  // NEW: tab state — only meaningful when tabsConfig is provided
-  const [activeTab, setActiveTab] = useState(config.tabsConfig?.[0]?.key || '')
-  const [tabCounts, setTabCounts] = useState<Record<string, number>>({})
-
-  // NEW: modal state — only meaningful when modalConfig is provided
-  const [selectedRow, setSelectedRow] = useState<any | null>(null)
-
+  // Mount the component
   useEffect(() => setMounted(true), [])
 
   // --------------- Trigger data reload whe any search/sort/page/filter state changes ------------------------
@@ -259,7 +203,7 @@ export default function DynamicPage({ config }: dynamicPageProps) {
       loadData()
       // loadRelatedData()
     }
-  }, [mounted, session, currentPage, recordsPerPage, sortBy, sortOrder, conditionFilter, activeTab]) // NEW: activeTab added
+  }, [mounted, session, currentPage, recordsPerPage, sortBy, sortOrder, conditionFilter, searchTerm]) // Update when these are changed
 
 
   // -------------------- Fetches one page of record from the API -------------------------
@@ -273,9 +217,7 @@ export default function DynamicPage({ config }: dynamicPageProps) {
         sortBy,
         sortOrder,
         ...(searchTerm && { search: searchTerm, searchField }),
-        ...(conditionFilter && { condition: conditionFilter }),
-        // NEW: include active tab as query param when tabs are configured
-        ...(config.tabsConfig && activeTab && { [config.tabQueryParam || 'status']: activeTab }),
+        ...(conditionFilter && { condition: conditionFilter })
       })
       const res = await fetch(`${config.apiEndpoint}?${params}`)
 
@@ -284,13 +226,13 @@ export default function DynamicPage({ config }: dynamicPageProps) {
       }
 
       const responseData = await res.json()
-      // NEW: support both { data } (standard) and { assessments } (tab-style) responses
-      setData(responseData.data ?? responseData.assessments ?? [])
-      setTotalItems(responseData.totalItems)
-      setTotalPages(responseData.totalPages)
-      // NEW: populate tab badge counts if API returns them
-      if (responseData.tabCounts) setTabCounts(responseData.tabCounts)
-    } catch (e) {
+      // If response data is null then set as empty
+      setData(responseData.data ?? [])
+      // If load unsuccessful, set total items and pages to 0
+      setTotalItems(responseData.totalItems ?? 0)
+      setTotalPages(responseData.totalPages ?? 0)
+    } catch {
+      // Alert the user when data fail to load
       alert(`Failed to load ${config.entityDisplayName.toLowerCase()}`)
     } finally {
       // Unmount the loading spinner to prevent stuck in loading
@@ -348,13 +290,33 @@ export default function DynamicPage({ config }: dynamicPageProps) {
   }, [config.searchFields, config.defaultSortBy]) 
 
 
-  const handleAdd = () => {
-    if (config.addUrl) router.push(config.addUrl) // addUrl is optional
-  }
+  // --------------- Handle data table column sorting ----------------
+  // Clicking a column header can toggle sort using asc or desc
+  const handleSort = useCallback((col: string) => {
+    if (sortBy === col) {
+      // Swap the order or sorting when clicking the same column
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else { 
+      // When clicking a different column
+      setSortBy(col);
+      // Set the sort order to asc (A to Z)
+      setSortOrder('asc') 
+    }
+  }, [sortBy, sortOrder]) // Only update when these change
 
-  const handleEdit = (item: any) => {
-    if (config.editUrl) router.push(`${config.editUrl}/${item[config.primaryKey]}`) // editUrl is optional
-  }
+  // -------------------- Navigation handlers --------------------
+  // --------------- Handle routing to add page ------------------
+  const handleAdd = useCallback(() => {
+    // Route to the add page
+    router.push(config.addUrl)
+  }, [config.addUrl, router]) // Only update when change
+
+
+  // --------------- Handle routing to edit page -----------------
+  const handleEdit = useCallback((item: entityRow) => {
+    // Route to the edit page and load a single record
+    router.push(`${config.editUrl}/${item[config.primaryKey]}`)
+  }, [config.editUrl, config.primaryKey, router]) // Only update when these change
 
   
   // --------------- Handle deleting records ---------------------
@@ -601,125 +563,14 @@ export default function DynamicPage({ config }: dynamicPageProps) {
             <p className="text-gray-600 mt-1">{config.pageDescription}</p>
           </div>
 
-          {/* NEW: tabs rendered above DataTable only when tabsConfig is provided */}
-          {config.tabsConfig && (
-            <div className="mb-4">
-              <div className="flex gap-2 border-b border-gray-200">
-                {config.tabsConfig.map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
-                    className={`px-4 py-2 font-medium text-sm transition-colors flex items-center gap-2 ${
-                      activeTab === tab.key
-                        ? `border-b-2 ${tab.activeColor || 'border-red-600 text-red-600'}`
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                    {tab.badgeKey !== undefined && (
-                      <span className="ml-1">({tabCounts[tab.badgeKey!] ?? 0})</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* Dynamic data table */}
           <DataTable
             title={`${config.entityDisplayName} Listing`}
-            columns={
-              // NEW: when customActions provided, append an Actions column
-              config.customActions
-                ? [
-                    // Inject setSelectedRow into columns that have a clickable thumbnail - WC
-                    ...config.columns.map(col =>
-                      col.key === 'asset_id' && config.modalConfig
-                        ? {
-                            ...col,
-                            render: (v: any, row: any, rowIndex?: number) => {
-                              const original = col.render?.(v, row, rowIndex)
-                              if (!row.image_url || !original) return original
-                              // Wrap the column output so clicking the thumbnail opens the modal - WC
-                              return (
-                                <div
-                                  onClick={() => setSelectedRow(row)}
-                                  style={{ cursor: 'pointer' }}
-                                  title="Click image to enlarge"
-                                >
-                                  {original}
-                                </div>
-                              )
-                            },
-                          }
-                        : col
-                    ),
-                    {
-                      key: '__actions__',
-                      label: 'Actions',
-                      sortable: false,
-                      render: (_: any, row: any) => {
-                        // Renders custom actions with conditional visibility per row/tab - WC
-                        const visibleActions = config.customActions!.filter(action => !action.show || action.show(row, activeTab))
-                        const viewAction = visibleActions.find(a => a.label === 'View')
-                        const approveAction = visibleActions.find(a => a.label === 'Approve')
-                        const rejectAction = visibleActions.find(a => a.label === 'Reject')
-                        // otherActions: Reopen and anything else not in the icon row - WC
-                        const otherActions = visibleActions.filter(a => !['View', 'Approve', 'Reject'].includes(a.label))
-
-                        return (
-                          // Actions are split into two rows when Approve/Reject are present to emphasize them, 
-                          // as they're the most common actions on maintenance pages - WC
-                          <div className="flex flex-col gap-1 items-start">
-                            <div className="flex flex-col gap-1">
-                              {approveAction && (
-                                <button
-                                  title="Approve"
-                                  onClick={() => approveAction.onClick(row, loadData)}
-                                  disabled={approveAction.disabled?.(row)}
-                                  className={approveAction.className}
-                                >
-                                  {approveAction.icon}
-                                  {approveAction.label}
-                                </button>
-                              )}
-                              {rejectAction && (
-                                <button
-                                  title="Reject"
-                                  onClick={() => rejectAction.onClick(row, loadData)}
-                                  disabled={rejectAction.disabled?.(row)}
-                                  className={rejectAction.className}
-                                >
-                                  {rejectAction.icon}
-                                  {rejectAction.label}
-                                </button>
-                              )}
-                            </div>
-                            {/* Reopen and any other actions rendered below the icon buttons - WC */}
-                            {otherActions.map(action => (
-                              <button
-                                key={action.label}
-                                title={action.label}
-                                onClick={() => action.onClick(row, loadData)}
-                                disabled={action.disabled?.(row)}
-                                className={action.className}
-                              >
-                                {action.icon}
-                                {action.label}
-                              </button>
-                            ))}
-                          </div>
-                        )
-                      },
-                    },
-                  ]
-                : config.columns  // original behaviour untouched for asset/location/dept pages - WC
-            }
+            columns={config.columns}
             data={data}
             loading={loading}
             searchTerm={searchTerm}
             searchField={searchField}
-            searchFields={config.searchFields}
             onSearchFieldChange={setSearchField}
             onSearchChange={setSearchTerm}
             onSearch={handleSearch}
@@ -738,25 +589,13 @@ export default function DynamicPage({ config }: dynamicPageProps) {
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={handleSort}
-            // NEW: skip Edit/Delete when customActions is configured
-            actions={!config.customActions ? { onEdit: handleEdit, onDelete: handleDelete } : undefined}
+            actions={{ onEdit: handleEdit, onDelete: handleDeleteRequest }}
             showAddButton={config.showAddButton}
             onAdd={handleAdd}
           />
           
         </div>
       </main>
-      {/* NEW: modal rendered only when modalConfig provided and a row is selected */}
-      {config.modalConfig && selectedRow && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedRow(null)}
-        >
-          <div onClick={e => e.stopPropagation()}>
-            {config.modalConfig.renderModal(selectedRow, () => setSelectedRow(null))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

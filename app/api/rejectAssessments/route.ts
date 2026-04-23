@@ -8,7 +8,7 @@ const payloadSchema = z.object({
 }).strict();
 
 export async function POST(request: NextRequest) {
-  // Only admins can reject assessments
+  // RBAC: Only admins can reject assessments
   const authResult = await validateSession('admin');
   if (!authResult.authorized) return authResult.response;
 
