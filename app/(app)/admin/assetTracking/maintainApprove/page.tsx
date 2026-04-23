@@ -2,7 +2,8 @@
 
 // useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
 import { useAdminAccess } from '@/hooks/useAdminAccess'
-import DynamicPage, { DynamicPageConfig, CustomAction } from '@/components/dynamicPage'
+import DynamicPage from '@/components/dynamicPage'
+import type { DynamicPageConfig } from '@/components/dynamicPage'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -38,7 +39,7 @@ const parseAiPoints = (text: string): string[] => {
 
 // ── Action handlers — passed to customActions, receive (row, refresh) ─────────
 
-const handleApprove = async (row: any, refresh: () => void) => {
+const handleApprove = async (row: Record<string, unknown>, refresh: () => void) => {
   if (!confirm('Are you sure you want to approve this maintenance request?')) return
   const res = await fetch('/api/approveAssessments', {
     method: 'POST',
@@ -49,7 +50,7 @@ const handleApprove = async (row: any, refresh: () => void) => {
   else alert('Failed to approve')
 }
 
-const handleReject = async (row: any, refresh: () => void) => {
+const handleReject = async (row: Record<string, unknown>, refresh: () => void) => {
   if (!confirm('Are you sure you want to reject this maintenance request?')) return
   const res = await fetch('/api/rejectAssessments', {
     method: 'POST',
@@ -60,7 +61,7 @@ const handleReject = async (row: any, refresh: () => void) => {
   else alert('Failed to reject')
 }
 
-const handleReopen = async (row: any, refresh: () => void) => {
+const handleReopen = async (row: Record<string, unknown>, refresh: () => void) => {
   if (!confirm('Reopen this assessment and move it back to pending?')) return
   const res = await fetch('/api/reopenAssessments', {
     method: 'POST',
@@ -142,17 +143,20 @@ const maintenanceConfig: DynamicPageConfig = {
 
   // Custom modal for viewing asset image and details (triggered by "View" action) - WC
   modalConfig: {
-    renderModal: (row, onClose) => (
+    renderModal: (row, onClose) => {
+      const assetId  = row.asset_id  as string | undefined
+      const imageUrl = row.image_url as string | undefined
+      return (
       <div className="bg-white rounded-lg p-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-base font-semibold text-gray-800">
-            Asset Image — {row.asset_id}
+            Asset Image — {assetId}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
         </div>
-        {row.image_url ? (
+        {imageUrl ? (
           <div className="border rounded-lg overflow-hidden bg-gray-100">
-            <img src={row.image_url} alt="Asset" className="w-full max-h-[50vh] object-contain" />
+            <img src={imageUrl} alt="Asset" className="w-full max-h-[50vh] object-contain" />
           </div>
         ) : (
           <div className="border rounded-lg bg-gray-100 h-48 flex items-center justify-center text-gray-400 text-sm">
@@ -160,7 +164,8 @@ const maintenanceConfig: DynamicPageConfig = {
           </div>
         )}
       </div>
-    ),
+      )
+    },
   },
 
   // Columns config — defines table columns and how to render them. 
@@ -172,11 +177,13 @@ const maintenanceConfig: DynamicPageConfig = {
       key: 'asset_id',
       label: 'Asset',
       sortable: false,
-      render: (v: string, row: any, rowIndex?: number) => {
+      render: (v, row, rowIndex) => {
+        const assetId  = v as string
+        const imageUrl = row.image_url as string | undefined
         const shouldLoad = rowIndex === undefined || rowIndex < 10
         return (
           <div className="flex flex-col items-center gap-1.5">
-            {row.image_url ? (
+            {imageUrl ? (
               shouldLoad ? (
                 // Clickable thumbnail — opens the modal via the 'View' label convention in DynamicPage
                 <div
@@ -185,8 +192,8 @@ const maintenanceConfig: DynamicPageConfig = {
                   data-open-modal="true"
                 >
                   <img
-                    src={row.image_url}
-                    alt={`Asset ${v}`}
+                    src={imageUrl}
+                    alt={`Asset ${assetId}`}
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
@@ -197,7 +204,7 @@ const maintenanceConfig: DynamicPageConfig = {
                 </div>
               )
             ) : null}
-            <span className="font-medium text-gray-900 whitespace-nowrap">{v}</span>
+            <span className="font-medium text-gray-900 whitespace-nowrap">{assetId}</span>
           </div>
         )
       },
@@ -211,44 +218,56 @@ const maintenanceConfig: DynamicPageConfig = {
       key: 'condition_status',
       label: 'Condition',
       sortable: false,
-      render: (v: string) => (
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-          v === 'Spoiled' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-        }`}>{v}</span>
-      ),
+      render: (v) => {
+        const condition = v as string
+        return (
+          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+            condition === 'Spoiled' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+          }`}>{condition}</span>
+        )
+      },
     },
     {
       key: 'priority',
       label: 'Priority',
       sortable: false,
-      render: (v: string) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-          v === 'high'   ? 'bg-red-100 text-red-800'      :
-          v === 'medium' ? 'bg-orange-100 text-orange-800' :
-                           'bg-yellow-100 text-yellow-800'
-        }`}>{v?.toUpperCase()}</span>
-      ),
+      render: (v) => {
+        const priority = v as string
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+            priority === 'high'   ? 'bg-red-100 text-red-800'      :
+            priority === 'medium' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-yellow-100 text-yellow-800'
+          }`}>{priority?.toUpperCase()}</span>
+        )
+      },
     },
     {
       key: 'assessed_dt',
       label: 'Assessed At',
       sortable: false,
-      render: (v: string) => <span className="text-gray-500 whitespace-nowrap">{formatDate(v)}</span>,
+      render: (v) => {
+        const date = v as string
+        return <span className="text-gray-500 whitespace-nowrap">{formatDate(date)}</span>
+      },
     },
     {
       // Response column: capped at 220px with line-clamp so Actions stays visible (WC)
       key: 'ai_response',
       label: 'Response',
       sortable: false,
-      render: (v: string, row: any) => (
+      render: (v, row) => {
+        const aiResponse = v as string | undefined
+        const feedback   = row.feedback as string | undefined
+        return (
         <div style={{ maxWidth: '220px', width: '220px' }}>
-          {v ? (
+          {aiResponse ? (
             <div className="flex flex-col gap-1.5">
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5 w-fit">
                 AI Response
               </span>
               <ul className="space-y-1">
-                {parseAiPoints(v).length > 0 ? parseAiPoints(v).map((point, i) => (
+                {parseAiPoints(aiResponse).length > 0 ? parseAiPoints(aiResponse).map((point, i) => (
                   <li key={i} className="flex items-start gap-1.5">
                     <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-red-400 flex-shrink-0" />
                     <span className="text-xs text-gray-700 leading-snug line-clamp-2">{point}</span>
@@ -256,30 +275,32 @@ const maintenanceConfig: DynamicPageConfig = {
                 )) : <li className="text-xs text-gray-400 italic">No details</li>}
               </ul>
             </div>
-          ) : row.feedback ? (
+          ) : feedback ? (
             <div className="flex flex-col gap-1.5">
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 w-fit">
                 Staff feedback
               </span>
-              <p className="text-xs text-gray-700 leading-snug line-clamp-3">{row.feedback}</p>
+              <p className="text-xs text-gray-700 leading-snug line-clamp-3">{feedback}</p>
             </div>
           ) : (
             <span className="text-xs text-gray-400 italic">No response</span>
           )}
         </div>
-      ),
+        )
+      },
     },
     {
       key: 'approval_status',
       label: 'Status',
       sortable: false,
-      render: (v: string) => {
-        if (!v || v === 'pending') return (
+      render: (v) => {
+        const status = v as string | undefined
+        if (!status || status === 'pending') return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-semibold text-yellow-700 whitespace-nowrap">
             <ClockIcon className="h-4 w-4" /> Pending
           </span>
         )
-        if (v === 'approved') return (
+        if (status === 'approved') return (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-semibold text-green-900 whitespace-nowrap">
             <CheckCircleIcon className="h-4 w-4" /> Approved
           </span>
