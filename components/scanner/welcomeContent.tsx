@@ -1,36 +1,43 @@
 // components/scanner/WelcomeContent.tsx
-import { Package, Users, MapPin, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Users, MapPin, Building2 } from 'lucide-react';
 
-export default function WelcomeContent({ onNavigate }: { onNavigate: (page: string) => void }) {
+export default function welcomeContent({ onNavigate }: { onNavigate: (page: string) => void }) {
   const scanOptions = [
+    // ------------------ Scan asset id -----------------------
     {
-      title: "Asset Scan",
+      title: "View & Update Asset",
       icon: Package,
       page: "asset",
       color: "from-red-600 to-red-500",
-      description: "Scan asset QR codes or barcodes",
+      description: "Scan asset barcode to view and update information (e.g. condition)",
     },
+
+    // ------------------ Scan location QR -----------------------
     {
-      title: "Staff ID Scan",
-      icon: Users,
-      page: "staff",
-      color: "from-black to-gray-800",
-      description: "Scan staff identification codes",
-    },
-    {
-      title: "Location Scan",
+      title: "Update Assets' Location",
       icon: MapPin,
       page: "location",
-      color: "from-red-700 to-red-600",
-      description: "Scan location QR codes or barcodes",
+      color: "from-black to-gray-800",
+      description: "Scan location QR code to tag asset to location",
     },
+
+    // ------------------ Scan staff id -----------------------
     {
-      title: "Department Scan",
+      title: "Associate Asset with Staff",
+      icon: Users,
+      page: "staff",
+      color: "from-red-700 to-red-600",
+      description: "Scan staff id to tag asset to staff",
+    },
+
+    // ------------------ Scan department QR -----------------------
+    {
+      title: "Update Assets' Department",
       icon: Building2,
       page: "department",
       color: "from-gray-800 to-black",
-      description: "Scan department codes",
-    },
+      description: "Scan department QR code to tag asset to department",
+    }
   ];
 
   return (
@@ -41,10 +48,10 @@ export default function WelcomeContent({ onNavigate }: { onNavigate: (page: stri
             <Package className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Welcome to Asset Tracking!
+            Swinburne Asset Tracking System
           </h1>
           <p className="text-xl text-gray-600">
-            Choose a scanning option to get started
+            Choose an option to fulfill your task
           </p>
         </div>
 
@@ -65,7 +72,8 @@ export default function WelcomeContent({ onNavigate }: { onNavigate: (page: stri
           ))}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md">
+        {/* Commented by Desmond @ 23-April-26 : Removed unnecessary action buttons */}
+        {/* <div className="bg-white rounded-lg shadow-md">
           <div className="px-4 lg:px-6 py-4 bg-gray-50">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-md">
@@ -81,7 +89,7 @@ export default function WelcomeContent({ onNavigate }: { onNavigate: (page: stri
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
