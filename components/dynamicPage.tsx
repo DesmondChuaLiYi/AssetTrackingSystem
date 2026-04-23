@@ -632,63 +632,88 @@ export default function DynamicPage({ config }: dynamicPageProps) {
               // NEW: when customActions provided, append an Actions column
               config.customActions
                 ? [
-                    ...config.columns,
+                    // Inject setSelectedRow into columns that have a clickable thumbnail - WC
+                    ...config.columns.map(col =>
+                      col.key === 'asset_id' && config.modalConfig
+                        ? {
+                            ...col,
+                            render: (v: any, row: any, rowIndex?: number) => {
+                              const original = col.render?.(v, row, rowIndex)
+                              if (!row.image_url || !original) return original
+                              // Wrap the column output so clicking the thumbnail opens the modal - WC
+                              return (
+                                <div
+                                  onClick={() => setSelectedRow(row)}
+                                  style={{ cursor: 'pointer' }}
+                                  title="Click image to enlarge"
+                                >
+                                  {original}
+                                </div>
+                              )
+                            },
+                          }
+                        : col
+                    ),
                     {
                       key: '__actions__',
                       label: 'Actions',
                       sortable: false,
                       render: (_: any, row: any) => {
-                        // Changed the original render to fit the table structure for maitannece page
-                        // and support multiple custom actions with conditional visibility -WC
+                        // Renders custom actions with conditional visibility per row/tab - WC
                         const visibleActions = config.customActions!.filter(action => !action.show || action.show(row, activeTab))
                         const viewAction = visibleActions.find(a => a.label === 'View')
                         const approveAction = visibleActions.find(a => a.label === 'Approve')
                         const rejectAction = visibleActions.find(a => a.label === 'Reject')
+                        // otherActions: Reopen and anything else not in the icon row - WC
                         const otherActions = visibleActions.filter(a => !['View', 'Approve', 'Reject'].includes(a.label))
 
-                       return (
-                        // For simplicity, View/Approve/Reject are given priority and rendered as buttons with icons,
-                        //  while any other custom actions are rendered as text buttons below (this can be adjusted based on actual requirements) - WC
-                        <div className="flex flex-row gap-1">
-                          {viewAction && (
-                            <button
-                              title="View"
-                              onClick={() => {
-                                if (config.modalConfig) setSelectedRow(row)
-                                else viewAction.onClick(row, loadData)
-                              }}
-                              disabled={viewAction.disabled?.(row)}
-                              className={viewAction.className}
-                            >
-                              {viewAction.icon}
-                            </button>
-                          )}
-                          {approveAction && (
-                            <button
-                              title="Approve"
-                              onClick={() => approveAction.onClick(row, loadData)}
-                              disabled={approveAction.disabled?.(row)}
-                              className={approveAction.className}
-                            >
-                              {approveAction.icon}
-                            </button>
-                          )}
-                          {rejectAction && (
-                            <button
-                              title="Reject"
-                              onClick={() => rejectAction.onClick(row, loadData)}
-                              disabled={rejectAction.disabled?.(row)}
-                              className={rejectAction.className}
-                            >
-                              {rejectAction.icon}
-                            </button>
-                          )}
-                        </div>
-                      )
+                        return (
+                          // Actions are split into two rows when Approve/Reject are present to emphasize them, 
+                          // as they're the most common actions on maintenance pages - WC
+                          <div className="flex flex-col gap-1 items-start">
+                            <div className="flex flex-col gap-1">
+                              {approveAction && (
+                                <button
+                                  title="Approve"
+                                  onClick={() => approveAction.onClick(row, loadData)}
+                                  disabled={approveAction.disabled?.(row)}
+                                  className={approveAction.className}
+                                >
+                                  {approveAction.icon}
+                                  {approveAction.label}
+                                </button>
+                              )}
+                              {rejectAction && (
+                                <button
+                                  title="Reject"
+                                  onClick={() => rejectAction.onClick(row, loadData)}
+                                  disabled={rejectAction.disabled?.(row)}
+                                  className={rejectAction.className}
+                                >
+                                  {rejectAction.icon}
+                                  {rejectAction.label}
+                                </button>
+                              )}
+                            </div>
+                            {/* Reopen and any other actions rendered below the icon buttons - WC */}
+                            {otherActions.map(action => (
+                              <button
+                                key={action.label}
+                                title={action.label}
+                                onClick={() => action.onClick(row, loadData)}
+                                disabled={action.disabled?.(row)}
+                                className={action.className}
+                              >
+                                {action.icon}
+                                {action.label}
+                              </button>
+                            ))}
+                          </div>
+                        )
                       },
                     },
                   ]
-                : config.columns  // original behaviour — untouched for asset/location/dept pages
+                : config.columns  // original behaviour untouched for asset/location/dept pages - WC
             }
             data={data}
             loading={loading}

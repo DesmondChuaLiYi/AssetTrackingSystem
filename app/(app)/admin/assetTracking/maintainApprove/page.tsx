@@ -8,7 +8,8 @@ import {
   XCircleIcon,
   ClockIcon,
   ArrowPathIcon,
-  EyeIcon,
+  CheckIcon,   
+  XMarkIcon, 
 } from '@heroicons/react/24/outline'
 
 // Helper function to format date in "dd MMM yyyy, HH:mm" format (e.g. "25 Sep 2024, 14:30") - WC
@@ -99,53 +100,41 @@ const maintenanceConfig: DynamicPageConfig = {
     {
       key: 'approved',
       label: 'Approved',
-      icon: <CheckCircleIcon className="h-5 w-5" />,
+      icon: <CheckIcon className="h-5 w-5" />,
       badgeKey: 'approved',
       activeColor: 'border-green-600 text-green-600',
     },
     {
       key: 'rejected',
       label: 'Rejected',
-      icon: <XCircleIcon className="h-5 w-5" />,
+      icon: <XMarkIcon className="h-5 w-5" />,
       badgeKey: 'rejected',
       activeColor: 'border-red-600 text-red-600',
     },
   ],
   tabQueryParam: 'status',
 
-  //  Custom row actions (replaces Edit/Delete) 
+  //  Custom row actions — Approve/Reject for pending; Reopen for approved/rejected
+  // View button removed: clicking the thumbnail opens the modal instead - WC
   customActions: [
     {
-      label: 'View',
-      icon: <EyeIcon className="h-5 w-5" />,
-      className: 'inline-flex items-center justify-center w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors',
-      // View is shown on pending always; on approved/rejected only if image exists
-      show: (row, activeTab) =>
-        activeTab === 'pending' || !!row.image_url,
-      onClick: (_row, _refresh) => {
-        // View opens the modal — handled via modalConfig.renderModal below
-        // DynamicPage sets selectedRow when this action is clicked if label === 'View'
-        // See modalConfig below for the actual modal content
-      },
-    },
-    {
       label: 'Approve',
-      icon: <CheckCircleIcon className="h-5 w-5" />,
-      className: 'inline-flex items-center justify-center w-8 h-8 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors',
+      icon: <CheckIcon className="h-5 w-5" strokeWidth={2.5} />,
+      className: 'inline-flex items-center justify-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-xs font-medium',
       show: (_row, activeTab) => activeTab === 'pending',
       onClick: handleApprove,
     },
     {
       label: 'Reject',
-      icon: <XCircleIcon className="h-5 w-5" />,
-      className: 'inline-flex items-center justify-center w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors',
+      icon: <XMarkIcon className="h-5 w-5" strokeWidth={2.5} />,
+      className: 'inline-flex items-center justify-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-xs font-medium',
       show: (_row, activeTab) => activeTab === 'pending',
       onClick: handleReject,
     },
     {
       label: 'Reopen',
-      icon: <ArrowPathIcon className="h-4 w-4" />,
-      className: 'w-full inline-flex items-center justify-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors text-xs font-medium',
+      icon: <ArrowPathIcon className="h-5 w-5" strokeWidth={2.5} />,
+      className: 'inline-flex items-center justify-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md transition-colors text-xs font-medium',
       show: (_row, activeTab) => activeTab === 'approved' || activeTab === 'rejected',
       onClick: handleReopen,
     },
@@ -178,10 +167,40 @@ const maintenanceConfig: DynamicPageConfig = {
   // Actions column is auto-appended by DynamicPage when customActions are defined (see above) - WC
   columns: [
     {
+      // Asset ID cell: thumbnail stacked above ID text — no extra column needed.
+      // Clicking the thumbnail triggers the modal (same mechanism as the old View button). - WC
       key: 'asset_id',
-      label: 'Asset ID',
+      label: 'Asset',
       sortable: false,
-      render: (v: string) => <span className="font-medium text-gray-900">{v}</span>,
+      render: (v: string, row: any, rowIndex?: number) => {
+        const shouldLoad = rowIndex === undefined || rowIndex < 10
+        return (
+          <div className="flex flex-col items-center gap-1.5">
+            {row.image_url ? (
+              shouldLoad ? (
+                // Clickable thumbnail — opens the modal via the 'View' label convention in DynamicPage
+                <div
+                  className="w-14 h-14 rounded-md overflow-hidden border border-gray-200 bg-gray-100 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-400 hover:opacity-90 transition-all"
+                  title="Click to enlarge"
+                  data-open-modal="true"
+                >
+                  <img
+                    src={row.image_url}
+                    alt={`Asset ${v}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+                  <span className="text-gray-300 text-xs">IMG</span>
+                </div>
+              )
+            ) : null}
+            <span className="font-medium text-gray-900 whitespace-nowrap">{v}</span>
+          </div>
+        )
+      },
     },
     {
       key: 'location_id',

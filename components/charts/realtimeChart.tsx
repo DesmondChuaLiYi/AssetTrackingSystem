@@ -252,9 +252,14 @@ export default function RealtimeChart({
           fetchAllLocations(),
         ]);
         if (!cancelled) {
+          console.log('Sample asset dept fields:', assets.slice(0, 5).map((a: any) => ({ department: a.department, department_id: a.department_id })));
+          console.log('Dept API response:', depts.map((d: any) => ({ id: d.department_id, name: d.name })));
+          console.log('Full asset[0]:', JSON.stringify(assets[0], null, 2));
+
           setData(assets);
           setDeptMap(Object.fromEntries(depts.map((d: any) => [d.department_id, d.name])));
           setLocMap(Object.fromEntries(locs.map((l: any) => [l.location_id, l.name])));
+
         }
       } catch (e: any) {
         if (!cancelled) setError(e.message);
@@ -305,10 +310,10 @@ export default function RealtimeChart({
 
   // Helper to resolve department/location names from either ID or object, with fallback to 'Unknown'
   const resolveName = (raw: any, lookupMap: Record<string, string>): string => {
-    if (!raw) return 'Unknown';
-    if (typeof raw === 'object' && raw !== null) return raw.name || 'Unknown';
-    if (typeof raw === 'string' && raw) return lookupMap[raw] || raw;
-    return 'Unknown';
+    if (raw == null) return 'Unknown';
+    if (typeof raw === 'object') return raw.name || 'Unknown';
+    const key = String(raw);
+    return lookupMap[key] || key || 'Unknown';
   };
 
   // Group and aggregate data for the chart based on the current entity view
@@ -330,7 +335,7 @@ export default function RealtimeChart({
     }
 
     // Department or Location view: group by entity name, show condition breakdown
-    const field = entityView === 'department' ? 'department' : 'location';
+    const field = entityView === 'department' ? 'department_id' : 'location_id';
     const lookupMap = entityView === 'department' ? deptMap : locMap;
     const map: Record<string, { time: string; sortKey: string } & Record<Condition, number>> = {};
     filteredData.forEach(item => {
@@ -338,6 +343,7 @@ export default function RealtimeChart({
       const cond = item.condition as Condition;
       if (!CONDITIONS.includes(cond)) return;
       const name = resolveName(item[field], lookupMap);
+      if (name === 'Unknown') return;
       if (!map[name]) map[name] = { time: name, sortKey: name, 'In-use': 0, 'In-store': 0, 'Spoiled': 0 };
       map[name][cond]++;
     });
@@ -356,25 +362,27 @@ export default function RealtimeChart({
     const counts: Record<string, number> = {};
     spoiledItems.forEach(i => {
       const v = resolveName(i[field], lookupMap);
+      if (v === 'Unknown') return;
       counts[v] = (counts[v] || 0) + 1;
     });
     return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
   };
 
   // Get top spoiled departments and locations for the alerts section in the assets view
-  const spoiledByDept = rankBy('department', deptMap);
-  const spoiledByLocation = rankBy('location', locMap);
+  const spoiledByDept = rankBy('department_id', deptMap);
+  const spoiledByLocation = rankBy('location_id', locMap);
 
   // In department or location views, derive per-entity condition breakdown for the alert
-  const entityConditionSummary = (() => {
-    if (entityView === 'assets') return null;
-    const field = entityView === 'department' ? 'department' : 'location';
+    const entityConditionSummary = (() => {
+      if (entityView === 'assets') return null;
+    const field = entityView === 'department' ? 'department_id' : 'location_id';
     const lookupMap = entityView === 'department' ? deptMap : locMap;
     const map: Record<string, Record<Condition, number> & { total: number }> = {};
     filteredData.forEach(item => {
       const cond = item.condition as Condition;
       if (!CONDITIONS.includes(cond)) return;
       const name = resolveName(item[field], lookupMap);
+      if (name === 'Unknown') return;
       if (!map[name]) map[name] = { 'In-use': 0, 'In-store': 0, 'Spoiled': 0, total: 0 };
       map[name][cond]++;
       map[name].total++;
