@@ -246,20 +246,17 @@ export default function RealtimeChart({
     let cancelled = false;
     (async () => {
       try {
+        // Fetch assets, departments, and locations in parallel for efficiency
         const [assets, depts, locs] = await Promise.all([
           fetchAllAssets(),
           fetchAllDepartments(),
           fetchAllLocations(),
         ]);
+        // If the component was unmounted while fetching, don't attempt to update state
         if (!cancelled) {
-          console.log('Sample asset dept fields:', assets.slice(0, 5).map((a: any) => ({ department: a.department, department_id: a.department_id })));
-          console.log('Dept API response:', depts.map((d: any) => ({ id: d.department_id, name: d.name })));
-          console.log('Full asset[0]:', JSON.stringify(assets[0], null, 2));
-
           setData(assets);
           setDeptMap(Object.fromEntries(depts.map((d: any) => [d.department_id, d.name])));
           setLocMap(Object.fromEntries(locs.map((l: any) => [l.location_id, l.name])));
-
         }
       } catch (e: any) {
         if (!cancelled) setError(e.message);
@@ -395,7 +392,7 @@ export default function RealtimeChart({
 
   // Determine the most recent update timestamp from the data for display in the footer
   const lastItem = data[data.length - 1];
-  const lastDs   = lastItem?.created_dt || lastItem?.updated_at;
+  const lastDs = lastItem?.created_dt || lastItem?.updated_at;
   const lastDate = lastDs ? new Date(lastDs) : null;
 
   // Render loading and error states
