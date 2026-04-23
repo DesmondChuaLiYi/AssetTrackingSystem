@@ -8,7 +8,7 @@ const payloadSchema = z.object({
 }).strict();
 
 export async function POST(request: NextRequest) {
-  // RBAC: Only admins can reopen assessments
+  // Only admins can reopen assessments
   const authResult = await validateSession('admin');
   if (!authResult.authorized) return authResult.response;
 

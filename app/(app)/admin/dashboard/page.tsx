@@ -13,13 +13,16 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline'
 
+type EntityView = 'assets' | 'department' | 'location'
+
+// Define the structure of the dashboard stats
 interface DashboardStats {
   totalAssets: number
   totalDepartments: number
   totalStaff: number
   totalLocations: number
 }
-
+// The DashboardPage component serves as the main landing page for admin users, providing an overview of key metrics and quick access to different sections of the admin panel. 
 export default function DashboardPage() {
   const { session, isLoading: sessionLoading } = useAdminAccess()
   const router = useRouter()
@@ -31,14 +34,17 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
-  const [selectedChart, setSelectedChart] = useState('assets')
   // Add a key to force chart re-render
   const [chartKey, setChartKey] = useState(0)
+  // Chart entity selector (lifted from RealtimeChart)
+  const [entityView, setEntityView] = useState<EntityView>('assets')
 
+  // Set mounted to true after component mounts to avoid hydration issues with session data
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Fetch all dashboard data once session is ready
   useEffect(() => {
     if (!mounted || sessionLoading) return
     if (!session) return
@@ -56,7 +62,7 @@ export default function DashboardPage() {
         fetch('/api/staff/list'),
         fetch('/api/location')
       ])
-
+      // Check if all responses are ok
       const [assetsData, departmentsData, staffData, locationsData] = await Promise.all([
         assetsRes.json(),
         departmentsRes.json(),
@@ -85,44 +91,7 @@ export default function DashboardPage() {
     setChartKey(prev => prev + 1)
   }
 
-  // Chart configurations - using SINGULAR table names to match your database
-  const chartConfigs = [
-    {
-      id: 'assets',
-      label: 'Assets',
-      tableName: 'Asset',
-      title: 'Total Assets',
-      valueKey: 'count',
-      labelKey: 'category',
-      chartType: 'line' as const,
-      color: '#3b82f6',
-      icon: '',
-      dateKey: 'created_dt'
-    },
-    {
-      id: 'departments',
-      label: 'Departments',
-      tableName: 'Department',
-      title: 'Department Stats',
-      valueKey: 'total',
-      chartType: 'line' as const,
-      color: '#f59e0b',
-      icon: ''
-    },
-    {
-      id: 'locations',
-      label: 'Locations',
-      tableName: 'Location',
-      title: 'Location Analytics',
-      valueKey: 'count',
-      chartType: 'bar' as const,
-      color: '#ef4444',
-      icon: ''
-    }
-  ]
-
-  const activeChart = chartConfigs.find(c => c.id === selectedChart)
-
+  // Define the stat cards with their respective icons, colors, and links
   const statCards = [
     {
       title: 'Total Assets',
@@ -249,42 +218,36 @@ export default function DashboardPage() {
 
           {/* Chart Section and Recent Activity - Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Chart Section with Dropdown */}
+            {/* Chart Section */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              {/* Dropdown Selector */}
-              <div className="mb-4 flex justify-between items-center">
+              {/* Analytics header - only entity selector here */}
+              <div className="flex items-center justify-between mb-4">
                 <p className="font-bold text-xl">Analytics</p>
-                <div className="w-40 sm:w-48">
-                  <select
-                    value={selectedChart}
-                    onChange={(e) => setSelectedChart(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-medium text-sm"
-                  >
-                    {chartConfigs.map((chart) => (
-                      <option key={chart.id} value={chart.id}>
-                        {chart.icon} {chart.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={entityView}
+                  onChange={e => setEntityView(e.target.value as EntityView)}
+                  className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 focus:border-blue-400 outline-none cursor-pointer h-9"
+                >
+                  <option value="assets">Assets</option>
+                  <option value="department">Department</option>
+                  <option value="location">Location</option>
+                </select>
               </div>
-
-              {/* Realtime Chart with key prop for forced re-render */}
-              {activeChart && (
-                <RealtimeChart
-                  key={`${selectedChart}-${chartKey}`}
-                  config={{
-                    tableName: activeChart.tableName,
-                    title: activeChart.title,
-                    valueKey: activeChart.valueKey,
-                    labelKey: activeChart.labelKey,
-                    chartType: activeChart.chartType,
-                    color: activeChart.color,
-                    limit: 200,
-                    dateKey: activeChart.dateKey
-                  }}
-                />
-              )}
+              {/* Real-time Chart */}
+              <RealtimeChart
+                key={chartKey}
+                config={{
+                  tableName: 'Asset',
+                  title: 'Total Assets',
+                  valueKey: 'count',
+                  labelKey: 'category',
+                  chartType: 'line',
+                  color: '#3b82f6',
+                  limit: 200,
+                  dateKey: 'created_dt'
+                }}
+                entityView={entityView}
+              />
             </div>
 
             {/* Recent Activity */}
