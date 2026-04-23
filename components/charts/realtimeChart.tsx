@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Area, AreaChart,
 } from 'recharts';
 
@@ -21,11 +21,11 @@ const CONDITION_COLORS: Record<Condition, string> = {
   'Spoiled': '#ef4444',
 };
 
-const CONDITION_COLORS_ALPHA: Record<Condition, string> = {
-  'In-use': 'rgba(59,130,246,0.15)',
-  'In-store': 'rgba(34,197,94,0.15)',
-  'Spoiled': 'rgba(239,68,68,0.15)',
-};
+// const CONDITION_COLORS_ALPHA: Record<Condition, string> = {
+//   'In-use': 'rgba(59,130,246,0.15)',
+//   'In-store': 'rgba(34,197,94,0.15)',
+//   'Spoiled': 'rgba(239,68,68,0.15)',
+// };
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -82,7 +82,7 @@ async function fetchAllAssets(): Promise<any[]> {
 
 // Fetch all departments with pagination
 async function fetchAllDepartments(): Promise<any[]> {
-  const PAGE_LIMIT = 100;
+  // const PAGE_LIMIT = 100;
   let page = 1, totalPages = 1;
   const results: any[] = [];
   do {
@@ -98,7 +98,7 @@ async function fetchAllDepartments(): Promise<any[]> {
 
 // Fetch all locations with pagination
 async function fetchAllLocations(): Promise<any[]> {
-  const PAGE_LIMIT = 100;
+  // const PAGE_LIMIT = 100;
   let page = 1, totalPages = 1;
   const results: any[] = [];
   do {

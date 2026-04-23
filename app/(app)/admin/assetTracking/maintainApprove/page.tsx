@@ -3,7 +3,7 @@
 // useAdminAccess - protects this page so only admins can access it, redirect others to /unauthorized
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import DynamicPage from '@/components/dynamicPage'
-import type { DynamicPageConfig } from '@/components/dynamicPage'
+import type { dynamicPageConfig } from '@/components/dynamicPage'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -73,7 +73,7 @@ const handleReopen = async (row: Record<string, unknown>, refresh: () => void) =
 }
 
 //  DynamicPageConfig for Maintenance Page
-const maintenanceConfig: DynamicPageConfig = {
+const maintenanceConfig: dynamicPageConfig = {
   entityName: 'maintenance',
   entityDisplayName: 'Maintenance Assessments',
   entityDisplayNameSingular: 'Assessment',

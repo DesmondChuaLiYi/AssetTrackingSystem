@@ -85,7 +85,7 @@ export interface ModalConfig {
 }
 
 /** Configuration object passed to DynamicPage from each entity page */
-export interface DynamicPageConfig {
+export interface dynamicPageConfig {
   /** Short internal name for logging, e.g. 'asset' */
   entityName: string
   /** Plural display name, e.g. 'Assets' */
@@ -138,7 +138,7 @@ export interface DynamicPageConfig {
 }
 
 interface DynamicPageProps {
-  config: DynamicPageConfig
+  config: dynamicPageConfig
 }
 
 // ─────────────────────── Helpers ─────────────────────────────
