@@ -343,14 +343,14 @@ export interface Database {
                     asset_id: string;
                     location_id: string;
                     department_id?: string | null;
-                    condition_status: 'In-use' | 'In-store' | 'Spoiled';
+                    condition_status: Database['public']['Enums']['condition_status_enum']
                     maintenance_needed: boolean;
-                    priority: 'none' | 'low' | 'medium' | 'high';
+                    priority: Database['public']['Enums']['priority_enum'];
                     ai_response: string | null;
                     feedback: string | null; 
                     image_url?: string | null;  
                     actioned_at?: string | null;    
-                    approval_status?: 'pending' | 'approved' | 'rejected'; 
+                    approval_status?: Database['public']['Enums']['approval_status_enum'];      
                     assessed_dt: string;
                     assessed_by: string | null;
                     created_dt: string;
@@ -433,8 +433,10 @@ export interface Database {
         }
 
         Enums: {
-            // Meaning empty, and we are not using these features yet
-            [_ in never]: never
+            // Create enum types for condition_status, priority and approval_status to ensure data integrity
+            condition_status_enum: 'In-use' | 'In-store' | 'Spoiled'
+            priority_enum: 'none' | 'low' | 'medium' | 'high'
+            approval_status_enum: 'pending' | 'approved' | 'rejected'
         }
 
         CompositeTypes: {
@@ -451,13 +453,13 @@ export interface MaintenanceAssessment {
     asset_id: string;          
     location_id: string; 
     department_id?: string | null;      
-    condition_status: 'In-use' | 'In-store' | 'Spoiled';
+    condition_status: Database['public']['Enums']['condition_status_enum']
     maintenance_needed: boolean;
-    priority: 'none' | 'low' | 'medium' | 'high';
+    priority: Database['public']['Enums']['priority_enum'];
     ai_response?: string | null;
     feedback?: string | null;  
     image_url?: string | null;           
-    approval_status?: 'pending' | 'approved' | 'rejected';           
+    approval_status?: Database['public']['Enums']['approval_status_enum'];           
     actioned_at?: string | null;       
     assessed_dt: string;
     assessed_by: string | null;
@@ -469,17 +471,17 @@ export interface AssessmentInput {
   asset_id: string;          
   location_id: string;       
   department_id?: string | null;
-  condition_status: 'In-use' | 'In-store' | 'Spoiled';
+  condition_status: Database['public']['Enums']['condition_status_enum'];
   maintenance_needed: boolean;
-  priority: 'none' | 'low' | 'medium' | 'high';
+  priority: Database['public']['Enums']['priority_enum'];
   ai_response: string | null;
   assessed_by: string | null;
 }
 
 export interface AiAssessmentResult {
-  condition:'In-use' | 'In-store' | 'Spoiled';
+  condition: Database['public']['Enums']['condition_status_enum'];
   maintenanceNeeded: boolean;
-  priority: 'none' | 'low' | 'medium' | 'high';
+  priority: Database['public']['Enums']['priority_enum']
   issues: string[];
   fullResponse: string;
 }
