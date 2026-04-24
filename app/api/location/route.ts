@@ -1,3 +1,4 @@
+// Commented on 23/04/2026 Daryl. Removed .strict() and used coerce.number()
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { validateSession } from '@/lib/apiAuth';
@@ -12,19 +13,20 @@ const getQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// BUGFIX: Removed .strict() and used coerce.number()
 const postSchema = z.object({
-  name: z.string().min(1, 'Location name is required').max(100),
-  description: z.string().max(255).optional(),
-  block: z.string().max(50).optional().nullable(),
-  level: z.number().optional().nullable(),
-}).strict();
+  location_id: z.string().min(1, 'Location ID is required').max(30),
+  name: z.string().min(1, 'Location name is required').max(30),
+  description: z.string().max(30).optional().nullable(),
+  block: z.string().max(10).optional().nullable(),
+  level: z.coerce.number().int().optional().nullable(),
+});
 
 const deleteSchema = z.object({
-  location_id: z.string().uuid('Invalid Location ID'),
+  location_id: z.string().min(1, 'Invalid Location ID').max(30),
 });
 
 export async function GET(request: NextRequest) {
-  // Check that the user has a valid session to view locations
   const authResult = await validateSession();
   if (!authResult.authorized) return authResult.response;
 
@@ -32,9 +34,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const validatedParams = getQuerySchema.parse(Object.fromEntries(searchParams.entries()));
 
-    let query = supabaseAdmin
-      .from('Location')
-      .select('*', { count: 'exact' })
+    let query = supabaseAdmin.from('Location').select('*', { count: 'exact' });
 
     if (validatedParams.search) {
       query = query.ilike(validatedParams.searchField, `%${validatedParams.search}%`);
@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Admin-only action to create a new location
   const authResult = await validateSession('admin');
   if (!authResult.authorized) return authResult.response;
 
@@ -72,11 +71,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = postSchema.parse(body);
 
-    const newId = crypto.randomUUID(); // FIX: Generate required UUID
-
     const { data, error } = await supabaseAdmin.from('Location')
       .insert([{ 
-        location_id: newId, // FIX: Pass the generated ID
         ...validatedData, 
         created_dt: new Date().toISOString(), 
         updated_dt: new Date().toISOString() 
@@ -95,7 +91,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  // Admin-only action to delete a location
   const authResult = await validateSession('admin');
   if (!authResult.authorized) return authResult.response;
 
