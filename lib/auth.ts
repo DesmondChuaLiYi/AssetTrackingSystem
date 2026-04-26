@@ -50,11 +50,20 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
                     .eq("email", token.email) // Match the email
                     .single<staffData>() // Only grab one result, using the staffData type
 
-                if (!error && data) { // Only proceed when no error 
+                if (!error && data) { // Only proceed when no error
                     token.staffId = data.staff_id
                     token.role = data.role
                     token.departmentId = data.department_id
                     token.mobileNo = data.mobile_no
+
+                    // On first login, write the Microsoft ID to DB if not yet stored
+                    if (token.microsoftUserId) {
+                        await supabaseAdmin
+                            .from("Staff")
+                            .update({ microsoft_user_id: token.microsoftUserId as string })
+                            .eq("email", token.email)
+                            .is("microsoft_user_id", null) // Only update if still null — avoids unnecessary writes
+                    }
                 } else if (error) { // Error output
                     console.error("Error fetching staff data:", error.message)
                 }
