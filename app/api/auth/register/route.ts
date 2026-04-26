@@ -1,10 +1,8 @@
 // app/api/auth/register/route.ts
-/* Commented by Jun Zhen @ 24-Apr-2026
-  - Accepts user-supplied integer staff_id instead of auto-generating via DB function.
-  - Validates all inputs with Zod: staff_id must be digits-only, unique, and ≤ 30 chars.
-  - microsoft_user_id is left null and filled automatically on first Microsoft login.
-  - This route remains public (no session required) — protected only by middleware.ts.
-*/
+// Accepts user-supplied staff_id (digits only) instead of auto-generating via DB function.
+// Validates all inputs with Zod before inserting into Staff table.
+// microsoft_user_id is left null here and filled automatically on first Microsoft login.
+// This route is public — no session required.
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { supabaseAdmin as supabase } from '@/lib/supabase/server'

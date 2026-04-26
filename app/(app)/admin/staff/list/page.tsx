@@ -5,6 +5,11 @@ import { useState, useEffect } from 'react'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import Breadcrumb from '@/components/ui/breadcrumb'
 
+interface Department {
+  department_id: string
+  name: string
+}
+
 import {
   PencilIcon,
   PlusIcon
@@ -37,14 +42,22 @@ export default function AddStaffPage() {
     email: '',
     mobile_no: '',
     department_id: '',
-    microsoft_user_id: ''
   })
 
   // Staff list state
   const [staffList, setStaffList] = useState<Staff[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
+
+  // Fetch departments for dropdown
+  useEffect(() => {
+    fetch('/api/department?limit=100')
+      .then(res => res.json())
+      .then(data => { if (data.data) setDepartments(data.data) })
+      .catch(() => {}) // If fetch fails, dropdown will be empty
+  }, [])
 
   // Fetch staff list
   useEffect(() => {
@@ -81,7 +94,7 @@ export default function AddStaffPage() {
 
     // Validation
     if (!formData.staff_id || !formData.name || !formData.email ||
-      !formData.mobile_no || !formData.department_id || !formData.microsoft_user_id) {
+      !formData.mobile_no || !formData.department_id) {
       alert('All fields are required!')
       return
     }
@@ -107,7 +120,6 @@ export default function AddStaffPage() {
           email: '',
           mobile_no: '',
           department_id: '',
-          microsoft_user_id: ''
         })
         setEditingStaff(null)
         // Refresh staff list
@@ -131,7 +143,6 @@ export default function AddStaffPage() {
       email: staff.email || '',
       mobile_no: staff.mobile_no || '',
       department_id: staff.department_id || '',
-      microsoft_user_id: staff.microsoft_user_id || ''
     })
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -145,7 +156,6 @@ export default function AddStaffPage() {
       email: '',
       mobile_no: '',
       department_id: '',
-      microsoft_user_id: ''
     })
   }
 
@@ -238,34 +248,25 @@ export default function AddStaffPage() {
                 />
               </div>
 
+              {/* Department — dropdown from Department table */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department ID <span className="text-red-600">*</span>
+                  Department <span className="text-red-600">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="department_id"
                   value={formData.department_id}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                  placeholder="e.g., IT"
+                  onChange={(e) => setFormData(prev => ({ ...prev, department_id: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 bg-white"
                   required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Microsoft User ID <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="microsoft_user_id"
-                  value={formData.microsoft_user_id}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                  placeholder="e.g., d5a79a53-4635-4cb7-8b57-3a586f6cb9c9"
-                  required
-                />
+                >
+                  <option value="">Select a department</option>
+                  {departments.map(dept => (
+                    <option key={dept.department_id} value={dept.department_id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="md:col-span-2 flex gap-3">

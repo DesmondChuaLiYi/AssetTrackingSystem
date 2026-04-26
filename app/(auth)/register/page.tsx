@@ -2,11 +2,17 @@
 
 // Registration page — collects Staff ID (user-provided integer), name, email, mobile, department.
 // Staff ID is the Swinburne staff number (digits only). Validated inline and checked for duplicates before submit.
+// Department is a dropdown fetched from the Department table — prevents invalid/free-text department entries.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+
+interface Department {
+  department_id: string
+  name: string
+}
 
 // Regex: only digits, no letters or symbols
 const STAFF_ID_REGEX = /^\d+$/
@@ -16,6 +22,16 @@ const SENSITIVE_CHARS_REGEX = /[<>"'`;\\]/
 export default function RegisterPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [departments, setDepartments] = useState<Department[]>([])
+
+  // Fetch department list on mount for the dropdown
+  useEffect(() => {
+    fetch('/api/department/public')
+      .then(res => res.json())
+      .then(data => { if (data.data) setDepartments(data.data) })
+      .catch(() => {}) // If fetch fails, dropdown will be empty
+  }, [])
+
   const [formData, setFormData] = useState({
     staff_id: '',
     name: '',
@@ -256,21 +272,25 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Department */}
+          {/* Department — dropdown from Department table */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Department <span className="text-red-600">*</span>
             </label>
-            <input
-              type="text"
+            <select
               name="department_id"
               value={formData.department_id}
-              onChange={handleInputChange}
-              maxLength={30}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-              placeholder="e.g., IT Department"
+              onChange={(e) => setFormData(prev => ({ ...prev, department_id: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white"
               required
-            />
+            >
+              <option value="">Select a department</option>
+              {departments.map(dept => (
+                <option key={dept.department_id} value={dept.department_id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-md p-4">

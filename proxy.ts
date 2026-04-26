@@ -322,6 +322,7 @@ export default withAuth(
 // Matcher: Controls which URL paths this middleware runs on at all
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|api/auth|favicon\\.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)).*)',
+    // Exclude static files, auth routes, and the public department endpoint used by the registration form
+    '/((?!_next/static|_next/image|api/auth|api/department/public|favicon\\.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|woff|woff2)).*)',
   ],
 }
