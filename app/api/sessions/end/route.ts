@@ -1,62 +1,32 @@
 // app/api/sessions/end/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/client";
+// Called by logoutButton.tsx on sign out. Clears the user_session cookie.
+// Sessions table has been removed as session tracking is handled by NextAuth.
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    // Get session from cookie if it exists (don't require auth)
-    const sessionCookie = request.cookies.get("session")?.value;
+    const response = NextResponse.json({ success: true, message: 'Logged out successfully' })
 
-    // Try to update DB if we have session data
-    if (sessionCookie) {
-      try {
-        const sessionData = JSON.parse(sessionCookie);
-        if (sessionData.sessionId) {
-          await supabase
-            .from("Sessions")
-            .update({
-              status: "ended",
-              ended_at: new Date().toISOString(),
-            })
-            .eq("id", sessionData.sessionId);
-        }
-      } catch (parseError) {
-        // Ignore parse errors - just clear the cookie
-      }
-    }
-
-    const response = NextResponse.json({
-      success: true,
-      message: "Logged out successfully",
-    });
-
-    // Clear the session cookie
-    response.cookies.set("session", "", {
+    // Clear the user_session cookie set by /api/sessions/set-cookie
+    response.cookies.set('user_session', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 0,
-      path: "/",
-    });
+      path: '/',
+    })
 
-    return response;
+    return response
   } catch (error) {
-    console.error("Logout error:", error);
-
-    // Still return success and clear cookie even on error
-    const response = NextResponse.json({
-      success: true,
-      message: "Logged out",
-    });
-
-    response.cookies.set("session", "", {
+    console.error('Logout error:', error)
+    const response = NextResponse.json({ success: true, message: 'Logged out' })
+    response.cookies.set('user_session', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 0,
-      path: "/",
-    });
-
-    return response;
+      path: '/',
+    })
+    return response
   }
 }
