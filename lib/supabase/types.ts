@@ -138,6 +138,9 @@ export interface Database {
                     location_id: string | null
                     department_id: string | null
                     category: string
+                    // Commented by Desmond @ 26-April-26
+                    // last_assessed_dt for maintenance assessment record
+                    last_assessed_dt?: string | null
                     created_dt: string
                     // The user who created the record
                     created_by: string | null
@@ -159,6 +162,9 @@ export interface Database {
                     location_id?: string | null
                     department_id?: string | null
                     category?: string
+                    // Commented by Desmond @ 26-April-26
+                    // last_assessed_dt for maintenance assessment record
+                    last_assessed_dt?: string | null
                     created_dt?: string
                     created_by?: string | null
                     updated_dt?: string
@@ -178,6 +184,9 @@ export interface Database {
                     location_id?: string | null
                     department_id?: string | null
                     category?: string
+                    // Commented by Desmond @ 26-April-26
+                    // last_assessed_dt for maintenance assessment record
+                    last_assessed_dt?: string | null
                     created_dt?: string
                     created_by?: string | null
                     updated_dt?: string

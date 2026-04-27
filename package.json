@@ -25,12 +25,12 @@
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.544.0",
-    "next": "^16.1.6",
-    "next-auth": "^4.24.5",
+    "next": "^16.2.4",
+    "next-auth": "^4.24.14",
     "postcss-load-config": "^6.0.1",
-    "react": "^18",
+    "react": "^19.2.5",
     "react-barcode": "^1.6.1",
-    "react-dom": "^18",
+    "react-dom": "^19.2.5",
     "recharts": "^3.3.0",
     "zod": "^4.3.6"
   },
@@ -55,4 +55,3 @@
     "typescript": "^5"
   }
 }
-
