@@ -13,7 +13,6 @@ const addStaffSchema = z.object({
   email: z.string().email().max(100), // .email() ensures the value is a valid email format
   mobile_no: z.string().max(20),
   department_id: z.string().max(50),
-  microsoft_user_id: z.string().max(100)
 }).strict()
 
 export async function POST(request: NextRequest) {
@@ -36,9 +35,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Use only the validated fields — guarantees no unexpected fields reach the database
-    const { staff_id, name, email, mobile_no, department_id, microsoft_user_id } = parsed.data
+    const { staff_id, name, email, mobile_no, department_id } = parsed.data
 
-    // Insert new staff member
+    // Insert new staff member — microsoft_user_id is left null, filled automatically on first login
     const { data: staff, error } = await supabase
       .from('Staff')
       .insert([
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
           email,
           mobile_no,
           department_id,
-          microsoft_user_id,
+          microsoft_user_id: null,
           created_dt: new Date().toISOString(),
           updated_dt: new Date().toISOString()
         }

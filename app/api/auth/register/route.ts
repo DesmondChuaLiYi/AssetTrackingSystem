@@ -1,51 +1,96 @@
 // app/api/auth/register/route.ts
-/* Commented by Desmond @ 24-Jan-2026
-  - This route should remain public for user registration
-  - It is also protected by middleware.ts
-*/
+// Accepts user-supplied staff_id (digits only) instead of auto-generating via DB function.
+// Validates all inputs with Zod before inserting into Staff table.
+// microsoft_user_id is left null here and filled automatically on first Microsoft login.
+// This route is public — no session required.
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { supabaseAdmin as supabase } from '@/lib/supabase/server'
+
+// Zod schema — mirrors DB column limits and business rules
+const RegisterSchema = z.object({
+  // staff_id: digits only, 1–30 chars (VARCHAR(30) in DB)
+  staff_id: z
+    .string()
+    .min(1, 'Staff ID is required')
+    .max(30, 'Staff ID cannot exceed 30 characters')
+    .regex(/^\d+$/, 'Staff ID must contain digits only'),
+
+  name: z
+    .string()
+    .min(1, 'Name is required')
+    .max(60, 'Name cannot exceed 60 characters')
+    .regex(/^[^<>"'`;\\]+$/, 'Name contains invalid characters'),
+
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .max(60, 'Email cannot exceed 60 characters')
+    .email('Invalid email format')
+    .regex(/^[^<>"'`;\\]+$/, 'Email contains invalid characters'),
+
+  mobile_no: z
+    .string()
+    .min(1, 'Mobile number is required')
+    .max(20, 'Mobile number cannot exceed 20 characters')
+    .regex(/^[^<>"'`;\\]+$/, 'Mobile number contains invalid characters'),
+
+  department_id: z
+    .string()
+    .min(1, 'Department is required')
+    .max(30, 'Department cannot exceed 30 characters')
+    .regex(/^[^<>"'`;\\]+$/, 'Department contains invalid characters'),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, mobile_no, department_id } = await request.json()
+    const body = await request.json()
 
-    // Validation
-    if (!name || !email || !mobile_no || !department_id) {
+    // Validate with Zod — returns typed data or throws with field-level messages
+    const parsed = RegisterSchema.safeParse(body)
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: firstError.message },
         { status: 400 }
       )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    const { staff_id, name, email, mobile_no, department_id } = parsed.data
+
+    // Check Staff ID uniqueness
+    const { data: existingById } = await supabase
+      .from('Staff')
+      .select('staff_id')
+      .eq('staff_id', staff_id)
+      .single()
+
+    if (existingById) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
+        { error: `Staff ID ${staff_id} is already registered.` },
+        { status: 409 }
       )
     }
 
-    // Check if email already exists
-    const { data: existingStaff } = await supabase
+    // Check email uniqueness — surface meaningful message based on approval status
+    const { data: existingByEmail } = await supabase
       .from('Staff')
       .select('email, status')
       .eq('email', email)
       .single()
 
-    if (existingStaff) {
-      if (existingStaff.status === 'pending') {
+    if (existingByEmail) {
+      if (existingByEmail.status === 'pending') {
         return NextResponse.json(
           { error: 'Your registration is pending approval. Please wait for admin confirmation.' },
           { status: 409 }
         )
-      } else if (existingStaff.status === 'approved') {
+      } else if (existingByEmail.status === 'approved') {
         return NextResponse.json(
           { error: 'This email is already registered. Please login.' },
           { status: 409 }
         )
-      } else if (existingStaff.status === 'rejected') {
+      } else if (existingByEmail.status === 'rejected') {
         return NextResponse.json(
           { error: 'Your previous registration was rejected. Please contact administrator.' },
           { status: 403 }
@@ -53,21 +98,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get next staff_id using the database function
-    const { data: nextIdData, error: idError } = await supabase
-      .rpc('get_next_staff_id')
-
-    if (idError) {
-      console.error('Error getting next staff ID:', idError)
-      return NextResponse.json(
-        { error: 'Failed to generate staff ID' },
-        { status: 500 }
-      )
-    }
-
-    const staff_id = nextIdData as string
-
-    // Insert new staff registration (status defaults to 'pending')
+    // Insert new staff — status defaults to 'pending', microsoft_user_id filled on first login
     const { data: newStaff, error: insertError } = await supabase
       .from('Staff')
       .insert([
@@ -79,7 +110,7 @@ export async function POST(request: NextRequest) {
           department_id,
           status: 'pending',
           role: 'staff',
-          microsoft_user_id: null, // Will be filled at first login
+          microsoft_user_id: null,
           created_dt: new Date().toISOString(),
           updated_dt: new Date().toISOString()
         }
