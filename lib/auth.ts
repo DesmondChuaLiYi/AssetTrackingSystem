@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase/server" // Import Supabase admin c
 type staffData = {
     staff_id: string
     role: string
+    status: string
     department_id: string | null
     mobile_no: string | null
 }
@@ -46,15 +47,30 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
             if (token.email && !token.role) { // If we have the email but no role
                 const { data, error } = await supabaseAdmin // Query from the Staff table
                     .from("Staff") // Table name
-                    .select("staff_id, role, department_id, mobile_no") // Column names
+                    .select("staff_id, role, status, department_id, mobile_no") // Column names
                     .eq("email", token.email) // Match the email
                     .single<staffData>() // Only grab one result, using the staffData type
 
-                if (!error && data) { // Only proceed when no error 
+                if (!error && data) { // Only proceed when no error
+                    // Block login if account is not approved
+                    if (data.status !== 'approved') {
+                        token.role = data.status // Set role to 'pending' or 'rejected' so loginClient.tsx can show the right message
+                        return token
+                    }
+
                     token.staffId = data.staff_id
                     token.role = data.role
                     token.departmentId = data.department_id
                     token.mobileNo = data.mobile_no
+
+                    // On first login, write the Microsoft ID to DB if not yet stored
+                    if (token.microsoftUserId) {
+                        await supabaseAdmin
+                            .from("Staff")
+                            .update({ microsoft_user_id: token.microsoftUserId as string })
+                            .eq("email", token.email)
+                            .is("microsoft_user_id", null) // Only update if still null — avoids unnecessary writes
+                    }
                 } else if (error) { // Error output
                     console.error("Error fetching staff data:", error.message)
                 }

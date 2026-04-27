@@ -19,6 +19,10 @@ import { validateSession } from '@/lib/apiAuth'
 // Zod validates the request body so only expected fields are accepted
 import { z } from 'zod'
 
+// Commented by Desmond @ 26-April-26
+// Import the TypeScript type definitions for the entire Supabase structure
+import type { Database } from '@/lib/supabase/types'
+
 // ============================================================
 // ZOD SCHEMAS — define what data each action expects
 // ============================================================
@@ -105,7 +109,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabaseAdmin
     .from(table)
     .select('*')
-    .eq(idColumn, scannedCode)
+    .eq(idColumn as string, scannedCode)
     .maybeSingle()
 
   if (error) {
@@ -230,24 +234,61 @@ export async function POST(req: NextRequest) {
   // ACTION: tag_asset
   // Update an asset's location_id or department_id
   // ----------------------------------------
+  // Commented by Desmond @ 26-April-26
+  // Tagging an asset to a location or department
   if (action === 'tag_asset') {
+    // Use the Zod validation schema to validate the raw JSON data sent by user's browser
     const parsed = TagAssetSchema.safeParse(body)
-    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
-
-    const { error } = await supabaseAdmin
-      .from('Asset')
-      .update({
-        [parsed.data.field]: parsed.data.value,
-        updated_dt: new Date().toISOString()
-      })
-      .eq('asset_id', parsed.data.assetId)
-
-    if (error) {
-      console.error({ message: error.message })
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    // If parsing fails
+    if (!parsed.success) {
+      // Return an error 
+      return NextResponse.json(
+        { error: 'Invalid request' }, 
+        { status: 400 })
     }
 
-    return NextResponse.json({ success: true })
+    // Destructure and pull the field column and value from the validated data
+    const { field, value } = parsed.data
+
+    // TypeScript type mapping which tells the compiler
+    // what object is allowed, based on lib/supabase/type.ts
+    const updateData: Database['public']['Tables']['Asset']['Update'] = {
+      // Update the updated_dt column
+      updated_dt: new Date().toISOString()
+    }
+
+    // Check the allowed listing before updating the value
+    if (field === 'location_id') {
+      updateData.location_id = value;
+    } else if (field === 'department_id') {
+      updateData.department_id = value;
+    }
+
+    // Database execution - await pauses the function execution
+    // until Supabase returns a result
+    const { error } = await supabaseAdmin
+      // Query from the Asset table
+      .from('Asset')
+      // Only the fields present in updateData will be changed
+      .update(updateData)
+      // Update the specific asset_id
+      .eq('asset_id', parsed.data.assetId)
+
+    // Error handling and security
+    if (error) {
+      // Only developer can see the console error
+      console.error({ message: error.message })
+      // Return NextResponse error
+      return NextResponse.json(
+        { error: 'Database error' }, 
+        { status: 500 }
+      )
+    }
+
+    // If process ok, return success response
+    return NextResponse.json(
+      { success: true }
+    )
   }
 
   // ----------------------------------------

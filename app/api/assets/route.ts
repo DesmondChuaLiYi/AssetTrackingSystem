@@ -19,6 +19,10 @@ import { supabaseAdmin } from '@/lib/supabase/server'
 // Check whether the user is logged in, authorized and role allowed
 import { validateSession } from '@/lib/apiAuth'
 
+// Commented by Desmond @ 26-April-26
+// Import the TypeScript type definitions for the entire Supabase structure
+import type { Database } from '@/lib/supabase/types'
+
 // Zod is a schema validation library
 // It ensures the user input matches the database structure to prevent bad data and attacks
 import { z } from 'zod'
@@ -44,7 +48,7 @@ const assetCreateSchema = z.object({
   asset_id: z.string().max(30),
   name: z.string().max(50),
   model: z.string().max(30),
-  description: z.string().max(60).optional(),
+  description: z.string().max(200).optional(),
   condition: z.enum(ALLOWED_CONDITIONS).optional(),
   location_id: z.string().max(30).nullable().optional(),
   department_id: z.string().max(30).nullable().optional(),
@@ -56,7 +60,7 @@ const assetUpdateSchema = z.object({
   asset_id: z.string().max(30), // asset_id is required
   name: z.string().max(50).optional(),
   model: z.string().max(30).optional(),
-  description: z.string().max(60).optional(),
+  description: z.string().max(200).optional(),
   condition: z.enum(ALLOWED_CONDITIONS).optional(),
   location_id: z.string().max(30).nullable().optional(),
   department_id: z.string().max(30).nullable().optional(),
@@ -375,7 +379,7 @@ export async function PUT(request: NextRequest) {
       'location_id',
       'department_id',
       'category',
-    ]
+    ] as const
 
     /** Commented by Desmond @ 26-Feb-2026
      * Create an empty object to store valid field updates
@@ -384,17 +388,20 @@ export async function PUT(request: NextRequest) {
      * @params 'unknown' - value can be anything, 'unknown' is also safer than 'any' because it enforces type checking
      * '{}' means empty object 
      */
-    const updateData: Record<string, unknown> = {}
+    const updateData: Partial<Database['public']['Tables']['Asset']['Update']> = {}
 
     // Loop through the allowed fields using for...of
     for (const field of allowedFields) { // Declare a 'field' variable
-      if (field in input) { // If allowed field is in input
-        /** Commented by Desmond @ 26-Feb-2026
-         * Copy the valid field from the user input to 'updateData'
-         * @params 'updateData[field]' - Adds the property dynamically like updateData["name"] = "Laptop"
-         * @params '(input as Record<string, unknown>)[field]' - Type casting to treat input like an object with string keys
-         */
-        updateData[field] = (input as Record<string, unknown>)[field]
+      /** Commented by Desmond @ 26-Feb-2026
+       * Copy the valid field from the user input to 'updateData'
+       * @params 'updateData[field]' - Adds the property dynamically like updateData["name"] = "Laptop"
+       */
+      const value = input[field as keyof typeof input]
+
+      // Special validation for asset's 'condition' field (enum)
+      if (value !== undefined) {
+        // For non-enum fields, assign values directly to updateData
+        updateData[field as keyof typeof updateData] = value as any
       }
     }
 
