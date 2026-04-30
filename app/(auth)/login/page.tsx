@@ -13,7 +13,9 @@ export default async function LoginPage() {
 
   if (session) {
     const role = (session.user as any)?.role;
-    redirect(role === 'admin' ? '/admin/dashboard' : '/user/dashboard');
+    // Only redirect approved users — pending/rejected stay on the login page to see the warning toast
+    if (role === 'admin') redirect('/admin/dashboard');
+    if (role === 'staff') redirect('/user/dashboard');
   }
 
   return <LoginClient />;
