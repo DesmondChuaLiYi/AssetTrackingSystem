@@ -222,16 +222,15 @@ function rateLimitResponse(reset: number): NextResponse {
 }
 
 // Public paths
-const PUBLIC_PATHS = new Set(['/login', '/register', 'unauthorized'])
+const PUBLIC_PATHS = new Set(['/login', '/register', '/unauthorized'])
 
 // Returns true if the path is always publicly accessible
-// Also covers sub-paths of /unauthorized for nested pages
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) {
     return true
   }
 
-  if (pathname.startsWith('unauthorized')) {
+  if (pathname.startsWith('/unauthorized')) {
     return true
   }
   return false
@@ -271,9 +270,12 @@ export default withAuth(
 
     // ------------------------------------------------------------------
     // /dashboard — redirect to the correct role-based dashboard
+    // Pending/rejected users go to login instead
     // ------------------------------------------------------------------
     if (pathname === '/dashboard') {
-      const destination = token?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'
+      let destination = '/login'
+      if (token?.role === 'admin') destination = '/admin/dashboard'
+      else if (token?.role === 'staff') destination = '/user/dashboard'
       return applySecurityHeaders(
         NextResponse.redirect(new URL(destination, request.url))
       )
@@ -292,8 +294,18 @@ export default withAuth(
     }
 
     // ------------------------------------------------------------------
-    // /user/* — any authenticated user passes through
+    // /user/* and /profile/* — only approved users can access
+    // Pending and rejected accounts are redirected to login
+    // Only applies to protected routes to avoid redirect loops on /login
     // ------------------------------------------------------------------
+    const approvedRoles = ['admin', 'staff']
+    const isProtectedRoute = pathname.startsWith('/user') || pathname.startsWith('/profile')
+    if (isProtectedRoute && !approvedRoles.includes(token?.role as string)) {
+      return applySecurityHeaders(
+        NextResponse.redirect(new URL('/login', request.url))
+      )
+    }
+
     return applySecurityHeaders(NextResponse.next())
   },
 

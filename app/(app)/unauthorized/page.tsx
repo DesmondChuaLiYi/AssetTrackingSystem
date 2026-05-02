@@ -1,11 +1,14 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ShieldExclamationIcon } from "@heroicons/react/24/outline";
 
 export default function UnauthorisedPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role;
 
   const handleReturnToLogin = async () => {
     // Sign out and redirect to login
@@ -39,12 +42,15 @@ export default function UnauthorisedPage() {
             Go Back
           </button>
 
-          <button
-            onClick={() => router.push("/user/dashboard")}
-            className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            Go to Your Dashboard
-          </button>
+          {/* Only show for approved staff — pending/rejected users cannot access the dashboard */}
+          {role === 'staff' && (
+            <button
+              onClick={() => router.push("/user/dashboard")}
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Go to Your Dashboard
+            </button>
+          )}
 
           <button
             onClick={handleReturnToLogin}
