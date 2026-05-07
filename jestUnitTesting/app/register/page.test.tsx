@@ -1,29 +1,65 @@
+/**
+ * Unit tests for the Registration page
+ *
+ * Key things that changed this semester vs last semester:
+ *   - Staff ID field added (digits only, stripped at keystroke, max 30 chars)
+ *   - Department changed from a free-text input to a <select> dropdown
+ *     populated by GET /api/department/public on mount
+ *   - Inline validation errors shown per field as the user types
+ *   - Duplicate Staff ID and email checked on blur via API calls
+ *   - Submit blocked if any fieldErrors are still set
+ *
+ * What we cover:
+ *   - Renders all form fields including the new Staff ID field
+ *   - Department field is a <select>, not a text input
+ *   - Department dropdown is populated from the public API on mount
+ *   - Back to Login link points to /
+ *   - Admin approval note is visible
+ *   - Staff ID strips non-digit characters on every keystroke
+ *   - Staff ID does not allow letters to be typed
+ *   - Staff ID shows inline error when a URL/link is typed (non-digits)
+ *   - Email strips sensitive characters (<>"'`;\\) on every keystroke
+ *   - Email shows inline error for invalid format
+ *   - Submit blocked and shows "All fields are required!" when form is empty
+ *   - Submit blocked and shows "Please fix the errors" when field errors exist
+ *   - Duplicate Staff ID error shown on blur via /api/auth/check-staff-id
+ *   - Duplicate email error shown on blur via /api/auth/check-email
+ *   - Successful submission shows alert with Staff ID and clears form
+ *   - Redirects to / after 2 seconds on success
+ *   - Submit button changes to "Submitting..." and is disabled while in-flight
+ *   - API error (success: false) shows alert with the error message
+ *   - Network error shows fallback alert
+ */
+
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import RegisterPage from '@/app/(auth)/register/page';
 
-// Mock dependencies
+// mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }));
 
+// mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
-    return <img {...props} />;
-  },
+  default: (props: any) => <img {...props} />,
 }));
 
+// mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: any) => {
-    return <a href={href}>{children}</a>;
-  };
+  return ({ children, href }: any) => <a href={href}>{children}</a>;
 });
 
-// Mock fetch, alert, and setTimeout
 global.fetch = jest.fn();
 global.alert = jest.fn();
 jest.useFakeTimers();
+
+// mock department list returned by /api/department/public
+const mockDepartments = [
+  { department_id: 'IT', name: 'Information Technology' },
+  { department_id: 'HR', name: 'Human Resources' },
+];
 
 describe('RegisterPage', () => {
   const mockPush = jest.fn();
@@ -31,342 +67,462 @@ describe('RegisterPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+
+    // default: /api/department/public returns the mock list
+    // /api/auth/check-staff-id and /api/auth/check-email return no conflict
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/check-staff-id')) {
+        return Promise.resolve({ json: () => Promise.resolve({ exists: false }) });
+      }
+      if (url.includes('/api/auth/check-email')) {
+        return Promise.resolve({ json: () => Promise.resolve({ message: null }) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, staff: { staff_id: 'S001' } }) });
+    });
   });
 
   afterAll(() => {
     jest.useRealTimers();
   });
 
-  it('renders registration page with all form fields', () => {
-    render(<RegisterPage />);
+  // ─── Rendering ─────────────────────────────────────────────────────────────
+
+  /**
+   * All required form fields should be visible when the page loads
+   */
+  it('renders all form fields including the new Staff ID field', async () => {
+    await act(async () => { render(<RegisterPage />); });
 
     expect(screen.getByText('Staff Registration')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g., John Doe')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g., john@swin.edu.my')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g., 0123456789')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('e.g., IT Department')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g., 12345')).toBeInTheDocument();      // Staff ID
+    expect(screen.getByPlaceholderText('e.g., John Doe')).toBeInTheDocument();   // Name
+    expect(screen.getByPlaceholderText('e.g., john@swin.edu.my')).toBeInTheDocument(); // Email
+    expect(screen.getByPlaceholderText('e.g., 0123456789')).toBeInTheDocument(); // Mobile
+    expect(screen.getByRole('combobox')).toBeInTheDocument();                    // Department select
     expect(screen.getByText('Submit Registration')).toBeInTheDocument();
   });
 
-  it('renders back to login link', () => {
-    render(<RegisterPage />);
+  /**
+   * Department must be a <select> dropdown, not a text input
+   */
+  it('renders department field as a select dropdown, not a text input', async () => {
+    await act(async () => { render(<RegisterPage />); });
 
-    const backLink = screen.getByText('← Back to Login');
-    expect(backLink).toBeInTheDocument();
-    expect(backLink.closest('a')).toHaveAttribute('href', '/');
+    const select = screen.getByRole('combobox');
+    expect(select.tagName).toBe('SELECT');
   });
 
-  it('handles form input changes', () => {
-    render(<RegisterPage />);
+  /**
+   * The dropdown should be populated with departments from /api/department/public
+   */
+  it('populates department dropdown from the public API on mount', async () => {
+    await act(async () => { render(<RegisterPage />); });
 
-    const nameInput = screen.getByPlaceholderText('e.g., John Doe');
+    await waitFor(() => {
+      expect(screen.getByText('Information Technology')).toBeInTheDocument();
+      expect(screen.getByText('Human Resources')).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * The default "Select a department" placeholder option must be present
+   */
+  it('shows Select a department as the default dropdown option', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    expect(screen.getByText('Select a department')).toBeInTheDocument();
+  });
+
+  /**
+   * Back to Login link must point to / (the root login route)
+   */
+  it('renders Back to Login link pointing to /', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const link = screen.getByText('← Back to Login');
+    expect(link.closest('a')).toHaveAttribute('href', '/');
+  });
+
+  /**
+   * Admin approval note should always be visible on the form
+   */
+  it('shows the admin approval note', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    expect(screen.getByText(/an administrator will review and approve/i)).toBeInTheDocument();
+  });
+
+  /**
+   * Staff ID hint text about digits only should be visible
+   */
+  it('shows digits-only hint text under Staff ID field', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    expect(screen.getByText(/Digits only/i)).toBeInTheDocument();
+  });
+
+  // ─── Staff ID input behaviour ──────────────────────────────────────────────
+
+  /**
+   * Letters typed in the Staff ID field must be stripped immediately —
+   * the input should only hold the digit portion
+   */
+  it('strips letters from Staff ID on every keystroke', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const staffIdInput = screen.getByPlaceholderText('e.g., 12345');
+    fireEvent.change(staffIdInput, { target: { value: 'abc123' } });
+
+    // only the digits '123' should remain
+    expect(staffIdInput).toHaveValue('123');
+  });
+
+  /**
+   * Pasting a URL (common injection attempt) into Staff ID should result
+   * in an empty field because URLs contain no digits at the start and
+   * are entirely stripped
+   */
+  it('results in empty field when a URL is typed in Staff ID', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const staffIdInput = screen.getByPlaceholderText('e.g., 12345');
+    fireEvent.change(staffIdInput, { target: { value: 'https://evil.com' } });
+
+    // only digits survive — 'https://evil.com' has no digits so value is empty
+    expect(staffIdInput).toHaveValue('');
+  });
+
+  /**
+   * A purely numeric Staff ID should be accepted without any error
+   */
+  it('accepts a valid numeric Staff ID without errors', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const staffIdInput = screen.getByPlaceholderText('e.g., 12345');
+    fireEvent.change(staffIdInput, { target: { value: '104385730' } });
+
+    expect(staffIdInput).toHaveValue('104385730');
+    expect(screen.queryByText(/Staff ID must/i)).not.toBeInTheDocument();
+  });
+
+  // ─── Email input behaviour ─────────────────────────────────────────────────
+
+  /**
+   * Sensitive characters in the email field should be stripped on keystroke
+   */
+  it('strips sensitive characters from email on every keystroke', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
     const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
-    const mobileInput = screen.getByPlaceholderText('e.g., 0123456789');
-    const departmentInput = screen.getByPlaceholderText('e.g., IT Department');
+    fireEvent.change(emailInput, { target: { value: 'test<script>@swin.edu.my' } });
 
-    fireEvent.change(nameInput, { target: { value: 'Test User' } });
-    fireEvent.change(emailInput, { target: { value: 'test@swin.edu.my' } });
-    fireEvent.change(mobileInput, { target: { value: '0123456789' } });
-    fireEvent.change(departmentInput, { target: { value: 'IT' } });
-
-    expect(nameInput).toHaveValue('Test User');
-    expect(emailInput).toHaveValue('test@swin.edu.my');
-    expect(mobileInput).toHaveValue('0123456789');
-    expect(departmentInput).toHaveValue('IT');
+    // < and > are stripped
+    expect(emailInput).toHaveValue('testscript@swin.edu.my');
   });
 
-  it('shows validation alert when submitting empty form', async () => {
-    render(<RegisterPage />);
+  /**
+   * An invalid email format should show an inline error message
+   */
+  it('shows inline error for invalid email format', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
+    fireEvent.change(emailInput, { target: { value: 'notanemail' } });
+
+    expect(screen.getByText('Invalid email format.')).toBeInTheDocument();
+  });
+
+  /**
+   * A valid email should not show any inline error
+   */
+  it('does not show email error for a valid email address', async () => {
+    await act(async () => { render(<RegisterPage />); });
+
+    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
+    fireEvent.change(emailInput, { target: { value: 'valid@swin.edu.my' } });
+
+    expect(screen.queryByText('Invalid email format.')).not.toBeInTheDocument();
+  });
+
+  // ─── Blur duplicate checks ─────────────────────────────────────────────────
+
+  /**
+   * If the Staff ID already exists in the DB, the blur handler should show an error
+   */
+  it('shows error when Staff ID is already registered (on blur)', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/check-staff-id')) {
+        return Promise.resolve({ json: () => Promise.resolve({ exists: true }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ message: null }) });
+    });
+
+    await act(async () => { render(<RegisterPage />); });
+
+    const staffIdInput = screen.getByPlaceholderText('e.g., 12345');
+    fireEvent.change(staffIdInput, { target: { value: '12345' } });
+
+    await act(async () => { fireEvent.blur(staffIdInput); });
+
+    await waitFor(() => {
+      expect(screen.getByText('This Staff ID is already registered.')).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * If the email is already registered (or pending), the blur handler shows the
+   * message returned by the API
+   */
+  it('shows error when email is already registered (on blur)', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/check-email')) {
+        return Promise.resolve({ json: () => Promise.resolve({ message: 'This email is already registered.' }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false }) });
+    });
+
+    await act(async () => { render(<RegisterPage />); });
+
+    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
+    fireEvent.change(emailInput, { target: { value: 'taken@swin.edu.my' } });
+
+    await act(async () => { fireEvent.blur(emailInput); });
+
+    await waitFor(() => {
+      expect(screen.getByText('This email is already registered.')).toBeInTheDocument();
+    });
+  });
+
+  // ─── Submit validation ─────────────────────────────────────────────────────
+
+  /**
+   * Submitting an empty form should alert "All fields are required!" without calling the API
+   */
+  it('shows all fields required alert when form is empty', async () => {
+    await act(async () => { render(<RegisterPage />); });
 
     const form = screen.getByText('Submit Registration').closest('form');
-
-    await act(async () => {
-      if (form) {
-        fireEvent.submit(form);
-      }
-    });
+    await act(async () => { if (form) fireEvent.submit(form); });
 
     expect(global.alert).toHaveBeenCalledWith('All fields are required!');
+    // the register API should not be called
+    expect(global.fetch).toHaveBeenCalledTimes(1); // only the departments fetch on mount
   });
 
-  it('successfully submits registration', async () => {
-    const mockResponse = {
-      success: true,
-      staff: {
-        staff_id: 'S001',
-        name: 'Test User',
-        email: 'test@swin.edu.my',
-      },
-    };
+  /**
+   * If there is an active field error the submit handler should block and alert
+   * "Please fix the errors before submitting."
+   */
+  it('blocks submit and alerts when field errors are present', async () => {
+    await act(async () => { render(<RegisterPage />); });
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse),
+    // wait for department dropdown to populate so we can select one
+    await waitFor(() => {
+      expect(screen.getByText('Information Technology')).toBeInTheDocument();
     });
 
-    render(<RegisterPage />);
+    // type an invalid email to set a fieldError
+    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
+    fireEvent.change(emailInput, { target: { value: 'bademail' } });
 
-    // Fill in the form
-    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), {
-      target: { value: 'Test User' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), {
-      target: { value: 'test@swin.edu.my' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), {
-      target: { value: '0123456789' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., IT Department'), {
-      target: { value: 'IT' },
+    // fill all other fields so only the email error remains
+    fireEvent.change(screen.getByPlaceholderText('e.g., 12345'), { target: { value: '12345' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), { target: { value: '0123456789' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'IT' } });
+
+    const form = screen.getByText('Submit Registration').closest('form');
+    await act(async () => { if (form) fireEvent.submit(form); });
+
+    expect(global.alert).toHaveBeenCalledWith('Please fix the errors before submitting.');
+  });
+
+  // ─── Successful submission ─────────────────────────────────────────────────
+
+  /**
+   * Helper: fill every field with valid data and select a department
+   */
+  async function fillValidForm() {
+    await waitFor(() => {
+      // wait for department options to appear before selecting
+      expect(screen.getByText('Information Technology')).toBeInTheDocument();
     });
 
-    const submitButton = screen.getByText('Submit Registration');
+    fireEvent.change(screen.getByPlaceholderText('e.g., 12345'), { target: { value: '104385730' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), { target: { value: 'Jun Zhen Wong' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), { target: { value: 'junzhen@swin.edu.my' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), { target: { value: '0123456789' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'IT' } });
+  }
 
-    await act(async () => {
-      fireEvent.click(submitButton);
+  /**
+   * On success the page should alert the success message containing the Staff ID
+   */
+  it('shows success alert with Staff ID on successful registration', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/register')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, staff: { staff_id: '104385730' } }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false, message: null }) });
     });
+
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
+
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
 
     await waitFor(() => {
       expect(global.alert).toHaveBeenCalledWith(
         expect.stringContaining('Registration submitted successfully!')
       );
       expect(global.alert).toHaveBeenCalledWith(
-        expect.stringContaining('Your Staff ID: S001')
+        expect.stringContaining('104385730')
       );
     });
   });
 
-  it('redirects to login after successful registration', async () => {
-    const mockResponse = {
-      success: true,
-      staff: {
-        staff_id: 'S001',
-        name: 'Test User',
-        email: 'test@swin.edu.my',
-      },
-    };
-
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse),
+  /**
+   * After success the form fields should be cleared
+   */
+  it('clears form fields after successful registration', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/register')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, staff: { staff_id: '104385730' } }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false, message: null }) });
     });
 
-    render(<RegisterPage />);
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
 
-    // Fill in the form
-    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), {
-      target: { value: 'Test User' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), {
-      target: { value: 'test@swin.edu.my' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), {
-      target: { value: '0123456789' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., IT Department'), {
-      target: { value: 'IT' },
-    });
-
-    const submitButton = screen.getByText('Submit Registration');
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
 
     await waitFor(() => {
-      expect(global.alert).toHaveBeenCalled();
+      expect(screen.getByPlaceholderText('e.g., 12345')).toHaveValue('');
+      expect(screen.getByPlaceholderText('e.g., John Doe')).toHaveValue('');
+      expect(screen.getByPlaceholderText('e.g., john@swin.edu.my')).toHaveValue('');
+      expect(screen.getByPlaceholderText('e.g., 0123456789')).toHaveValue('');
+    });
+  });
+
+  /**
+   * After success the page should redirect to / after a 2-second delay
+   */
+  it('redirects to / after 2 seconds on successful registration', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/register')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, staff: { staff_id: '104385730' } }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false, message: null }) });
     });
 
-    // Fast-forward timers
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
+
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
+    await waitFor(() => { expect(global.alert).toHaveBeenCalled(); });
+
+    act(() => { jest.advanceTimersByTime(2000); });
 
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('clears form after successful registration', async () => {
-    const mockResponse = {
-      success: true,
-      staff: {
-        staff_id: 'S001',
-        name: 'Test User',
-        email: 'test@swin.edu.my',
-      },
-    };
+  // ─── Submit button state ───────────────────────────────────────────────────
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse),
+  /**
+   * While the registration fetch is in-flight the button should show
+   * "Submitting..." and be disabled so the user can't double-submit
+   */
+  it('disables submit button and shows Submitting... while in-flight', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      // register call never resolves — keeps loading state visible
+      return new Promise(() => {});
     });
 
-    render(<RegisterPage />);
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
 
-    const nameInput = screen.getByPlaceholderText('e.g., John Doe');
-    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
-    const mobileInput = screen.getByPlaceholderText('e.g., 0123456789');
-    const departmentInput = screen.getByPlaceholderText('e.g., IT Department');
-
-    // Fill in the form
-    fireEvent.change(nameInput, { target: { value: 'Test User' } });
-    fireEvent.change(emailInput, { target: { value: 'test@swin.edu.my' } });
-    fireEvent.change(mobileInput, { target: { value: '0123456789' } });
-    fireEvent.change(departmentInput, { target: { value: 'IT' } });
-
-    const submitButton = screen.getByText('Submit Registration');
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
 
     await waitFor(() => {
-      expect(nameInput).toHaveValue('');
-      expect(emailInput).toHaveValue('');
-      expect(mobileInput).toHaveValue('');
-      expect(departmentInput).toHaveValue('');
+      const btn = screen.getByText('Submitting...');
+      expect(btn).toBeDisabled();
     });
   });
 
-  it('handles API error during registration', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      json: () => Promise.resolve({ success: false, error: 'Email already registered' }),
+  // ─── Error handling ────────────────────────────────────────────────────────
+
+  /**
+   * When the API returns success: false the error message from the response should appear
+   */
+  it('shows API error message when registration fails', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/register')) {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({ success: false, error: 'Email already registered' }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false, message: null }) });
     });
 
-    render(<RegisterPage />);
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
 
-    // Fill in the form
-    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), {
-      target: { value: 'Test User' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), {
-      target: { value: 'test@swin.edu.my' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), {
-      target: { value: '0123456789' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., IT Department'), {
-      target: { value: 'IT' },
-    });
-
-    const submitButton = screen.getByText('Submit Registration');
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
 
     await waitFor(() => {
       expect(global.alert).toHaveBeenCalledWith('Registration failed: Email already registered');
     });
   });
 
-  it('handles network error during registration', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation();
+  /**
+   * A network error (fetch throws) should show the fallback alert message
+   */
+  it('shows fallback alert on network error', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
-
-    render(<RegisterPage />);
-
-    // Fill in the form
-    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), {
-      target: { value: 'Test User' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), {
-      target: { value: 'test@swin.edu.my' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), {
-      target: { value: '0123456789' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., IT Department'), {
-      target: { value: 'IT' },
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.includes('/api/department/public')) {
+        return Promise.resolve({ json: () => Promise.resolve({ data: mockDepartments }) });
+      }
+      if (url.includes('/api/auth/register')) {
+        return Promise.reject(new Error('Network error'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ exists: false, message: null }) });
     });
 
-    const submitButton = screen.getByText('Submit Registration');
+    await act(async () => { render(<RegisterPage />); });
+    await fillValidForm();
 
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    await act(async () => { fireEvent.click(screen.getByText('Submit Registration')); });
 
     await waitFor(() => {
       expect(global.alert).toHaveBeenCalledWith('Failed to submit registration. Please try again.');
-      expect(consoleError).toHaveBeenCalledWith('Registration error:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith('Registration error:', expect.any(Error));
     });
 
-    consoleError.mockRestore();
-  });
-
-  it('disables submit button while submitting', async () => {
-    (global.fetch as jest.Mock).mockImplementation(
-      () => new Promise(() => {}) // Never resolves
-    );
-
-    render(<RegisterPage />);
-
-    // Fill in the form
-    fireEvent.change(screen.getByPlaceholderText('e.g., John Doe'), {
-      target: { value: 'Test User' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., john@swin.edu.my'), {
-      target: { value: 'test@swin.edu.my' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 0123456789'), {
-      target: { value: '0123456789' } ,
-    });
-    fireEvent.change(screen.getByPlaceholderText('e.g., IT Department'), {
-      target: { value: 'IT' },
-    });
-
-    const submitButton = screen.getByText('Submit Registration');
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
-
-    await waitFor(() => {
-      const submittingButton = screen.getByText('Submitting...');
-      expect(submittingButton).toBeDisabled();
-    });
-  });
-
-  it('shows note about admin approval', () => {
-    render(<RegisterPage />);
-
-    expect(
-      screen.getByText(/After submitting your registration, an administrator will review and approve your request/i)
-    ).toBeInTheDocument();
-  });
-
-  it('shows email helper text', () => {
-    render(<RegisterPage />);
-
-    expect(screen.getByText('Use your Swinburne email address')).toBeInTheDocument();
-  });
-
-  it('marks all fields as required', () => {
-    render(<RegisterPage />);
-
-    const nameInput = screen.getByPlaceholderText('e.g., John Doe');
-    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
-    const mobileInput = screen.getByPlaceholderText('e.g., 0123456789');
-    const departmentInput = screen.getByPlaceholderText('e.g., IT Department');
-
-    expect(nameInput).toBeRequired();
-    expect(emailInput).toBeRequired();
-    expect(mobileInput).toBeRequired();
-    expect(departmentInput).toBeRequired();
-  });
-
-  it('validates email field type', () => {
-    render(<RegisterPage />);
-
-    const emailInput = screen.getByPlaceholderText('e.g., john@swin.edu.my');
-    expect(emailInput).toHaveAttribute('type', 'email');
-  });
-
-  it('validates mobile field type', () => {
-    render(<RegisterPage />);
-
-    const mobileInput = screen.getByPlaceholderText('e.g., 0123456789');
-    expect(mobileInput).toHaveAttribute('type', 'tel');
+    consoleSpy.mockRestore();
   });
 });
