@@ -191,12 +191,17 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
   }
 
   // BUGFIX 29-April Daryl: Strict Regex for IDs, Names, Models, etc. (Bans @, ., -, etc.)
-  const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|~/?;:'"`=+\\[\].,-]/;
+  // BUGFIX 25-April: Strict Regex (Bans @, ., -, \, etc.) Hyphen is at the very end to work properly.
+  const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|~/?;:'"\\.,-]/;
+  // BUGFIX 07-May: Daryl: Lenient Regex for Descriptions (Allows uppercase letters)
   // BUGFIX 29-April Daryl: Lenient Regex for Descriptions (Allows spaces, periods, and commas)
-  const DESC_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|~/?;:`'"=+-\\[\]]/;
+  // BUGFIX 25-April: Lenient Regex for Descriptions (Allows spaces, periods, commas, and hyphens)
+  const DESC_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|~/?;:'"\\]/;
   // BUGFIX 29-April Daryl: Standard Email Format Validation
+  // BUGFIX 25-April: Standard Email Format Validation
   const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // BUGFIX 29-April Daryl: Standard Mobile Format (Allows optional + at start, then digits)
+  // BUGFIX 25-April: Standard Mobile Format (Allows optional + at start, then digits)
   const MOBILE_FORMAT_REGEX = /^\+?[0-9]{8,15}$/;
 
   const validateField = (value: string | number | null, fieldConfig: formFieldConfig) => {
@@ -204,26 +209,31 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     
     const strVal = String(value);
 
-    // 1. Number Input Logic (e.g., Level)
-    if (fieldConfig.type === 'number') {
+    // 1. Level Logic (Allows letters like 'G', 'LG', and hyphens like '-1')
+    if (fieldConfig.key.toLowerCase() === 'level') {
+      const LEVEL_REGEX = /^[-a-zA-Z0-9]+$/;
+      if (!LEVEL_REGEX.test(strVal)) return 'Invalid: Level can only contain letters, numbers, and hyphens (e.g., G, -1).';
+    }
+    // 2. Number Input Logic (Excluding Level)
+    else if (fieldConfig.type === 'number') {
       const num = Number(value);
       if (isNaN(num)) return 'Invalid: Must be a number.';
       if (num <= 0) return 'Invalid: Value must be greater than 0.';
       if (num > 9999999) return 'Invalid: Value is too large.';
     } 
-    // 2. Email Logic
+    // 3. Email Logic
     else if (fieldConfig.key.toLowerCase().includes('email')) {
-      if (!EMAIL_FORMAT_REGEX.test(strVal)) return 'Invalid: Please enter a valid email address (e.g., name@company.com).';
+      if (!EMAIL_FORMAT_REGEX.test(strVal)) return 'Invalid: Please enter a valid email address.';
     }
-    // 3. Mobile/Phone Logic
+    // 4. Mobile/Phone Logic
     else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
-      if (!MOBILE_FORMAT_REGEX.test(strVal)) return 'Invalid: Mobile number must contain only numbers (e.g., 0123456789).';
+      if (!MOBILE_FORMAT_REGEX.test(strVal)) return 'Invalid: Mobile number must contain only numbers.';
     }
-    // 4. Description/Textarea Logic (Lenient)
+    // 5. Description/Textarea Logic (Lenient)
     else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
       if (DESC_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters.';
     }
-    // 5. Standard Text Input Logic (Strict - No @, ., etc.)
+    // 6. Standard Text Input Logic (Strict)
     else if (fieldConfig.type === 'text') {
       if (STRICT_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters. Symbols like @, ., and - are not allowed here.';
     }
@@ -245,6 +255,7 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     // Or, the field is primary key
     const isDisabled = field.disabled || field.key === config.primaryKey
     const hasError = !!validationErrors[field.key]
+    const isLevel = field.key.toLowerCase() === 'level'
 
     // Commented by Desmond @ 22-April-26
     // -------------------------------------------------------------------------------------------------------------------------------------
@@ -329,12 +340,13 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
 
     // BUGFIX 25-April: Switch type='number' to type='text' but force numeric input via JS. 
     // This stops HTML from automatically accepting 'e', '.', or '-' inside number inputs.
+    // BUGFIX: We force type="text" globally so HTML doesn't block the letter "G" in the Level field.
     // --------------------- Text / Number input ----------------------
     return (
       <input 
         id={field.key} 
-        type={field.type === 'number' ? 'text' : 'text'} 
-        inputMode={field.type === 'number' ? 'numeric' : 'text'}
+        type="text" 
+        inputMode={field.type === 'number' && !isLevel ? 'numeric' : 'text'}
         value={String(value)} 
         onChange={(e) => handleInputChange(field.key, e.target.value)} 
         disabled={isDisabled} // Disabled if explicitly mentioned, or this is a primary key
