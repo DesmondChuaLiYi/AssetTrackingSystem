@@ -575,7 +575,10 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
                   <div key={field.key} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
                     
                     <div className="flex justify-between items-end mb-1">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label
+                       htmlFor={field.key}
+                       className="block text-sm font-medium text-gray-700"
+                                                                              >
                         {field.label}
                         {/* Shows a red asterisk to mark field as required */}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
