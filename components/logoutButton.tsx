@@ -90,7 +90,7 @@ export default function LogoutButton({className = '', text = 'Log Out'}: LogoutB
         // Clear the lastPath so toast shows on next login
         sessionStorage.removeItem('lastPath')
         // Remove any stored session
-        localStorage.remove('userSession')
+        localStorage.removeItem('userSession')
       // Catch the errors
       } catch {
         // Catch non-fatal error here

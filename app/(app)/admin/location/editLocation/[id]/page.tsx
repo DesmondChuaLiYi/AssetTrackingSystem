@@ -54,14 +54,18 @@ const editLocationConfig: dynamicEditConfig = {
       key: 'name', 
       label: 'Name', 
       type: 'text' as const, 
-      required: true 
+      required: true,
+      placeholder: 'e.g., Room G-001, Server Room',
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // -------------------- description -------------------
     { 
       key: 'description', 
       label: 'Description', 
-      type: 'textarea' as const 
+      type: 'textarea' as const,
+      maxLength: 200 
     },
 
     { key: 'block', label: 'Block', type: 'text' as const },

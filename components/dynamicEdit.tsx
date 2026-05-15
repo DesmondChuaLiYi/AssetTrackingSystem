@@ -11,6 +11,7 @@
  * It is the edit counterpart to dynamicAdd.tsx where we have the same config object shape
  * Just that this dynamic component works for editing form and fields
  */
+
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -32,6 +33,8 @@ interface formFieldConfig {
   placeholder?: string
   // Whether the field is read-only
   disabled?: boolean
+  // Maximum length allowed for the field (database constraint)
+  maxLength?: number 
 }
 
 // ------------------ The configuration object passed to dynamicEdit ------------------
@@ -70,15 +73,8 @@ type editFormData = Record<string, unknown>
 
 // -------- Shape of the related dropdown data fetched for location_id and department_id fields ------
 interface relatedData {
-  location_id: {
-    location_id: string;
-    name: string
-  } []
-
-  department_id: {
-    department_id: string;
-    name: string
-  } []
+  location_id: { location_id: string; name: string } []
+  department_id: { department_id: string; name: string } []
 }
 
 /** ---------------- Export the dynamicEdit page component ----------------------
@@ -94,19 +90,19 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
   // formData - the live state of all form inputs
   // Initially empty but gets populated by loadRecord() from the API
   const [formData, setFormData] = useState<editFormData>({})
-
+  
   // relatedData - holds the fetched locations and departments for dropdown fields
-  const [relatedData, setRelatedData] = useState<relatedData>({
-    location_id: [],
-    department_id: []
-  })
+  const [relatedData, setRelatedData] = useState<relatedData>({ location_id: [], department_id: [] })
+  
+  // Client-side validation errors from validateField()
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   // True while the PUT request is fetching - disables the save button
   const [loading, setLoading] = useState(false)
-
+  
   // True while the initial GET request is loading the existing record
   const [loadingData, setLoadingData] = useState(true)
-
+  
   // Prevents SSR or hydration mismatches by delaying render until client-side is ready
   const [mounted, setMounted] = useState(false)
 
@@ -118,9 +114,7 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
   // ------------------ Auth guard ----------------------
   useEffect(() => {
     // If the user is not authenticated, redirect back to login
-    if (status === 'unauthenticated') {
-      router.push('/')
-    }
+    if (status === 'unauthenticated') router.push('/')
   }, [status, router])
 
   // ------------------- Load existing record and related data when ready --------------
@@ -170,7 +164,6 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     }
   }
 
-
   // ----------------- loadRelatedData : Fetch locations and departments for dropdown fields ---------
   const loadRelatedData = async () => {
     try {
@@ -185,13 +178,6 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
         locationsRes.json(),
         departmentsRes.json()
       ])
-      // Fetch locations
-      // const locationsRes = await fetch('/api/location?page=1&limit=100')
-      // const locationsData = await locationsRes.json()
-
-      // Fetch departments
-      // const departmentsRes = await fetch('/api/department?page=1&limit=100')
-      // const departmentsData = await departmentsRes.json()
 
       setRelatedData({
         // If error or null, then default to empty
@@ -204,6 +190,62 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     }
   }
 
+  // BUGFIX 29-April Daryl: Strict Regex for IDs, Names, Models, etc. (Bans @, ., -, etc.)
+  // BUGFIX 25-April: Strict Regex (Bans @, ., -, \, etc.) Hyphen is at the very end to work properly.
+  const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}=+|~/?;:'"\\.,]/;
+  // BUGFIX 07-May: Daryl: Lenient Regex for Descriptions (Allows uppercase letters)
+  // BUGFIX 29-April Daryl: Lenient Regex for Descriptions (Allows spaces, periods, and commas)
+  // BUGFIX 25-April: Lenient Regex for Descriptions (Allows spaces, periods, commas, and hyphens)
+  const DESC_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|=+~/?;:'"\\]/;
+  // BUGFIX 29-April Daryl: Standard Email Format Validation
+  // BUGFIX 25-April: Standard Email Format Validation
+  const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // BUGFIX 29-April Daryl: Standard Mobile Format (Allows optional + at start, then digits)
+  // BUGFIX 25-April: Standard Mobile Format (Allows optional + at start, then digits)
+  const MOBILE_FORMAT_REGEX = /^\+?[0-9]{8,15}$/;
+
+  const validateField = (value: string | number | null, fieldConfig: formFieldConfig) => {
+    if (value === null || value === '') return null;
+    
+    const strVal = String(value);
+
+    // 1. Level Logic (Allows letters like 'G', 'LG', and hyphens like '-1')
+    if (fieldConfig.key.toLowerCase() === 'level') {
+      const LEVEL_REGEX = /^[-a-zA-Z0-9]+$/;
+      if (!LEVEL_REGEX.test(strVal)) return 'Invalid: Level can only contain letters, numbers, and hyphens (e.g., G, -1).';
+    }
+    // 2. Number Input Logic (Excluding Level)
+    else if (fieldConfig.type === 'number') {
+      const num = Number(value);
+      if (isNaN(num)) return 'Invalid: Must be a number.';
+      if (num <= 0) return 'Invalid: Value must be greater than 0.';
+      if (num > 9999999) return 'Invalid: Value is too large.';
+    } 
+    // 3. Email Logic
+    else if (fieldConfig.key.toLowerCase().includes('email')) {
+      if (!EMAIL_FORMAT_REGEX.test(strVal)) return 'Invalid: Please enter a valid email address.';
+    }
+    // 4. Mobile/Phone Logic
+    else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
+      if (!MOBILE_FORMAT_REGEX.test(strVal)) return 'Invalid: Mobile number must contain only numbers.';
+    }
+    // 5. Description/Textarea Logic (Lenient)
+    else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
+      if (DESC_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters.';
+    }
+    // 6. Standard Text Input Logic (Strict)
+    else if (fieldConfig.type === 'text') {
+      if (STRICT_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters. Symbols like @, ., and - are not allowed here.';
+    }
+    
+    // Character Limit Check
+    if (fieldConfig.maxLength && strVal.length > fieldConfig.maxLength) {
+      return `Exceeds database maximum length of ${fieldConfig.maxLength} characters.`;
+    }
+
+    return null;
+  }
+
   // ------------ renderField : Render the correct input element for each field type -------------------
   // Handles text inputs, text areas, select dropdowns
   // Disabled fields get a grey background and cursor not allowed
@@ -212,13 +254,16 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     // The field is disabled if the field is explicit disabled
     // Or, the field is primary key
     const isDisabled = field.disabled || field.key === config.primaryKey
+    const hasError = !!validationErrors[field.key]
+    const isLevel = field.key.toLowerCase() === 'level'
 
     // Commented by Desmond @ 22-April-26
     // -------------------------------------------------------------------------------------------------------------------------------------
     // -                     This is the BASE class for the input fields, change the attributes like column WIDTH here                     -
     // -------------------------------------------------------------------------------------------------------------------------------------
-    const baseClass = `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm ${
-      isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''
+    const baseClass = `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm ${
+      isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-500 border-gray-300' :
+      hasError ? 'border-red-400 bg-red-50' : 'border-gray-300' 
     }`
 
     // -------------------------- Select ----------------------------
@@ -229,51 +274,48 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
       // Replace static empty options with live db data for location_id
       // For location_id field, use locations from relatedData
       if (field.key === 'location_id' && relatedData.location_id?.length > 0) {
-        options = [
+        options = [ 
           // Label for select field
-          { value: '', label: 'Select Location' },
+          { value: '', label: 'Select Location' }, 
           // Map the attributes to the correct fields
-          ...relatedData.location_id.map(location => ({
+          ...relatedData.location_id.map(location => ({ 
             // location_id
-            value: location.location_id,
+            value: location.location_id, 
             // location name
-            label: location.name
-          }))
+            label: location.name 
+          })) 
         ]
       }
 
       // Replace static empty options with live db data for department_id
       // For department_id field, use departments from relatedData
       if (field.key === 'department_id' && relatedData.department_id?.length > 0) {
-        options = [
+        options = [ 
           // Label for select field
-          { value: '', label: 'Select Department' },
+          { value: '', label: 'Select Department' }, 
           // Map the attributes to the correct fields
-          ...relatedData.department_id.map(department => ({
+          ...relatedData.department_id.map(department => ({ 
             // department_id
-            value: department.department_id,
+            value: department.department_id, 
             // department name
-            label: department.name
-          }))
+            label: department.name 
+          })) 
         ]
       }
 
       // ---------------------- Render the select (dropdown) field -------------------------
       return (
-        // ------------ Select --------------
-        <select
-          id={field.key}
-          value={String(value)}
-          onChange={(e) => handleInputChange(field.key, e.target.value)}
+        <select 
+          id={field.key} 
+          value={String(value)} 
+          onChange={(e) => handleInputChange(field.key, e.target.value)} 
           disabled={isDisabled} // Disabled if explicitly mentioned, or this is a primary key
           className={baseClass} // Style follows the baseClass, refer above
           required={field.required}
         >
           {options.map(option => (
             // -------------- Option ----------------
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+            <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
       )
@@ -282,30 +324,36 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     // ----------------------- Text area ----------------------------
     if (field.type === 'textarea') {
       return (
-        <textarea
-          id={field.key}
-          value={String(value)}
-          onChange={(e) => handleInputChange(field.key, e.target.value)}
+        <textarea 
+          id={field.key} 
+          value={String(value)} 
+          onChange={(e) => handleInputChange(field.key, e.target.value)} 
           disabled={isDisabled} // Disabled if explicitly mentioned, or this is a primary key
-          placeholder={field.placeholder}
+          placeholder={field.placeholder} 
           className={baseClass} // Style follows the baseClass, refer above
-          rows={3}
-          required={field.required}
+          rows={3} 
+          required={field.required} 
+          maxLength={field.maxLength} 
         />
       )
     }
 
+    // BUGFIX 25-April: Switch type='number' to type='text' but force numeric input via JS. 
+    // This stops HTML from automatically accepting 'e', '.', or '-' inside number inputs.
+    // BUGFIX: We force type="text" globally so HTML doesn't block the letter "G" in the Level field.
     // --------------------- Text / Number input ----------------------
     return (
-      <input
-        id={field.key}
-        type={field.type === 'number' ? 'number' : 'text'}
-        value={String(value)}
-        onChange={(e) => handleInputChange(field.key, e.target.value)}
+      <input 
+        id={field.key} 
+        type="text" 
+        inputMode={field.type === 'number' && !isLevel ? 'numeric' : 'text'}
+        value={String(value)} 
+        onChange={(e) => handleInputChange(field.key, e.target.value)} 
         disabled={isDisabled} // Disabled if explicitly mentioned, or this is a primary key
-        placeholder={field.placeholder}
+        placeholder={field.placeholder} 
         className={baseClass} // Style follows the baseClass, refer above
-        required={field.required}
+        required={field.required} 
+        maxLength={field.maxLength} 
       />
     )
   }
@@ -313,6 +361,18 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
   // -------------------- handleInputChange : Update a single field in formData ----------------------
   const handleInputChange = (key: string, value: string | number | null) => {
     setFormData((prev) => ({ ...prev, [key]: value}))
+
+    // Run client-side validation on the changed field
+    const fieldConfig = config.formFields.find(f => f.key === key);
+    if (fieldConfig) {
+      const error = validateField(value, fieldConfig);
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        if (error) newErrors[key] = error;
+        else delete newErrors[key];
+        return newErrors;
+      });
+    }
   }
 
   // ------------------- handleSubmit : Sends the updated record to the API --------------------
@@ -339,14 +399,8 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
 
       // Convert empty FK strings to null
       // Ensure proper typing for IDs
-      if (cleanedData.location_id === '') {
-        cleanedData.location_id = null
-      }
-
-      // Handle department_id (string type)
-      if (cleanedData.department_id === '') {
-        cleanedData.department_id = null
-      }
+      if (cleanedData.location_id === '') cleanedData.location_id = null
+      if (cleanedData.department_id === '') cleanedData.department_id = null
 
       // Send the PUT request
       const response = await fetch(`${config.apiEndpoint}/${recordId}`, {
@@ -379,16 +433,12 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
 
   // ----------------- Guard states : Shown before the form renders --------------------
   // Prevent rendering until mounted (avoids server/client HTML mismatch)
-  if (!mounted || status === 'loading') {
-    return null
-  }
+  if (!mounted || status === 'loading') return null
 
   // Form will not be rendered for unauthenticated users
-  if (status === 'unauthenticated') {
-    return null
-  }
+  if (status === 'unauthenticated') return null
 
-  //  --------------- While record is being fetched, show the loading spinner -----------------
+  // --------------- While record is being fetched, show the loading spinner -----------------
   if (loadingData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -399,6 +449,9 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
       </div>
     )
   }
+
+  // Check if there are any client-side validation errors
+  const hasClientErrors = Object.keys(validationErrors).length > 0;
 
   // -------------------------- Render the main page component ---------------------------
   return (
@@ -423,10 +476,27 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
                 {config.formFields.map((field) => (
                   <div key={field.key}>
 
-                    {/* Field label */}
-                    <label htmlFor={field.key} className="block text-sm font-medium text-gray-700">
-                      {field.label}
-                    </label>
+                    {/* Field label with character counter */}
+                    <div className="flex justify-between items-end mb-1">
+                      <label htmlFor={field.key} className="block text-sm font-medium text-gray-700">
+                        {field.label}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      
+                      {/* Character counter for text/textarea fields */}
+                      {(field.type === 'text' || field.type === 'textarea') && field.maxLength && (
+                        <span className={`text-xs font-medium ${String(formData[field.key] || '').length > field.maxLength ? 'text-red-600 font-bold' : 'text-gray-400'}`}>
+                          {String(formData[field.key] || '').length} / {field.maxLength}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Validation error message */}
+                    {validationErrors[field.key] && (
+                      <p className="mb-1 text-sm font-semibold text-red-600" role="alert">
+                        {validationErrors[field.key]}
+                      </p>
+                    )}
 
                     {/* Form fields */}
                     <div className="mt-1">
@@ -440,18 +510,18 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
               {/* Action buttons */}
               <div className="mt-8 flex justify-end space-x-3">
                 {/* Cancel */}
-                <button
-                  type="button"
-                  onClick={() => router.push(config.backUrl)}
+                <button 
+                  type="button" 
+                  onClick={() => router.push(config.backUrl)} 
                   className="px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
                   Cancel
                 </button>
 
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={loading}
+                {/* Submit - disabled while loading or if there are validation errors */}
+                <button 
+                  type="submit" 
+                  disabled={loading || hasClientErrors} 
                   className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Saving...' : `Save ${config.entityDisplayNameSingular}`}

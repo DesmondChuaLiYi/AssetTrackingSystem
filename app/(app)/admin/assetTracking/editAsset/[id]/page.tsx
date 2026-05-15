@@ -55,7 +55,9 @@ const editAssetConfig: dynamicEditConfig = {
       key: 'name', 
       label: 'Name', 
       type: 'text' as const, 
-      required: true 
+      required: true, 
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // ----------------- model ------------------
@@ -63,14 +65,19 @@ const editAssetConfig: dynamicEditConfig = {
       key: 'model', 
       label: 'Model', 
       type: 'text' as const, 
-      required: true 
+      required: true,
+      placeholder: 'e.g. X1 Carbon Gen 9 (max 30 chars)', 
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // --------------- description ----------------
     { 
       key: 'description', 
       label: 'Description', 
-      type: 'textarea' as const 
+      type: 'textarea' as const, 
+      // Added max length 200 same as Description for Location on 27/04/26 Daryl
+      maxLength: 200
     },
 
     // ---------------- category -----------------
@@ -78,7 +85,10 @@ const editAssetConfig: dynamicEditConfig = {
       key: 'category', 
       label: 'Category', 
       type: 'text' as const, 
-      required: true 
+      required: true, 
+      placeholder: 'e.g. Laptop, Chair (max 50 chars)',
+      // Added max length 50 on 27/04/26 Daryl
+      maxLength: 50
     },
 
     // --------------- condition -----------------

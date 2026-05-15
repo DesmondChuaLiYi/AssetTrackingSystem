@@ -34,7 +34,9 @@ const addAssetConfig: dynamicAddConfig = {
       label: 'Asset ID',
       type: 'text' as const,
       required: true,
-      placeholder: 'e.g. SN12345678 (max 30 chars)'
+      placeholder: 'e.g. SN12345678 (max 30 chars)',
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // -------------- name -------------------
@@ -43,7 +45,9 @@ const addAssetConfig: dynamicAddConfig = {
       label: 'Name', 
       type: 'text' as const, 
       required: true,
-      placeholder: 'e.g. Lenovo ThinkPad (max 30 chars)'
+      placeholder: 'e.g. Lenovo ThinkPad (max 30 chars)',
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
     
     // -------------- model ----------------
@@ -52,7 +56,9 @@ const addAssetConfig: dynamicAddConfig = {
       label: 'Model', 
       type: 'text' as const, 
       required: true,
-      placeholder: 'e.g. X1 Carbon Gen 9 (max 30 chars)' 
+      placeholder: 'e.g. X1 Carbon Gen 9 (max 30 chars)', 
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // --------------- description ----------------
@@ -61,7 +67,9 @@ const addAssetConfig: dynamicAddConfig = {
       label: 'Description', 
       type: 'textarea' as const, 
       required: false,
-      placeholder: 'Additional details about the asset (max 60 chars)'
+      placeholder: 'Additional details about the asset (max 200 chars)',
+      // Added max length 200 same as Description for Location on 27/04/26 Daryl
+      maxLength: 200
     },
 
     // -------------- category -------------------
@@ -70,7 +78,9 @@ const addAssetConfig: dynamicAddConfig = {
       label: 'Category', 
       type: 'text' as const, 
       required: true,
-      placeholder: 'e.g. Laptop, Chair (max 50 chars)'
+      placeholder: 'e.g. Laptop, Chair (max 50 chars)',
+      // Added max length 50 on 27/04/26 Daryl
+      maxLength: 50
      },
 
     // --------------- condition -------------------

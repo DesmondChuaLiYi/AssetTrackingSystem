@@ -43,8 +43,10 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
                     account.providerAccountId // Fallback to provider account ID
             }
 
-            // Load staff data from the database once per session
-            if (token.email && !token.role) { // If we have the email but no role
+            // Re-check status from the database on every JWT refresh.
+            // This ensures that if an admin changes a user's status (e.g. approved → pending),
+            // the change takes effect within the next token refresh cycle (up to 5 minutes).
+            if (token.email) {
                 const { data, error } = await supabaseAdmin // Query from the Staff table
                     .from("Staff") // Table name
                     .select("staff_id, role, status, department_id, mobile_no") // Column names
@@ -55,6 +57,9 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
                     // Block login if account is not approved
                     if (data.status !== 'approved') {
                         token.role = data.status // Set role to 'pending' or 'rejected' so loginClient.tsx can show the right message
+                        token.staffId = undefined
+                        token.departmentId = undefined
+                        token.mobileNo = undefined
                         return token
                     }
 

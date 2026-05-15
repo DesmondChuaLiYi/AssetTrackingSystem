@@ -56,7 +56,10 @@ const editDepartmentConfig: dynamicEditConfig = {
       key: 'name', 
       label: 'Name', 
       type: 'text' as const, 
-      required: true 
+      required: true, 
+      placeholder: 'e.g., Information & Communications Technology',
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // -------------------- block ------------------------

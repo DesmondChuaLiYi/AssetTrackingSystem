@@ -39,36 +39,43 @@ export default function logoutPage() {
         // Placed here because useEffect itself cannot be async
         // So the logic is wrapped in an inner async function
         const performLogout = async () => {
-            try {
-                // Clear the server-side cookies (user_session + NextAuth cookies + NextAuth callback-url)
-                // Call the logout API to perform server logout
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                })
-            // Catch the errors
-            } catch {
-                // Though server cookie clearing failed, but proceed with client-side
-                // invalidation later on
-                // Even if server fails, continue the logout process and do not block the user
-                console.error('[logout] Server cookie clear failed, proceed with client signOut')
-            }
+            try { 
+                try {
+                    // NextAuth logout
+                    // Clears NextAuth client-side session state
+                    await signOut ({
+                        // Prevents automatic redirect to control navigation manually
+                        redirect: false
+                    })
+                // Catch the errors
+                } catch {
+                    // Log the error to console for developers
+                    console.error(['[logout] NextAuth signOut error'])
+                }
 
-            try {
-                // NextAuth logout
-                // Clears NextAuth client-side session state
-                await signOut ({
-                    // Prevents automatic redirect to control navigation manually
-                    redirect: false
-                })
-            // Catch the errors
-            } catch {
-                // Log the error to console for developers
-                console.error(['[logout] NextAuth signOut error'])
+                try {
+                    // Clear the server-side cookies (user_session + NextAuth cookies + NextAuth callback-url)
+                    // Call the logout API to perform server logout
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                // Catch the errors
+                } catch {
+                    // Though server cookie clearing failed, but proceed with client-side
+                    // invalidation later on
+                    // Even if server fails, continue the logout process and do not block the user
+                    console.error('[logout] Server cookie clear failed, proceed with client signOut')
+                }
+
+                // Replace the current entry and reroute to /login
+                // Prevents user from navigating back to the previous page
+                router.replace('/login')
+            } catch (error) {
+                // Fallback error handling
+                console.error('[logout] Unexpected error occurred during logout:', error)
+                router.replace('/login')
             }
-            // Replace the current entry and reroute to /login
-            // Prevents user from navigating back to the previous page
-            router.replace('/login')
         }
         // Execute the function
         performLogout()

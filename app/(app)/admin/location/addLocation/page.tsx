@@ -59,7 +59,9 @@ const addLocationConfig: dynamicAddConfig = {
       label: 'Name', 
       type: 'text' as const, 
       required: true,
-      placeholder: 'e.g., Room G-001, Server Room'
+      placeholder: 'e.g., Room G-001, Server Room',
+      // Added max length 30 on 27/04/26 Daryl
+      maxLength: 30
     },
 
     // ------------------- description ----------------------
@@ -67,7 +69,8 @@ const addLocationConfig: dynamicAddConfig = {
       key: 'description', 
       label: 'Description', 
       type: 'textarea' as const,
-      placeholder: 'Brief description about the location (max 30 characters)'
+      placeholder: 'Brief description about the location (max 200 characters)',
+      maxLength: 200
     },
 
     // --------------------- block -----------------
@@ -75,7 +78,9 @@ const addLocationConfig: dynamicAddConfig = {
       key: 'block', 
       label: 'Block', 
       type: 'text' as const,
-      placeholder: 'e.g., A, B, C'
+      placeholder: 'e.g., A, B, C',
+      // Added max length 2 on 27/04/26 Daryl
+      maxLength: 2
     },
 
     // --------------------- level --------------------
@@ -83,7 +88,9 @@ const addLocationConfig: dynamicAddConfig = {
       key: 'level', 
       label: 'Level', 
       type: 'number' as const,
-      placeholder: 'e.g., 1, 2, 3'
+      placeholder: 'e.g., 1, 2, 3',
+      // Added max length 2 on 27/04/26 Daryl
+      maxLength: 2
     }
   ]
 }

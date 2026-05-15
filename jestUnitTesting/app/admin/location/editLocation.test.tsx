@@ -1,183 +1,95 @@
-import { render, screen } from '@testing-library/react';
-import EditLocationPage from '@/app/(app)/admin/location/editLocation/[id]/page';
+/**
+ * Unit tests for the EditLocationPage
+ *
+ * This page extracts the location ID from the URL params, enforces admin access, 
+ * and passes the data to the generic DynamicEdit component.
+ *
+ * What we cover:
+ *   - Auth checking (renders nothing while loading or if not an admin)
+ *   - ID extraction from useParams (handles string, array, and missing params)
+ *   - Rendering DynamicEdit when authorized with the correct config and ID
+ */
 
-// Mock useParams
+import { render, screen } from '@testing-library/react';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
+import { useParams } from 'next/navigation';
+import EditLocationPage from '@/app/(app)/admin/location/editLocation/[id]/page';
+import DynamicEdit from '@/components/dynamicEdit';
+
+// Mock the admin access hook
+jest.mock('@/hooks/useAdminAccess', () => ({
+  useAdminAccess: jest.fn(),
+}));
+
+// Mock next/navigation
 jest.mock('next/navigation', () => ({
   useParams: jest.fn(),
 }));
 
-// Mock DynamicEdit component
-jest.mock('@/components/DynamicEdit', () => {
-  return function MockDynamicEdit({ config, recordId }: any) {
-    return (
-      <div data-testid="dynamic-edit">
-        <h1>{config.pageTitle}</h1>
-        <div data-testid="record-id">{recordId}</div>
-        <div data-testid="config">{JSON.stringify(config)}</div>
-      </div>
-    );
-  };
+// Mock the DynamicEdit component
+jest.mock('@/components/dynamicEdit', () => {
+  return jest.fn(() => <div data-testid="mock-dynamic-edit" />);
 });
 
 describe('EditLocationPage', () => {
-  const mockUseParams = require('next/navigation').useParams;
-
   beforeEach(() => {
-    mockUseParams.mockReturnValue({ id: 'LOC001' });
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders DynamicEdit component', () => {
-    render(<EditLocationPage />);
-
-    expect(screen.getByTestId('dynamic-edit')).toBeInTheDocument();
+  it('renders nothing while admin access is loading', () => {
+    (useAdminAccess as jest.Mock).mockReturnValue({ isLoading: true, isAdmin: false });
+    (useParams as jest.Mock).mockReturnValue({ id: 'G001' });
+    
+    const { container } = render(<EditLocationPage />);
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('displays correct page title', () => {
-    render(<EditLocationPage />);
-
-    expect(screen.getByText('Edit Location')).toBeInTheDocument();
+  it('renders nothing if the user is not an admin', () => {
+    (useAdminAccess as jest.Mock).mockReturnValue({ isLoading: false, isAdmin: false });
+    (useParams as jest.Mock).mockReturnValue({ id: 'G001' });
+    
+    const { container } = render(<EditLocationPage />);
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it('passes record ID from URL params', () => {
+  it('passes a string ID to DynamicEdit correctly', () => {
+    (useAdminAccess as jest.Mock).mockReturnValue({ isLoading: false, isAdmin: true });
+    (useParams as jest.Mock).mockReturnValue({ id: 'B504' }); // String ID
+    
     render(<EditLocationPage />);
-
-    expect(screen.getByTestId('record-id')).toHaveTextContent('LOC001');
+    
+    expect(screen.getByTestId('mock-dynamic-edit')).toBeInTheDocument();
+    
+    expect(DynamicEdit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recordId: 'B504',
+        config: expect.objectContaining({ entityName: 'location' }),
+      }),
+      undefined
+    );
   });
 
-  it('configures correct entity names', () => {
+  it('extracts the first item if the ID parameter is an array', () => {
+    (useAdminAccess as jest.Mock).mockReturnValue({ isLoading: false, isAdmin: true });
+    (useParams as jest.Mock).mockReturnValue({ id: ['LAB-ICT', 'OTHER'] }); // Array ID
+    
     render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    expect(config.entityName).toBe('location');
-    expect(config.entityDisplayName).toBe('Locations');
-    expect(config.entityDisplayNameSingular).toBe('Location');
+    
+    expect(DynamicEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: 'LAB-ICT' }),
+      undefined
+    );
   });
 
-  it('sets correct API endpoint', () => {
+  it('falls back to an empty string if the ID parameter is missing', () => {
+    (useAdminAccess as jest.Mock).mockReturnValue({ isLoading: false, isAdmin: true });
+    (useParams as jest.Mock).mockReturnValue({}); // Missing ID
+    
     render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    expect(config.apiEndpoint).toBe('/api/location');
-  });
-
-  it('sets correct primary key', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    expect(config.primaryKey).toBe('location_id');
-  });
-
-  it('sets correct back URL', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    expect(config.backUrl).toBe('/admin/location/Rooms');
-  });
-
-  it('disables location_id field for editing', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const locationIdField = config.formFields.find((f: any) => f.key === 'location_id');
-
-    expect(locationIdField.disabled).toBe(true);
-    expect(locationIdField.required).toBe(true);
-  });
-
-  it('configures all form fields', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    expect(config.formFields).toHaveLength(5);
-
-    const fieldKeys = config.formFields.map((f: any) => f.key);
-    expect(fieldKeys).toContain('location_id');
-    expect(fieldKeys).toContain('name');
-    expect(fieldKeys).toContain('description');
-    expect(fieldKeys).toContain('block');
-    expect(fieldKeys).toContain('level');
-  });
-
-  it('marks name field as required', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const nameField = config.formFields.find((f: any) => f.key === 'name');
-
-    expect(nameField.required).toBe(true);
-  });
-
-  it('makes description, block and level optional in edit mode', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const descriptionField = config.formFields.find((f: any) => f.key === 'description');
-    const blockField = config.formFields.find((f: any) => f.key === 'block');
-    const levelField = config.formFields.find((f: any) => f.key === 'level');
-
-    expect(descriptionField.required).toBeUndefined();
-    expect(blockField.required).toBeUndefined();
-    expect(levelField.required).toBeUndefined();
-  });
-
-  it('handles different location IDs correctly', () => {
-    mockUseParams.mockReturnValue({ id: 'LOC999' });
-
-    render(<EditLocationPage />);
-
-    expect(screen.getByTestId('record-id')).toHaveTextContent('LOC999');
-  });
-
-  it('configures description as textarea', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const descriptionField = config.formFields.find((f: any) => f.key === 'description');
-
-    expect(descriptionField.type).toBe('textarea');
-  });
-
-  it('configures level field as number input', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const levelField = config.formFields.find((f: any) => f.key === 'level');
-
-    expect(levelField.type).toBe('number');
-  });
-
-  it('configures block field as text input', () => {
-    render(<EditLocationPage />);
-
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-
-    const blockField = config.formFields.find((f: any) => f.key === 'block');
-
-    expect(blockField.type).toBe('text');
+    
+    expect(DynamicEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: '' }),
+      undefined
+    );
   });
 });

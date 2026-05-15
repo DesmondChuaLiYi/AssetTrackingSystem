@@ -13,10 +13,10 @@
  */
 
 // Commented on 23/04/2026 Daryl. Removed .strict() and used coerce.number()
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
-import { validateSession } from '@/lib/apiAuth';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase/server'
+import { validateSession } from '@/lib/apiAuth'
+import { z } from 'zod'
 import { generateAndUploadQr, deleteQr } from '@/lib/qrcode/qrcode'
 
 // Commented by Desmond @ 30-April-26: Temporarily unused
@@ -42,7 +42,8 @@ const getQuerySchema = z.object({
 const postSchema = z.object({
   location_id: z.string().min(1, 'Location ID is required').max(30),
   name: z.string().min(1, 'Location name is required').max(30),
-  description: z.string().max(30).optional().nullable(),
+  // Commented on 26/04/2026 Daryl. Updated max length to 200 to match DB schema change
+  description: z.string().max(200).optional().nullable(),
   block: z.string().max(10).optional().nullable(),
   level: z.coerce.number().int().optional().nullable(),
 })
@@ -52,15 +53,15 @@ const deleteSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
-  const authResult = await validateSession();
+  const authResult = await validateSession()
 
   if (!authResult.authorized) {
-    return authResult.response;
+    return authResult.response
   }
 
   try {
-    const { searchParams } = new URL(request.url);
-    const validatedParams = getQuerySchema.parse(Object.fromEntries(searchParams.entries()));
+    const { searchParams } = new URL(request.url)
+    const validatedParams = getQuerySchema.parse(Object.fromEntries(searchParams.entries()))
 
     let query = supabaseAdmin
       .from('Location')
@@ -69,45 +70,45 @@ export async function GET(request: NextRequest) {
       .is('deleted_dt', null)
 
     if (validatedParams.search) {
-      query = query.ilike(validatedParams.searchField, `%${validatedParams.search}%`);
+      query = query.ilike(validatedParams.searchField, `%${validatedParams.search}%`)
     }
 
-    query = query.order(validatedParams.sortBy, { ascending: validatedParams.sortOrder === 'asc' });
+    query = query.order(validatedParams.sortBy, { ascending: validatedParams.sortOrder === 'asc' })
 
-    const from = (validatedParams.page - 1) * validatedParams.limit;
-    const to = from + validatedParams.limit - 1;
-    query = query.range(from, to);
+    const from = (validatedParams.page - 1) * validatedParams.limit
+    const to = from + validatedParams.limit - 1
+    query = query.range(from, to)
 
-    const { data, error, count } = await query;
-    if (error) throw error;
+    const { data, error, count } = await query
+    if (error) throw error
 
     return NextResponse.json({
       data: data || [],
       totalItems: count || 0,
       totalPages: Math.ceil((count || 0) / validatedParams.limit)
-    });
+    })
   } catch (error: any) {
-    console.error('GET /api/location error:', { message: error?.message });
+    console.error('GET /api/location error:', { message: error?.message })
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await validateSession('admin');
+  const authResult = await validateSession('admin')
 
   if (!authResult.authorized) {
-    return authResult.response;
+    return authResult.response
   }
 
   // Commented by Desmond @ 30-April-26
   let tagPath: string | null = null
 
   try {
-    const body = await request.json();
-    const validatedData = postSchema.parse(body);
+    const body = await request.json()
+    const validatedData = postSchema.parse(body)
 
     // Commented by Desmond @ 30-April-26
     // Step 1: Check for duplicate (including soft-deleted — IDs are never reused)
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
         }
       ])
       .select()
-      .single();
+      .single()
 
     if (error) {
       // Commented by Desmond @ 30-April-26
@@ -160,31 +161,31 @@ export async function POST(request: NextRequest) {
       if (tagPath) {
         await deleteQr(tagPath)
       }
-      throw error;
+      throw error
     }
     return NextResponse.json(
       { success: true, data }, 
       { status: 201 }
-    );
+    )
   } catch (error: any) {
-    console.error('POST /api/location error:', { message: error?.message });
+    console.error('POST /api/location error:', { message: error?.message })
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to create location' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create location' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const authResult = await validateSession('admin');
+  const authResult = await validateSession('admin')
 
   if (!authResult.authorized) {
-    return authResult.response;
+    return authResult.response
   }
   
   try {
-    const { searchParams } = new URL(request.url);
-    const validatedData = deleteSchema.parse({ location_id: searchParams.get('location_id') });
+    const { searchParams } = new URL(request.url)
+    const validatedData = deleteSchema.parse({ location_id: searchParams.get('location_id') })
 
     // Commented by Desmond @ 30-April-26
     // Only soft delete records that are not already deleted
@@ -202,7 +203,7 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (error) {
-      throw error;
+      throw error
     }
 
     if (!data) {
@@ -214,14 +215,14 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json(
       { success: true, message: 'Location deleted successfully' }
-    );
+    )
     
   } catch (error: any) {
-    console.error('DELETE /api/location error:', { message: error?.message });
+    console.error('DELETE /api/location error:', { message: error?.message })
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 })
   }
 }
 

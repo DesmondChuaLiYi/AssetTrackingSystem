@@ -9,7 +9,8 @@ const idSchema = z.string().min(1, 'Location ID is required').max(30, 'Location 
 // BUGFIX: Removed .strict() and used coerce.number()
 const putSchema = z.object({
   name: z.string().min(1).max(30).optional(),
-  description: z.string().max(30).optional().nullable(),
+  // Commented on 26/04/2026 Daryl. Updated max length to 200 to match DB schema change
+  description: z.string().max(200).optional().nullable(),
   block: z.string().max(10).optional().nullable(),
   level: z.coerce.number().int().optional().nullable(),
 });
