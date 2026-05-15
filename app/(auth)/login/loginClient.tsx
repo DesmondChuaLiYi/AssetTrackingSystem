@@ -1,39 +1,39 @@
-"use client";
+"use client"
 
-import { useSession, signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { useToast } from '@/components/ui/toast';
+import { useSession, signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef } from "react"
+import { useToast } from '@/components/ui/toast'
 
 export default function LoginClient() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const { showToast } = useToast();
-  const hasInitialized = useRef(false);
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const { showToast } = useToast()
+  const hasInitialized = useRef(false)
 
   // Redirect the user after login successfully
   useEffect(() => {
     // Prevents the user from redirected multiple times
     if (hasInitialized.current) {
-      return;
+      return
     }
 
     // Redirect the user to their respective dashboard if authenticated
     if (status === 'authenticated' && session?.user) {
-      hasInitialized.current = true;
+      hasInitialized.current = true
       // Get the user role from the session
       const role = (session.user as any).role;
 
       // Handle different account statuses
       if (role === 'pending') {
-        showToast("Your account is pending admin approval", "warning");
-        return;
+        showToast("Your account is pending admin approval", "warning")
+        return
       } else if (role == 'rejected') {
-        showToast("Your account has been rejected", "error");
-        return;
+        showToast("Your account has been rejected", "error")
+        return
       } else if (role === 'unregistered') {
-        showToast("Your account is not registered in the system. Please register for access", "warning");
-        return;
+        showToast("Your account is not registered in the system. Please register for access", "warning")
+        return
       }
 
       // Store login success in sessionStorage so that toast can display
@@ -42,9 +42,9 @@ export default function LoginClient() {
 
       // Redirect based on role after a short delay
       if (role == 'admin') {
-        router.push("/admin/dashboard");
+        router.replace("/admin/dashboard");
       } else {
-        router.push("/user/dashboard");
+        router.replace("/user/dashboard");
       }
     }
   }, [status, session, router, showToast]);
@@ -55,7 +55,7 @@ export default function LoginClient() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
@@ -75,12 +75,27 @@ export default function LoginClient() {
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-4">
-              Sign in with your organisation account
+              Sign in with your organization account
             </p>
           </div>
 
           <button
-            onClick={() => signIn('azure-ad')}
+            onClick={() => {
+              // Commented by Desmond @ 12-May-26: Extract the callback URL from the query parameters
+              // to preserve the original destination after login
+              // Suppose the user tries to access /scan/location/E404 but they are not logged in, which 
+              // they will be redirected to /login?callbackUrl=/scan/location/E404. 
+              // After successful login, we want to redirect them back to /scan/location/E404, 
+              // not the default dashboard. 
+              const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
+
+              // Initiate Microsoft login with the callback URL if it exists. Otherwise, it will 
+              // default to the dashboard redirection in the auth callback.
+              signIn('azure-ad', {
+                callbackUrl: callbackUrl || undefined
+              })
+            }}
+            
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
             disabled={false}
           >
@@ -118,5 +133,5 @@ function LoadingState() {
         <p className="text-gray-600">Loading...</p>
       </div>
     </div>
-  );
+  )
 }

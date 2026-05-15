@@ -1,13 +1,13 @@
 // components/scanner/ScannerContext.tsx
-'use client';
+'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { useState, useEffect, useRef } from 'react'
+import { Html5Qrcode } from 'html5-qrcode'
 import {
   QrCode, Barcode,
   ChevronLeft,
   XCircle 
-} from 'lucide-react';
+} from 'lucide-react'
 
 export default function ScannerContent({
   title,
@@ -19,159 +19,162 @@ export default function ScannerContent({
   autoStart = false,
   shouldStartScanning = false,
   onScanningStarted,
+  children
 }: {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  onItemScanned: (item: any) => Promise<void>;
-  onBack: () => void;
-  parentScan: { type: string, id: string, name: string } | null;
-  autoStart?: boolean;
-  shouldStartScanning?: boolean;
-  onScanningStarted?: () => void;
-}) {
-  const [isScanning, setIsScanning] = useState(false); // Always start as false
-  const [scannerError, setScannerError] = useState<string | null>(null);
+  title: string
+  description: string
+  icon: React.ElementType
+  onItemScanned: (item: any) => Promise<void>
+  onBack: () => void
+  parentScan: { type: string, id: string, name: string } | null
+  autoStart?: boolean
+  shouldStartScanning?: boolean
+  onScanningStarted?: () => void
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const onItemScannedRef = useRef(onItemScanned);
-  const continuousModeRef = useRef(false); // Track if we're in continuous mode
-  const scannerRegionId = "qr-reader"; // Use fixed ID
-  const lastScannedCodeRef = useRef<string | null>(null);
-  const lastScannedTimeRef = useRef<number>(0);
+  children?: React.ReactNode
+}) {
+  const [isScanning, setIsScanning] = useState(false) // Always start as false
+  const [scannerError, setScannerError] = useState<string | null>(null)
+
+  const scannerRef = useRef<Html5Qrcode | null>(null)
+  const onItemScannedRef = useRef(onItemScanned)
+  const continuousModeRef = useRef(false) // Track if we're in continuous mode
+  const scannerRegionId = "qr-reader" // Use fixed ID
+  const lastScannedCodeRef = useRef<string | null>(null)
+  const lastScannedTimeRef = useRef<number>(0)
 
   // Keep the callback ref up to date
   useEffect(() => {
-    onItemScannedRef.current = onItemScanned;
-  }, [onItemScanned]);
+    onItemScannedRef.current = onItemScanned
+  }, [onItemScanned])
 
   // Handle external trigger to start scanning
   useEffect(() => {
     if (shouldStartScanning && !isScanning) {
-      continuousModeRef.current = autoStart; // Set continuous mode based on autoStart
-      setIsScanning(true);
-      onScanningStarted?.();
+      continuousModeRef.current = autoStart // Set continuous mode based on autoStart
+      setIsScanning(true)
+      onScanningStarted?.()
     }
-  }, [shouldStartScanning, isScanning, onScanningStarted, autoStart]);
+  }, [shouldStartScanning, isScanning, onScanningStarted, autoStart])
 
   const safeStopAndClear = async (inst: Html5Qrcode | null) => {
-    if (!inst) return;
+    if (!inst) return
     try {
-      const state = await (inst as any).getState();
+      const state = await (inst as any).getState()
       if (state === 2) { // 2 = SCANNING state
-        await (inst as any).stop();
+        await (inst as any).stop()
       }
     } catch (e) {
       // If getState doesn't work, try to stop anyway
       try {
-        await (inst as any).stop();
+        await (inst as any).stop()
       } catch (stopError) {
         // Silently handle
       }
     }
     try {
-      (inst as any).clear();
+      (inst as any).clear()
     } catch (e) {
       // Silently handle
     }
-  };
+  }
 
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
 
     if (isScanning) {
       const startScanner = async () => {
         // Clean up any existing scanner first
         if (scannerRef.current) {
-          await safeStopAndClear(scannerRef.current);
-          scannerRef.current = null;
+          await safeStopAndClear(scannerRef.current)
+          scannerRef.current = null
         }
 
-        if (!isMounted) return;
+        if (!isMounted) return
 
         try {
-          const scanner = new Html5Qrcode(scannerRegionId);
-          scannerRef.current = scanner;
+          const scanner = new Html5Qrcode(scannerRegionId)
+          scannerRef.current = scanner
 
-          const config = { fps: 30, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 };
+          const config = { fps: 30, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 }
 
           const onScanSuccess = (decodedText: string) => {
-            if (!isMounted) return;
+            if (!isMounted) return
 
             // Debounce: Ignore duplicate scans within 2 seconds
-            const now = Date.now();
+            const now = Date.now()
             if (lastScannedCodeRef.current === decodedText && now - lastScannedTimeRef.current < 2000) {
-              return; // Ignore duplicate scan
+              return // Ignore duplicate scan
             }
 
             // Update last scanned tracking
-            lastScannedCodeRef.current = decodedText;
-            lastScannedTimeRef.current = now;
+            lastScannedCodeRef.current = decodedText
+            lastScannedTimeRef.current = now
 
             const newItem = {
               id: Date.now(),
               code: decodedText,
               time: new Date().toLocaleTimeString(),
               name: `Item - ${decodedText}`,
-            };
+            }
 
             const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGgU+mtn0xG8qBSuBzvLZiTYIGWe77OWfTRAMUKnj7K5iHAY5j9n0xXksBS");
-            audio.play().catch(() => {});
+            audio.play().catch(() => {})
 
-            onItemScannedRef.current(newItem);
+            onItemScannedRef.current(newItem)
 
             // In continuous mode: pause briefly then auto-resume
             // In normal mode: stop completely
             if (continuousModeRef.current) {
-              setIsScanning(false); // Pause scanner (don't call stopScanning - it resets continuous mode)
+              setIsScanning(false) // Pause scanner (don't call stopScanning - it resets continuous mode)
               setTimeout(() => {
                 if (isMounted && continuousModeRef.current) {
-                  setIsScanning(true); // Resume scanning
+                  setIsScanning(true) // Resume scanning
                 }
-              }, 1000); // 1 second pause before resuming
+              }, 1000) // 1 second pause before resuming
             } else {
-              stopScanning(); // Stop completely
+              stopScanning() // Stop completely
             }
-          };
+          }
 
           await (scanner as any).start(
             { facingMode: "environment" },
             config,
             onScanSuccess,
             () => {}
-          );
+          )
         } catch (error: any) {
           if (isMounted) {
-            setScannerError(error.message || "Camera access denied.");
-            setIsScanning(false);
+            setScannerError(error.message || "Camera access denied.")
+            setIsScanning(false)
           }
         }
-      };
-      startScanner();
+      }
+      startScanner()
     }
 
     return () => {
-      isMounted = false;
-      const inst = scannerRef.current;
-      scannerRef.current = null;
-      safeStopAndClear(inst);
-    };
-  }, [isScanning]);
+      isMounted = false
+      const inst = scannerRef.current
+      scannerRef.current = null
+      safeStopAndClear(inst)
+    }
+  }, [isScanning])
 
   const handleStartClick = () => {
-    setScannerError(null);
-    continuousModeRef.current = autoStart; // Set continuous mode based on autoStart
-    setIsScanning(true);
-  };
+    setScannerError(null)
+    continuousModeRef.current = autoStart // Set continuous mode based on autoStart
+    setIsScanning(true)
+  }
   const stopScanning = () => {
-    setIsScanning(false);
-    continuousModeRef.current = false; // Exit continuous mode when stopping
-  };
+    setIsScanning(false)
+    continuousModeRef.current = false // Exit continuous mode when stopping
+  }
 
   const handleBack = () => {
-    if (isScanning) stopScanning();
-    onBack();
-  };
+    if (isScanning) stopScanning()
+    onBack()
+  }
 
   return (
     <div className="p-4 lg:p-8">
@@ -262,6 +265,7 @@ export default function ScannerContent({
           </div>
         </div>
 
+        {children}
         {/* --- THIS IS THE UPDATED FOOTER --- */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="px-4 lg:px-6 py-4 bg-gray-50">
@@ -278,5 +282,5 @@ export default function ScannerContent({
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -6,13 +6,39 @@
  * on the asset_id entered by the user in the Add Asset form.
  * It also has a copy button to copy the asset_id to clipboard, and shows
  * a warning if the asset_id is already taken.
+ * 
+ * LATEST CHANGES:
+ * ---------------
+ *  - Now uses buildBarcodeDataUrl from lib/idCode/idCodeImaeg.ts - the same function path as the server's
+ *    buildBarcodeBuffer, so the preview would be the same as the stored PNG
+ *  - Swinburne header is now embedded into the PNG and not rendered as a HTML around the image. This
+ *    makes Save and Print consistent
+ *  - Asset name is also embedded below the barcode ID number (industry standard)
+ *  - Removed dependency on react-barcode for the preview, now using canvas-based
+ * 
+ *  COMPOSITE PNG LAYOUT (baked in, matches lib/idCode/idCodeImage.ts):
+ *   _______________________________________
+ *   |  SWINBURNE UNIVERSITY OF TECHNOLOGY |    - white on black strip
+ *   |-------------------------------------|
+ *   |   [=====CODE 128 BARCODE=====]      |
+ *   |        ICT-LAPTOP-001               |    - using by bwip-js includetext
+ *   |        Lenovo ThinkPad T480         |    - asset name (if provided)
+ *   ---------------------------------------
  */
 
 // useState remembers the state; useMemo cache the result so no need to recalculate;
 // useCallback cache function so it doesn't recreate; memo prevents unnecessary re-render
-import { useState, memo, useMemo, useCallback } from 'react'
-import Barcode from 'react-barcode' // Draws the barcode
-import { ClipboardDocumentIcon, CheckIcon, ExclamationTriangleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect, memo, useMemo, useCallback, useRef } from 'react'
+// import Barcode from 'react-barcode' // Draws the barcode
+import { 
+    ClipboardDocumentIcon, 
+    CheckIcon, 
+    ExclamationTriangleIcon, 
+    ExclamationCircleIcon,
+    PrinterIcon,
+    ArrowDownTrayIcon
+} from '@heroicons/react/24/outline'
+import { buildBarcodeDataUrl } from '@/lib/idCode/idCodeImage'
 
 // Define what is passed into the component (props are input)
 interface barcodePreviewProps {
@@ -23,7 +49,9 @@ interface barcodePreviewProps {
     isDuplicate?: boolean   // Show warning if it's duplicate
 }
 
-// Component that builds the barcode preview UI
+// -------------------------------------------------------------
+//         Component that builds the barcode preview
+// -------------------------------------------------------------
 const barcodePreview = ({
     value,
     label,
@@ -31,9 +59,52 @@ const barcodePreview = ({
     className = '',
     isDuplicate = false
 }: barcodePreviewProps) => {
+    const [barcodeDataUrl, setBarcodeDataUrl] = useState<string | null>(null)
+    const [generating, setGenerating] = useState(false)
     const [copied, setCopied] = useState(false) // Tracks if the user clicked 'copy'
+    const abortRef = useRef(false)
+
     const isValid = useMemo(() => value.trim().length > 0, [value]) // Value cannot be empty, empty spaces are trimmed and don't recompute unless value changed
-    // When user clicks copy, this method runs
+    
+    // -------------------------------------------------------------
+    //      Generate data URl png whenever value or label changes
+    // -------------------------------------------------------------
+    useEffect(() => {
+        if (!isValid) {
+            setBarcodeDataUrl(null)
+            return
+        }
+
+        abortRef.current = false
+        
+        setGenerating(true)
+
+        buildBarcodeDataUrl({ id: value.trim(), name: label })
+            .then(url => {
+                if (!abortRef.current) {
+                    setBarcodeDataUrl(url)
+                }
+            })
+
+            .catch(err => {
+                console.error('[BarcodePreview] generation error:', err)
+            })
+
+            .finally(() => {
+                if (!abortRef.current) {
+                    setGenerating(false)
+                }
+            })
+
+            return() => {
+                abortRef.current = true
+            }
+
+    }, [value, label, isValid])
+
+    // -------------------------------------------------------------
+    //              Copy asset ID to clipboard
+    // -------------------------------------------------------------
     const handleCopy = useCallback(async () => {
         if (!isValid) { // Don't copy empty values
             return
@@ -69,7 +140,114 @@ const barcodePreview = ({
                 alert('Failed to copy to clipboard. Please try copying manually.')
             }
         }
-    }, [value])
+    }, [value, isValid])
+
+
+    // -------------------------------------------------------------
+    //                          Save PNG
+    // -------------------------------------------------------------
+    const handleSave = useCallback(() => {
+        // If barcode image does not exist
+        if (!barcodeDataUrl) {
+            // Exit early
+            return 
+        }
+
+        try {
+            // Draw the barcode and the layout onto the canvas and wait until it finishes drawing
+            // await drawToCanvas(canvas)
+            // Create a temporary anchor element and use it to trigger download of the canvas content
+            const link = document.createElement('a')
+            // Set the file name
+            link.download = `barcode-${value.trim()}.png`
+            // Convert the canvas content to an image (data URL) and set it as the href of the anchor
+            link.href = barcodeDataUrl
+            // Simulate a click on the anchor to trigger the browser to download the file
+            link.click()
+            // Catch the errors
+        } catch (err) {
+            // Log the error to the console for developers
+            console.error('[BarcodePreview] Save error:', err)
+            // Alert the user that saving failed
+            alert('Failed to save barcode image.')
+        }
+
+    }, [barcodeDataUrl, value])
+
+
+    // -------------------------------------------------------------
+    //                          Print PNG
+    // -------------------------------------------------------------
+    const handlePrint = useCallback(() => {
+        // If barcode image does not exist
+        if (!barcodeDataUrl) {
+            // Exit early
+            return
+        }
+
+        try {
+            // // Draw the barcode and the layout onto the canvas and wait until it finishes drawing
+            // await drawToCanvas(canvas)
+            // // Convert the canvas content to a data URL (base64-encoded image)
+            // const dataUrl = canvas.toDataURL('image/png')
+
+            // Open an invisible iframe and print only the QR image
+            const iframe = document.createElement('iframe')
+
+            // Move the iframe off-screen and hide it - this is a common technique to print 
+            // specific content without opening a new tab or affecting the main page
+            iframe.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 0; height: 0'
+            // Add the iframe to the document body so that it becomes part of the DOM and can be manipulated
+            document.body.appendChild(iframe)
+            // Get the document context of the iframe to write custom HTML for printing
+            const doc = iframe.contentDocument ?? iframe.contentWindow?.document
+
+            // If we cannot access the document context for some reason
+            if (!doc) {
+                // Exit early
+                return
+            }
+
+            // Open the document
+            doc.open()
+            // Write a minimal HTML structure containing the barcode image into the iframe's document
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                    <head>
+                        <title>Barcode - ${value.trim()}</title>
+                        <style>
+                            @page { margin: 8mm; }
+                            body { margin: 0; display: flex; flex-direction; column; align-items: center; font-family: sans-serif; }
+                            img { width: 90mm; }
+                        </style>
+                    </head>
+
+                    <body>
+                        <img src="${barcodeDataUrl}" alt="Barcode code for ${value.trim()}" />
+                    </body>
+                </html>
+            `)
+            // Close the document
+            doc.close()
+
+            // Focus the iframe window
+            iframe.contentWindow?.focus()
+            // Trigger print to print the content of the iframe (barcode)
+            iframe.contentWindow?.print()
+
+            // Remove iframe after a short delay
+            setTimeout(() => document.body.removeChild(iframe), 2000)
+            // Catch errors
+        } catch (err) {
+            // Log the error to the console for developers
+            console.error('[BarcodePreview] Print error:', err)
+            // Alert the user that printing failed
+            alert('Failed to print barcode.')
+        }
+
+    }, [barcodeDataUrl, value])
+
 
     // If the value is empty, show this content
     // This is the icon at the center of the barcode preview section
@@ -105,36 +283,60 @@ const barcodePreview = ({
             )}
 
             {/* Utility headers */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
                     {/* Display the algorithm used for the barcode generator */}
-                    <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-700 ring-1 ring-inset ring-red-600/20">
+                    {/* <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-red-700 ring-1 ring-inset ring-red-600/20">
                         Code 128
-                    </span>
+                    </span> */}
                     {/* State that this is a preview */}
                     <span className="text-sm font-medium text-gray-400">Preview</span>
                 </div>
 
                 {showCopyButton && (
-                    // The copy button
-                    <button type="button" onClick={handleCopy} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-red-500
-                        ${copied ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
-                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200'
-                        }`}>
-                        {copied ? (
-                            // Will display as "Copied" after the user clicks the copy button
-                            <><CheckIcon className="h-3.5 w-3.5" /> Copied</>
-                        ) : (
-                            // Display the copy ID button
-                            <><ClipboardDocumentIcon className="h-3.5 w-3.5" /> Copy ID</>
-                        )}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        {/* The copy button */}
+                        <button type="button" onClick={handleCopy} title="Copy asset ID"
+                                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
+                                            transition-all focus:outline-none focus:ring-2 focus:ring-red-500
+                            ${copied ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
+                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200'
+                            }`}>
+                            {copied ? (
+                                // Will display as "Copied" after the user clicks the copy button
+                                <><CheckIcon className="h-3.5 w-3.5" /> Copied</>
+                            ) : (
+                                // Display the copy ID button
+                                <><ClipboardDocumentIcon className="h-3.5 w-3.5" /> Copy ID</>
+                            )}
+                        </button>
+
+
+                        {/* Save barcode PNG button */}
+                        <button type="button" onClick={handleSave} disabled={!barcodeDataUrl}
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
+                                           transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                        >
+                            <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Save
+                        </button>
+
+
+                        {/* Print barcode button */}
+                        <button type="button" onClick={handlePrint} disabled={!barcodeDataUrl}
+                                title="Print barcode"
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
+                                           transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                        >
+                            <PrinterIcon className="h-3.5 w-3.5" /> Print
+                        </button>
+                        
+                    </div>
                 )}
             </div>
 
             {/* Barcode SVG display */}
-            <div className="flex w-full items-center justify-center overflow-x-auto py-2 scrollbar-hide">
-                <div className="min-w-fit">
+            <div className="flex w-full items-center justify-center overflow-x-auto px-4 py-3">
+                {/* <div className="min-w-fit">
                     <Barcode 
                         value={value}   // Barcode value
                         format="CODE128"    // Barcode format
@@ -147,24 +349,21 @@ const barcodePreview = ({
                         lineColor="#111827" // Line color for the barcode strip
                         font="monospace" // Font for the asset_id displayed below the barcode
                     />
-                </div>
+                </div> */}
+                {!generating && barcodeDataUrl && (
+                    <img src={barcodeDataUrl} alt={`Barcode for ${value}`}
+                         className="rounded border border-gray-100 shadow-sm"
+                         style={{ maxWidth: '100%', height: 'auto' }}
+                    />
+                )}
             </div>
 
             {/* Metadata footer */}
-            {(label || value) && (
-                // border-t creates the tiny line above the 'System generated barcode' line
-                <div className="mt-4 border-t border-gray-100 pt-3"> {/* Whole bottom section for the barcode preview */}
-                    {label && (
-                        <p className="truncate text-center text-xs font-semibold text-gray-700" title={label}>
-                            {label}
-                        </p>
-                    )}
-                    <p className="mt-1 text-center text-xs text-gray-400">
-                        {/* Display a footer stating this is a system generated barcode plus the generated asset_id */}
-                        System generated barcode: <span className="font-mono text-gray-500">{value}</span>
-                    </p>
-                </div>
-            )}
+            {/* <div className="border-t border-gray-50 px-4 pb-3 pt-2">
+                <p className="text-center text-[10px] text-gray-400 font-mono">
+                    {value}
+                </p>
+            </div> */}
         </div>
     )
 }

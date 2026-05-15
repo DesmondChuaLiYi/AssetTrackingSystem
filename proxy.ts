@@ -1,5 +1,6 @@
 /** Commented by Desmond @ 18-Mar-26
- * middleware.ts
+ * proxy.ts
+ * Previously known as 'middleware.ts'
  * 
  * Auth strategy: next-auth JWT mode.
  *   next-auth manages its own encrypted 'next-auth.session-token' cookie.
@@ -132,6 +133,10 @@ async function rateLimitCrashHandler (limiter: Ratelimit, key: string): Promise<
 function applySecurityHeaders(response: NextResponse): NextResponse {
   const isProd = process.env.NODE_ENV === 'production'
 
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
+
   /** Click-jacking protection
    * X-Frame-Options: DENY
    * Blocks this page from being embedded inside an <iframe> on any other origin.
@@ -222,7 +227,8 @@ function rateLimitResponse(reset: number): NextResponse {
 }
 
 // Public paths
-const PUBLIC_PATHS = new Set(['/login', '/register', '/unauthorized'])
+// Commented by Desmond @ 29-April-26: /scan/* is added to PUBLIC_PATHS
+const PUBLIC_PATHS = new Set(['/login', '/register', 'unauthorized', '/scan/*'])
 
 // Returns true if the path is always publicly accessible
 function isPublicPath(pathname: string): boolean {
@@ -274,8 +280,13 @@ export default withAuth(
     // ------------------------------------------------------------------
     if (pathname === '/dashboard') {
       let destination = '/login'
-      if (token?.role === 'admin') destination = '/admin/dashboard'
-      else if (token?.role === 'staff') destination = '/user/dashboard'
+      
+      if (token?.role === 'admin') {
+        destination = '/admin/dashboard'
+      } else if (token?.role === 'staff') {
+        destination = '/user/dashboard'
+      }
+
       return applySecurityHeaders(
         NextResponse.redirect(new URL(destination, request.url))
       )

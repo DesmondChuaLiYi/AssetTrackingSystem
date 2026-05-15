@@ -2,6 +2,11 @@
   "name": "asset-tracking",
   "version": "0.1.0",
   "private": true,
+
+  "engines": {
+    "node": "20.x"
+  },
+
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,11 +16,13 @@
     "test:watch": "jest --watch",
     "test:debug": "jest --detectOpenHandles --forceExit"
   },
+
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@heroicons/react": "^2.2.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.2",
+    "@types/qrcode": "^1.5.6",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
     "bwip-js": "^4.10.1",
@@ -28,12 +35,14 @@
     "next": "^16.2.4",
     "next-auth": "^4.24.14",
     "postcss-load-config": "^6.0.1",
+    "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-barcode": "^1.6.1",
     "react-dom": "^19.2.5",
     "recharts": "^3.3.0",
     "zod": "^4.3.6"
   },
+
   "devDependencies": {
     "@swc/core": "^1.15.2",
     "@swc/jest": "^0.2.39",
@@ -53,5 +62,9 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",
     "typescript": "^5"
+  },
+  
+  "optionalDependencies": {
+    "canvas": "^2.11.2"
   }
 }

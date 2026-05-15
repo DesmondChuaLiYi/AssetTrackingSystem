@@ -9,8 +9,9 @@
  * to prevent accidental sign outs.
  */
 
-import { signOut } from 'next-auth/react'
+// import { signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
 // Commented by Desmond @ 22-April-26
 // Previously, there is an issue where the logout confirmation modal wouldn't block the screen
@@ -43,6 +44,8 @@ export default function LogoutButton({className = '', text = 'Log Out'}: LogoutB
   // True while the async signout sequence is in progress
   // It will disable the confirm button to prevent double-clicks
   const [signingOut, setSigningOut] = useState(false)
+
+  const router = useRouter()
 
   // ----------------- Escape key handler -----------------
   // Used to close the logout confirmation modal by pressing the ESC key
@@ -82,9 +85,13 @@ export default function LogoutButton({className = '', text = 'Log Out'}: LogoutB
   const confirmLogout = async () => {
     setSigningOut(true) // Disables the logout button while signing out
     try {
+      // Step 1: Clear the client-side session data
       try {
         // Clear the lastPath so toast shows on next login
-        sessionStorage.removeItem('lastPath');
+        sessionStorage.removeItem('lastPath')
+        // Remove any stored session
+        localStorage.removeItem('userSession')
+      // Catch the errors
       } catch {
         // Catch non-fatal error here
       }
@@ -92,30 +99,60 @@ export default function LogoutButton({className = '', text = 'Log Out'}: LogoutB
       // Tell the server to mark the session as ended
       //  - Call the API to end the session in the database
       // Even if this fails, we still sign out the user
-      await fetch('/api/sessions/end', {
+
+      // Commented by Desmond @ 3-May-26
+      // This is from an old method where sessions were stored in a Supabase table
+      // await fetch('/api/sessions/end', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      // })
+
+      const logout = await fetch('/api/auth/logout', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
+        credentials: 'include'
       })
 
+      if (!logout.ok) {
+        throw new Error(`Logout failed with status ${logout.status}`)
+      }
+
       // Sign out from NextAuth and redirect the user to the login page
-      await signOut(
-        { 
-          callbackUrl: '/login', 
-          redirect: true 
-        }
-      )
+
+      // Commented by Desmond @ 3-May-26
+      // Instead of redirecting the user to /login, use router.replace()
+      // so that user cannot go back to the previous page 
+      // await signOut(
+      //   { 
+      //     callbackUrl: '/login', 
+      //     redirect: true 
+      //   }
+      // )
+      const data = await logout.json()
+
+      router.replace(data.redirectTo || '/login')
+      router.refresh()
+
+    // Catch the errors
     } catch (error) {
       // Log the error to console
       console.error('Logout failed:', error)
       // Fallback: Just sign out
-      await signOut(
-        { 
-          callbackUrl: '/login', 
-          redirect: true 
-        }
-      )
+      // await signOut(
+      //   { 
+      //     callbackUrl: '/login', 
+      //     redirect: true 
+      //   }
+      // )
+
+      router.replace('/login')
+
+    } finally {
+      setSigningOut(false)
     }
   }
 
