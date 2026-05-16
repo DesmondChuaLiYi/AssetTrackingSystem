@@ -4,6 +4,14 @@
  * @file app/api/auth/logout/route.ts
  * @description Secure logout endpoint following OAuth2 best practices
  * 
+ * Commented by Desmond @ 16-May-26: LATEST CHANGES
+ * Fix
+ *  - The previous version only cleared 'next-auth.session-token'. On Vercel
+ *    (HTTPS/production) NextAuth uses the '__Secure-' prefixed cookie name.
+ *    Therefore, clearing only the un-prefixed name left the KWT alive on the client.
+ *    The middleware authorized() callback then still returned true, the logout page
+ *    is re-mounted, signOut() fired again, and the cycle repeats into an infinite loop.
+ * 
  * - Clears NextAuth session and cookies
  * - Clears the custom user_session_cookie
  * - Returns success response for client to handle redirect
@@ -81,6 +89,18 @@ export async function POST(_request: NextRequest) {
             path: '/'
         })
 
+        // NextAuth JWT cookie name in production (HTTPS)
+        // NextAuth automatically switches to the __Secure- prefix when the request
+        // arrives over HTTPS. We must clear both names so that the JWT is destroyed
+        // regardless of which environment the request originated from
+        response.cookies.set('__Secure-next-auth.session-token', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 0,
+            path: '/'
+        })
+
         // Clear callback URL cookie if it exists
         // It deletes the stored 'callback URL' used by NextAuth to redirect the 
         // user after login or logout
@@ -114,6 +134,41 @@ export async function POST(_request: NextRequest) {
 
         // Clear the user_session cookie 
         response.cookies.set('user_session', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 0,
+            path: '/'
+        })
+
+        // For NextAuth, also need to clear the NextAuth session cookie
+        // next-auth.session-token is NextAuth's core session cookie
+        response.cookies.set('next-auth.session-token', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 0,
+            path: '/'
+        })
+
+        // NextAuth JWT cookie name in production (HTTPS)
+        // NextAuth automatically switches to the __Secure- prefix when the request
+        // arrives over HTTPS. We must clear both names so that the JWT is destroyed
+        // regardless of which environment the request originated from
+        response.cookies.set('__Secure-next-auth.session-token', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 0,
+            path: '/'
+        })
+
+        // Clear callback URL cookie if it exists
+        // It deletes the stored 'callback URL' used by NextAuth to redirect the 
+        // user after login or logout
+        // A callback URL is the URL the application redirects the user to 
+        // after an authentication action completes (e.g. login, logout)
+        response.cookies.set('next-auth.callback-url', '', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
