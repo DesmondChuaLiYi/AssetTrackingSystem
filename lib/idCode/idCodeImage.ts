@@ -2,6 +2,22 @@
  * @file lib/idCode/idCodeImage.ts
  * @description Unified image generation for barcode (assets) and QR codes (locations & departments)
  * 
+ * Commented by Desmond @ 16-May-26: LATEST FIXES
+ *  Issue A - Garbled text and tofu characters in the generated PNGs
+ *      This is because 'canvas' was marked as optional in package.json so that Vercel's
+ *      build did not fail trying to compile the native .node binary. When the optional
+ *      import resolved to 'undefined' at runtime, 'createCanvas' was undefined, the
+ *      code silently fell back to bwip-js's internal canvas shim, which does not support
+ *      fillText with system fonts, therefore causing the square-block characters.
+ * 
+ * To fix this:
+ *      'canvas' is now a regular dependency (not optional) AND is declared as a
+ *      serverExternalPackage in the next.config.js file so the Vercel bundler never
+ *      tries to bundle the native binary, because it is required at runtime from the 
+ *      installed node_modules instead. The dynamic import below is wrapped in a 
+ *      hard-fail guard. So, if 'createCanvas' is still undefined after the import,
+ *      immediately throw a clear message rather than silently producing broken QR codes.
+ * 
  *  1.  The image saved to Supabase is what the preview shows to the user
  *      Previously, the server only stored a bare QR PNG with no surrounding text.
  *      The client preview rendered the header/footer in HTML/CSS around the image for the Swinburne text.
@@ -60,11 +76,11 @@
 //                              Shared Constants
 // ------------------------------------------------------------------------------
 export const APP_BASE_URL = (typeof process !== 'undefined'
-    ? process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
+    ? process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
         // NEXTAUTH_URL is localhost in dev, do NOT use it for QR content
-        (process.env.NEXTAUTH_URL?.startsWith('https://')
-            ? process.env.NEXTAUTH_URL.replace(/\/&/, '')
-            : undefined)
+        // (process.env.NEXTAUTH_URL?.startsWith('https://')
+            // ? process.env.NEXTAUTH_URL.replace(/\/&/, '')
+            // : undefined)
     : undefined) ?? 'https://swinburne-assets.vercel.app'
 
 export const SWINBURNE_NAME = 'SWINBURNE UNIVERSITY OF TECHNOLOGY'
@@ -351,6 +367,60 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
 
 
 // ------------------------------------------------------------------------------
+//      Safely import the Node.js 'canvas' package and validate the export
+// ------------------------------------------------------------------------------
+/** Commented by Desmond @ 16-May-26: Canvas package fix 
+ * When 'canvas' was marked optional in package.json, the runtime import could
+ * resolve to an empty object / undefined, causing createCanvas to be undefined and
+ * bwip-js to fall back to its internal shim, which does not support fillText, 
+ * producing square-block characters.
+ * 
+ * 'canvas' is now a regular (non-optional) dependency. It is also declared as a 
+ * serverExternalPackage in next.config.js so the Vercel bundler never tries to bundle
+ * the native .node binary.
+ * 
+ * This guard throws a clear error if the package is still missing rather than producing
+ * broken images.
+ * 
+ * @throws { Error } if the canvas package is not installed or createCanvas is missing
+ */
+async function requireNodeCanvas() {
+    let mod: {
+        createCanvas: unknown
+        loadImage: unknown
+    }
+
+    try {
+        mod = await import('canvas')
+    } catch {
+        throw new Error(
+            '[idCodeImage] The "canvas" package is not installed. ' +
+            'Run `npm install canvas` and ensure it is listed as a regular ' +
+            'dependency (not optional) in package.json.'
+        )
+    }
+
+    if (typeof mod.createCanvas !== 'function') {
+        throw new Error(
+            '[idCodeImage] canvas.createCanvas is not a function. ' +
+            'The package may have loaded an empty shim. ' + 
+            'Check that "canvas" in dependencies (not devDependencies or optionalDependencies) ' +
+            'and that next.config.js lists it in serverExternalPackages.'
+        )
+    }
+
+    return mod as {
+        createCanvas: (w: number, h: number) => {
+            getContext: (t: '2d') => CanvasRenderingContext2D
+            toBuffer: (mime: 'image/png') => Buffer
+        }
+
+        loadImage: (src: Buffer | string) => Promise<CanvasImageSource>
+    }
+}
+
+
+// ------------------------------------------------------------------------------
 //     Server-side component: Generate the full composite PNG as a buffer
 // ------------------------------------------------------------------------------
 // These functions should only run in API routes / server utility files
@@ -369,7 +439,7 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
 export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
     // Dynamically import the modules and keep server-only modules out of the client bunndle
     const qrCode = (await import('qrcode')).default
-    const { createCanvas, loadImage } = await import('canvas')
+    const { createCanvas, loadImage } = await requireNodeCanvas()
 
     const scanUrl = buildScanUrl(options.folder, options.id)
 
