@@ -38,6 +38,9 @@
     "react-barcode": "^1.6.1",
     "react-dom": "^19.2.5",
     "recharts": "^3.3.0",
+    "redux": "^4.2.0",
+    "redux-thunk": "^2.4.2",
+    "run-parallel": "^1.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
