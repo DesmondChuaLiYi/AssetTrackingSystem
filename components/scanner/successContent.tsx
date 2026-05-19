@@ -1,29 +1,42 @@
 // components/scanner/SuccessContent.tsx
-'use client';
+'use client'
 
-import { Check, CheckCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Check, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function SuccessContent({ 
   scannedCount, 
   scanType,
-  item 
+  item,
+  onScanAnother
 }: { 
-  scannedCount: number; 
-  scanType: string;
-  item: any; 
+  scannedCount: number 
+  scanType: string
+  item: any 
+  onScanAnother?: () => void
 }) {
-  const router = useRouter();
+  const router = useRouter()
   
   const getTitle = () => {
-    if (scanType === 'New Asset Registered') return "Asset Registered!";
-    if (scanType.startsWith('Tagged to')) return "Asset Tagged!";
-    if (scanType === 'Staff Assignment') return "Staff Updated!";
-    return "Submission Successful!";
+    if (scanType === 'New Asset Registered') {
+      return "Asset Registered!"
+    }
+
+    if (scanType.startsWith('Tagged to')) {
+      return "Asset Tagged!"
+    }
+
+    if (scanType === 'Staff Assignment') {
+      return "Staff Updated!"
+    }
+
+    return "Submission Successful!"
   }
 
   // Check if this is a Bulk/Staff operation
-  const isBulkOperation = item?.code === 'BULK' || scanType === 'Staff Assignment';
+  const isBulkStaffOperation = scanType === 'Staff Assignment'
+  const isBulkLocationOperation = scanType.startsWith('Tagged to')
+  const isBulkOperation = isBulkStaffOperation || isBulkLocationOperation
 
   return (
     <div className="p-4 lg:p-8">
@@ -39,9 +52,11 @@ export default function SuccessContent({
           <p className="text-xl text-gray-600 mb-8">
             {scanType === 'New Asset Registered' 
               ? `New asset ${item?.name || ''} has been created.`
-              : isBulkOperation 
-                ? `Staff records have been successfully updated.`
-                : `1 ${scanType} item has been successfully submitted.`
+              : isBulkStaffOperation 
+                ? `${item?.name || 'Staff records'} have been successfully updated.`
+                : isBulkLocationOperation
+                  ? `${item?.name || 'Assets'} have been successfully tagged to ${scanType.includes('Location') ? 'location' : 'department'}.`
+                  : `1 ${scanType} item has been successfully submitted.`
             }
           </p>
 
@@ -74,11 +89,17 @@ export default function SuccessContent({
               </div>
             )}
 
-            {/* CASE 2: Staff/Bulk (Show Summary Only) */}
+            {/* CASE 2: Staff / Location / Department bulk (Show summary) */}
             {isBulkOperation && (
                <div className="text-sm text-green-700 space-y-2 text-center">
-                 <p className="text-lg font-bold">{item?.name}</p>
-                 <p className="text-gray-600">Transactions completed successfully.</p>
+                  <p className="text-lg font-bold">
+                    {isBulkStaffOperation
+                      ? `${item?.name || 'Staff records'} Updated`
+                      : isBulkLocationOperation
+                        ? `${item?.name || 'Assets tagged'} to ${scanType.includes('Location') ? 'Location' : 'Department'}`
+                        : 'Multi tagging completed'
+                    }
+                  </p>
                </div>
             )}
 
@@ -98,7 +119,8 @@ export default function SuccessContent({
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => router.push('/user/scanner')}
+              // onClick={() => router.push('/user/scanner')}
+              onClick={onScanAnother}
               className="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-md"
             >
               Scan More Items
@@ -113,5 +135,5 @@ export default function SuccessContent({
         </div>
       </div>
     </div>
-  );
+  )
 }

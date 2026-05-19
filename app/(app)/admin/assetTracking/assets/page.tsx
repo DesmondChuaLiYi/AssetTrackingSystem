@@ -30,6 +30,8 @@ import type { dynamicPageConfig } from '@/components/dynamicPage'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase/client'
 import { useAdminAccess } from '@/hooks/useAdminAccess'
+import { useState } from 'react'
+import IdCodeModal from '@/components/ui/idCodeModal'
 
 // ------------------ Storage URL helper --------------------
 /** Commented by Desmond @ 21-April-26
@@ -66,7 +68,16 @@ function getStorageUrl(tagPath: string | null): string | null {
 }
 
 // ------------------ Render the barcode thumbnail -------------------
-function BarcodeThumbnail({ tagPath }: { tagPath: string | null }) {
+/** Commented by Desmond @ 30-April-26
+ * @param tagPath - The storage path from the asset's tag_path DB column.
+ *                  e.g. 'assets/ICT-LAPTOP-001.png'
+ * @param assetId - asset_id passed to the modal for the header label
+ * @param name - Asset name shown as a label in the modal
+ * @param onOpen - Callback to open the modal with the asset's details
+ */
+function BarcodeThumbnail({ tagPath, assetId, name, onOpen } 
+  : { tagPath: string | null, assetId: string, name?: string, onOpen: (tagPath: string, assetId: string, label?: string ) => void
+}) {
   // Store the image url in a variable
   const url = getStorageUrl(tagPath)
 
@@ -83,20 +94,50 @@ function BarcodeThumbnail({ tagPath }: { tagPath: string | null }) {
     // Display the barcode image in the table
     // Clicking the image opens the full-size PNG in a new browser tab
     // rel="noopener noreferrer" prevents the opened tab to redirect back to the previous tab
-    <a href={url} target="_blank" rel="noopener noreferrer" title="Click to view full-sized barcode"
-       className="inline-block rounded border border-gray-200 hover:border-red-400 transition-colors"
+    // <a href={url} target="_blank" rel="noopener noreferrer" title="Click to view full-sized barcode"
+    //    className="inline-block rounded border border-gray-200 hover:border-red-400 transition-colors"
+    // >
+
+    <button type="button" onClick={() => onOpen(tagPath!, assetId, name)} title="Click to view, print or save barcode"
+            className="inline-block rounded border border-gray-200 hover:border-red-400 transition-colors
+                       focus:outline-none focus:ring-2 focus:ring-red-500"           
     >
+
       {/* The barcode image */}
       <Image src={url} alt={`Barcode - ${tagPath}`} width={96} height={40} className="object-contain" unoptimized 
         onError={(_e) => { // _e so that the compiler knows that the developer know this unused variable exists, but ignores it
           console.error('Image failed to load:', {tagPath, url})
         }}
       />
-    </a>
+    </button>
   )
 }
 
-// ------------------ Page config to be fed into the dynamic page -------------------
+// -------------------------- Main page component --------------------------
+// This is a thin wrapper that passes the config to dynamicPage
+// All table rendering, search, sort, pagination and actions are live in dynamicPage
+export default function AssetsPage() {
+  // Block non-admins from accessing this page on the client side
+  const { isLoading, isAdmin } = useAdminAccess()
+
+  // Modal state — opened when the user clicks a barcode thumbnail
+  const [modal, setModal] = useState<{
+    tagPath: string
+    assetId: string
+    label?: string
+  } | null>(null)
+
+  const openModal = (tagPath: string, assetId: string, label?: string) =>
+    setModal({ tagPath, assetId, label })
+
+  const closeModal = () => setModal(null)
+
+  // Show nothing while checking session, or if user is not admin (hook will redirect them)
+  if (isLoading || !isAdmin) {
+    return null
+  }
+
+  // ------------------ Page config to be fed into the dynamic page -------------------
 const assetsConfig: dynamicPageConfig = {
   entityName: 'asset',
   entityDisplayName: 'Asset',
@@ -133,8 +174,13 @@ const assetsConfig: dynamicPageConfig = {
       label: 'Barcode',
       sortable: false,
       // Render the barcode image here
-      render: (value: unknown) => (
-        <BarcodeThumbnail tagPath={typeof value === 'string' ? value : null} />
+      render: (value: unknown, row: Record<string, unknown>) => (
+        <BarcodeThumbnail
+          tagPath={typeof value === 'string' ? value : null}
+          assetId={String(row.asset_id ?? '')}
+          name={typeof row.name === 'string' ? row.name : undefined}
+          onOpen={openModal} 
+        />
       ),
     },
 
@@ -270,17 +316,21 @@ const assetsConfig: dynamicPageConfig = {
   ]
 }
 
-// -------------------------- Main page component --------------------------
-// This is a thin wrapper that passes the config to dynamicPage
-// All table rendering, search, sort, pagination and actions are live in dynamicPage
-export default function AssetsPage() {
-  // Block non-admins from accessing this page on the client side
-  const { isLoading, isAdmin } = useAdminAccess()
+  return (
+  <>
+    <DynamicPage config={assetsConfig} />
 
-  // Show nothing while checking session, or if user is not admin (hook will redirect them)
-  if (isLoading || !isAdmin) {
-    return null
-  }
-
-  return <DynamicPage config={assetsConfig} />
+    {/* Barcode modal — opens when user clicks a barcode thumbnail */}
+        {modal && (
+          <IdCodeModal
+            isOpen={true}
+            onClose={closeModal}
+            tagPath={modal.tagPath}
+            entityType="asset"
+            entityId={modal.assetId}
+            entityLabel={modal.label}
+          />
+        )}
+  </>
+  )
 }

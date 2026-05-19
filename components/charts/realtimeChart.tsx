@@ -21,12 +21,6 @@ const CONDITION_COLORS: Record<Condition, string> = {
   'Spoiled': '#ef4444',
 };
 
-// const CONDITION_COLORS_ALPHA: Record<Condition, string> = {
-//   'In-use': 'rgba(59,130,246,0.15)',
-//   'In-store': 'rgba(34,197,94,0.15)',
-//   'Spoiled': 'rgba(239,68,68,0.15)',
-// };
-
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // Types and interfaces
@@ -147,9 +141,8 @@ function SpoilageAlert({ items, label }: { items: { name: string; count: number 
       }`}>
         {label}
       </div>
-      <div className="font-semibold text-gray-900 text-sm mb-0.5">{top.name}</div>
-      <div className={`text-xs font-medium ${isHigh ? 'text-red-600' : 'text-amber-600'}`}>
-        {top.count} spoiled asset{top.count !== 1 ? 's' : ''}
+      <div className="font-semibold text-gray-900 text-sm mb-0.5">
+        {top.name}
       </div>
       {others && (
         <div className="text-xs text-gray-500 mt-1.5">Also: {others}</div>
@@ -203,7 +196,6 @@ export default function RealtimeChart({
   entityView: entityViewProp,
 }: { config: ChartConfig } & Partial<ChartExternalControls>) {
   const { tableName, title } = config;
-
   const [data, setData] = useState<any[]>([]);
   const [deptMap, setDeptMap] = useState<Record<string, string>>({});
   const [locMap, setLocMap] = useState<Record<string, string>>({});
@@ -347,11 +339,21 @@ export default function RealtimeChart({
     return Object.values(map).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   })();
 
-  // Totals for each condition across the filtered dataset, used for the summary pills
-  const totals = CONDITIONS.reduce((acc, c) => {
-    acc[c] = filteredData.filter(i => i.condition === c).length;
-    return acc;
-  }, {} as Record<Condition, number>);
+  // Totals for each condition — scoped to the current entity view.
+  // In department/location views, only count assets that belong to a known entity (appear in chartData).
+  const totals = (() => {
+    if (entityView === 'assets') {
+      return CONDITIONS.reduce((acc, c) => {
+        acc[c] = filteredData.filter(i => i.condition === c).length;
+        return acc;
+      }, {} as Record<Condition, number>);
+    }
+    // Sum directly from chartData rows (already grouped by entity, unknown excluded)
+    return CONDITIONS.reduce((acc, c) => {
+      acc[c] = chartData.reduce((sum, row) => sum + ((row as any)[c] || 0), 0);
+      return acc;
+    }, {} as Record<Condition, number>);
+  })();
 
   // For spoilage alerts, rank departments and locations by their count of spoiled assets
   const spoiledItems = filteredData.filter(i => i.condition === 'Spoiled');
@@ -371,7 +373,8 @@ export default function RealtimeChart({
 
   // In department or location views, derive per-entity condition breakdown for the alert
     const entityConditionSummary = (() => {
-      if (entityView === 'assets') return null;
+      if (entityView === 'assets') 
+        return null;
     const field = entityView === 'department' ? 'department_id' : 'location_id';
     const lookupMap = entityView === 'department' ? deptMap : locMap;
     const map: Record<string, Record<Condition, number> & { total: number }> = {};
@@ -379,7 +382,8 @@ export default function RealtimeChart({
       const cond = item.condition as Condition;
       if (!CONDITIONS.includes(cond)) return;
       const name = resolveName(item[field], lookupMap);
-      if (name === 'Unknown') return;
+      if (name === 'Unknown') 
+        return;
       if (!map[name]) map[name] = { 'In-use': 0, 'In-store': 0, 'Spoiled': 0, total: 0 };
       map[name][cond]++;
       map[name].total++;
@@ -396,22 +400,24 @@ export default function RealtimeChart({
   const lastDate = lastDs ? new Date(lastDs) : null;
 
   // Render loading and error states
-  if (loading) return (
-    <div className="flex items-center justify-center h-full min-h-[300px] text-sm text-gray-400">
-      Loading {title}…
-    </div>
-  );
-  if (error) return (
-    <div className="flex items-center justify-center h-full min-h-[300px] text-sm text-red-400">
-      Error: {error}
-    </div>
-  );
+  if (loading) 
+    return (
+      <div className="flex items-center justify-center h-full min-h-[300px] text-sm text-gray-400">
+        Loading {title}…
+      </div>
+    );
+  if (error) 
+    return (
+      <div className="flex items-center justify-center h-full min-h-[300px] text-sm text-red-400">
+        Error: {error}
+      </div>
+    );
 
   // CSS class for the select dropdowns, defined here to avoid repetition
   const selectCls = 'px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg text-gray-700 focus:border-blue-400 outline-none cursor-pointer h-8';
 
   return (
-    <div className="w-full h-full flex flex-col gap-5">
+      <div className="w-full h-full flex flex-col gap-5">
 
       {/* Date controls row  */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
@@ -552,20 +558,6 @@ export default function RealtimeChart({
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`font-semibold text-sm truncate ${isHigh ? 'text-red-700' : 'text-amber-700'}`}>
                         {entity.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="flex items-center gap-1 text-blue-600">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
-                        {entity['In-use']}
-                      </span>
-                      <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                        {entity['In-store']}
-                      </span>
-                      <span className={`flex items-center gap-1 font-semibold ${isHigh ? 'text-red-600' : 'text-amber-600'}`}>
-                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-                        {entity.Spoiled} spoiled
                       </span>
                     </div>
                   </div>

@@ -3,13 +3,28 @@
  * @description This file helps to generate the barcode for the asset records
  * and store them in the correct bucket in Supabase.
  * This is a server-only utility, do not import into a client component
+ * 
+ * LATEST CHANGES
+ * --------------
+ *  - PNG generation is now delegated to lib/idCode/idCodeImage.ts (buildBarcodeBuffer)
+ *    so the stored PNG includes the Swinburne header and asset name - matching what the 
+ *    barcodePreview shows in the browser
+ *  - Accepts optional 'name' parameter (asset name) embedded below the barcode.
+ * 
+ * PNG layout:
+ *  - SWINBURNE name header with black font
+ *  - Code 128 barcode with asset_id below the barcode
+ *  - Asset name (if provided) - e.g Lenovo ThinkPad T480
+ * 
+ * DO NOTimport this file in client components because it uses supabaseAdmin
  */
 
-import bwipjs from 'bwip-js' // Library that draws the barcode images
+// import bwipjs from 'bwip-js' // Library that draws the barcode images
 import { supabaseAdmin } from '../supabase/server' // Admin access to Supabase
+import { buildBarcodeBuffer } from '../idCode/idCodeImage'
 
 // Types - only these folders are allowed
-export type barcodeFolder = 'assets' | 'locations' | 'departments' // Folders storing barcode and QR codes in bucket 'IdCodes'
+export type barcodeFolder = 'assets' // Folders storing barcode in bucket 'IdCodes'
 
 // What is returned after the barcode is saved
 export interface uploadBarcodeResult {
@@ -53,50 +68,51 @@ export function getPublicUrl(tagPath: string): string {
 
 // ------------- Generate barcode PNG buffer ----------------------
 // bwip-js is a rendering engine to return a PNG of the barcode using toBuffer()
-async function generateBarcodePng(text: string): Promise<Buffer> {
-    try {
-        // Make sure the asset_id format is correct
-        validateAssetId(text) // text is parsed into this function call
+// async function generateBarcodePng(text: string): Promise<Buffer> {
+//     try {
+//         // Make sure the asset_id format is correct
+//         validateAssetId(text) // text is parsed into this function call
 
-        const png = await bwipjs.toBuffer({ // Returns a PNG image
-            bcid: 'code128',    // Barcode type
-            text,   // asset_id
-            scale: 3,   // 3px per image ensures good print quality
-            height: 20, // bar height in mm, which should fit a standard 2x1 inch sticker
-            includetext: true,  // human-readable id below the bars
-            textxalign: 'center',
-            textsize: 11,
-            paddingwidth: 10,
-            paddingheight: 6,
-            backgroundcolor: 'ffffff', // White color background
-            barcolor: '#111827', // Black barcode lines
-            textcolor: '#111827' // Black asset_id text
-        })
-        return Buffer.from(png) // Upload the image, which uses Buffer.from()
-    } catch (error) {
-        // Display error when failed to generate asset id barcode
-        console.error('Barcode PNG generation error', {
-            // If the text is a string, only show the first 10 characters
-            // Otherwise, show invalid
-            // This prevents leaking of sensitive data but still useful for debugging
-            assetId: typeof text === 'string' ? text.substring(0, 10) : 'Invalid',
-            message: (error as Error).message // error as Error because in Typescript, error: unknown
-        })
-        throw error
-    }
-}
+//         const png = await bwipjs.toBuffer({ // Returns a PNG image
+//             bcid: 'code128',    // Barcode type
+//             text,   // asset_id
+//             scale: 3,   // 3px per image ensures good print quality
+//             height: 20, // bar height in mm, which should fit a standard 2x1 inch sticker
+//             includetext: true,  // human-readable id below the bars
+//             textxalign: 'center',
+//             textsize: 11,
+//             paddingwidth: 10,
+//             paddingheight: 6,
+//             backgroundcolor: 'ffffff', // White color background
+//             barcolor: '#111827', // Black barcode lines
+//             textcolor: '#111827' // Black asset_id text
+//         })
+//         return Buffer.from(png) // Upload the image, which uses Buffer.from()
+//     } catch (error) {
+//         // Display error when failed to generate asset id barcode
+//         console.error('Barcode PNG generation error', {
+//             // If the text is a string, only show the first 10 characters
+//             // Otherwise, show invalid
+//             // This prevents leaking of sensitive data but still useful for debugging
+//             assetId: typeof text === 'string' ? text.substring(0, 10) : 'Invalid',
+//             message: (error as Error).message // error as Error because in Typescript, error: unknown
+//         })
+//         throw error
+//     }
+// }
 
 /** -------------- Upload barcode to Supabase bucket ---------------------
  * @param id - Asset ID to store assets
  * @param folder - Storage folder 
+ * @param name - Optional asset name drawn below the barcode ID
  * @returns Storage path and public url
  */
-export async function generateAndUploadBarcode (id: string, folder: barcodeFolder): Promise<uploadBarcodeResult> {
+export async function generateAndUploadBarcode (id: string, folder: barcodeFolder, name?: string): Promise<uploadBarcodeResult> {
     try {
         // Validate and ensure asset id meets the requirements
         validateAssetId(id)
         
-        const pngBuffer = await generateBarcodePng(id) // Generate the barcode
+        const pngBuffer = await buildBarcodeBuffer({ id, name }) // Generate the barcode
         const tagPath = `${folder}/${id}.png` // Create the file path by using folder name and asset_id
 
         // Upload the barcode to Supabase bucket

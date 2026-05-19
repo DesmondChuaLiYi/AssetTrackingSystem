@@ -63,8 +63,11 @@ export interface Database {
                     description: string | null
                     block: string | null
                     level: number | null
+                    tag_path: string | null
+                    created_by: string | null
                     created_dt: string
                     updated_dt: string
+                    deleted_dt: string | null
                 }
                 Insert: {
                     location_id: string
@@ -73,8 +76,11 @@ export interface Database {
                     description?: string | null
                     block?: string | null
                     level?: number | null
+                    tag_path?: string | null
+                    created_by?: string | null
                     created_dt?: string
                     updated_dt?: string
+                    deleted_dt?: string | null
                 }
                 Update: {
                     location_id?: string
@@ -84,8 +90,11 @@ export interface Database {
                     description?: string | null
                     block?: string | null
                     level?: number | null
+                    tag_path?: string | null
+                    created_by?: string | null
                     created_dt?: string
                     updated_dt?: string
+                    deleted_dt?: string | null
                 }
                 Relationships: []
             }
@@ -98,8 +107,11 @@ export interface Database {
                     name: string
                     block: string | null
                     level: number | null
+                    tag_path: string | null
+                    created_by: string | null
                     created_dt: string
                     updated_dt: string
+                    deleted_dt: string | null
                 }
                 Insert: {
                     department_id: string
@@ -107,8 +119,11 @@ export interface Database {
                     name?: string
                     block?: string | null
                     level?: number | null
+                    tag_path?: string | null
+                    created_by?: string | null
                     created_dt?: string
                     updated_dt?: string
+                    deleted_dt?: string | null
                 }
                 Update: {
                     department_id?: string
@@ -117,8 +132,11 @@ export interface Database {
                     name?: string
                     block?: string | null
                     level?: number | null
+                    tag_path?: string | null
+                    created_by?: string | null
                     created_dt?: string
                     updated_dt?: string
+                    deleted_dt?: string | null
                 }
                 Relationships: []
             }

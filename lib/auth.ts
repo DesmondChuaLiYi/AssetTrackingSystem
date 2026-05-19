@@ -96,6 +96,28 @@ export const authOptions: AuthOptions = { // Creating auth config and export it
             }
             return session // Return the updated session
         },
+
+        // Commented by Desmond @ 12-May-26: redirect callback that handles the callbackUrl for when a
+        // user scans a location or department QR code that has a link
+        // /scan/location/E404 , for instance, after login, they are redirected to the correct page
+
+        // url - the destination URL the auth system wants to redirect to
+        // baseUrl - the application's main domain. e.g. https://swinburne-assets.vercel.app
+        async redirect({url, baseUrl}) {
+            // If the user is being redirected after login, check if there's a callbackUrl
+            // This preserves the original URL they were trying to access
+            if (url.startsWith('/')) {
+                // relative URLs start with '/' and considered safe because they stay inside the app
+                // This would return 'https://swinburne-assets.vercel.app' and '/scan/location/E404'
+                return `${baseUrl}${url}`
+            } else if (new URL(url).origin === baseUrl) {
+                // Checks if the url origin belongs to with the baseUrl, if so, proceed
+                // Otherwise, do not allow
+                return url
+            }
+            // Default fallback
+            return baseUrl
+        }
     },
 
     // Use JWT for session strategy

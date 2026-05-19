@@ -1,5 +1,15 @@
 /** Commented by Desmond @ 18-Mar-26
- * middleware.ts
+ * proxy.ts
+ * Previously known as 'middleware.ts'
+ * 
+ * LATEST CHANGE:
+ * --------------
+ *  - Added '/logout' to PUBLIC_PATHS so the logout page can render and complete
+ *    its signOut() call without the middleware intercepting and looping
+ *  - Added =__Secure-next-auth.session-token' to the cookie-clear list in the logout
+ *    API route so the production HTTPS cookie is also cleared
+ * Without these two changes, the middleware will re-authorize the still alive JWT on 
+ * every render of the logout page, causing an infinite reload loop
  * 
  * Auth strategy: next-auth JWT mode.
  *   next-auth manages its own encrypted 'next-auth.session-token' cookie.
@@ -19,6 +29,8 @@
  * Route layout:
  *   /login          — public, no auth required
  *   /register       — public, no auth required
+ *   /logout          - public, no auth required and handles the sign out then
+ *                      redirect the user to /login
  *   /unauthorized   — public, shown when a role check fails
  *   /dashboard      — authenticated, immediately redirects to role dashboard
  *   /admin/*        — authenticated + role === 'admin' only
@@ -132,6 +144,10 @@ async function rateLimitCrashHandler (limiter: Ratelimit, key: string): Promise<
 function applySecurityHeaders(response: NextResponse): NextResponse {
   const isProd = process.env.NODE_ENV === 'production'
 
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
+
   /** Click-jacking protection
    * X-Frame-Options: DENY
    * Blocks this page from being embedded inside an <iframe> on any other origin.
@@ -222,7 +238,8 @@ function rateLimitResponse(reset: number): NextResponse {
 }
 
 // Public paths
-const PUBLIC_PATHS = new Set(['/login', '/register', '/unauthorized'])
+// Commented by Desmond @ 29-April-26: /scan/* is added to PUBLIC_PATHS
+const PUBLIC_PATHS = new Set(['/login', '/register', 'unauthorized', '/scan/*', '/logout'])
 
 // Returns true if the path is always publicly accessible
 function isPublicPath(pathname: string): boolean {
@@ -274,8 +291,13 @@ export default withAuth(
     // ------------------------------------------------------------------
     if (pathname === '/dashboard') {
       let destination = '/login'
-      if (token?.role === 'admin') destination = '/admin/dashboard'
-      else if (token?.role === 'staff') destination = '/user/dashboard'
+      
+      if (token?.role === 'admin') {
+        destination = '/admin/dashboard'
+      } else if (token?.role === 'staff') {
+        destination = '/user/dashboard'
+      }
+
       return applySecurityHeaders(
         NextResponse.redirect(new URL(destination, request.url))
       )

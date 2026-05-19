@@ -1,179 +1,187 @@
+/**
+ * Tests cover:
+ *   - Auth guard behaviour (loading, non-admin, admin)
+ *   - DynamicAdd receives correct config
+ *   - All form field configurations are correct
+ */
+
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import AddAssetPage from '@/app/(app)/admin/assetTracking/addAsset/page';
 
-// Mock DynamicAdd component
-jest.mock('@/components/DynamicAdd', () => {
-  return function MockDynamicAdd({ config }: any) {
-    return (
-      <div data-testid="dynamic-add">
-        <h1>{config.pageTitle}</h1>
-        <div data-testid="config">{JSON.stringify(config)}</div>
-      </div>
-    );
-  };
-});
+// Mock useAdminAccess 
+// without this the component always returns null (WC)
+const mockUseAdminAccess = jest.fn();
+jest.mock('@/hooks/useAdminAccess', () => ({
+  useAdminAccess: () => mockUseAdminAccess(),
+}));
 
-describe('AddAssetPage', () => {
-  it('renders DynamicAdd component', () => {
-    render(<AddAssetPage />);
-    
-    expect(screen.getByTestId('dynamic-add')).toBeInTheDocument();
+//  Mock DynamicAdd 
+// Renders the config as JSON so we can assert on it (WC)
+jest.mock('@/components/dynamicAdd', () => ({
+  __esModule: true,
+  default: ({ config }: any) => (
+    <div data-testid="dynamic-add">
+      <h1>{config.pageTitle}</h1>
+      <div data-testid="config">{JSON.stringify(config)}</div>
+    </div>
+  ),
+}));
+
+// Helper: parse config from DOM (WC)
+const getConfig = () => {
+  const el = screen.getByTestId('config');
+  return JSON.parse(el.textContent || '{}');
+};
+
+// SUITE 1: Auth Guard
+describe('AddAssetPage — Auth Guard', () => {
+
+  it('should render nothing when isLoading is true', () => {
+    // Arrange
+    mockUseAdminAccess.mockReturnValue({ isLoading: true, isAdmin: false });
+
+    // Act
+    const { container } = render(<AddAssetPage />);
+
+    // Assert
+    expect(container.firstChild).toBeNull();
   });
 
-  it('displays correct page title', () => {
+  it('should render nothing when user is not admin', () => {
+    // Arrange
+    mockUseAdminAccess.mockReturnValue({ isLoading: false, isAdmin: false });
+
+    // Act
+    const { container } = render(<AddAssetPage />);
+
+    // Assert
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('should render DynamicAdd when user is admin', () => {
+    // Arrange
+    mockUseAdminAccess.mockReturnValue({ isLoading: false, isAdmin: true });
+
+    // Act
     render(<AddAssetPage />);
-    
+
+    // Assert
+    expect(screen.getByTestId('dynamic-add')).toBeInTheDocument();
+  });
+});
+
+// SUITE 2: Page Config (WC)
+describe('AddAssetPage — Page Config', () => {
+
+  beforeEach(() => {
+    mockUseAdminAccess.mockReturnValue({ isLoading: false, isAdmin: true });
+    render(<AddAssetPage />);
+  });
+
+  it('should pass correct pageTitle to DynamicAdd', () => {
     expect(screen.getByText('Add Asset')).toBeInTheDocument();
   });
 
-  it('configures correct entity names', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config.entityName).toBe('asset');
-    expect(config.entityDisplayName).toBe('Assets');
-    expect(config.entityDisplayNameSingular).toBe('Asset');
+  it('should pass correct entityName', () => {
+    expect(getConfig().entityName).toBe('asset');
   });
 
-  it('sets correct API endpoint', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config.apiEndpoint).toBe('/api/assets');
+  it('should pass correct entityDisplayName', () => {
+    expect(getConfig().entityDisplayName).toBe('Assets');
   });
 
-  it('sets correct primary key', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config.primaryKey).toBe('asset_id');
+  it('should pass correct entityDisplayNameSingular', () => {
+    expect(getConfig().entityDisplayNameSingular).toBe('Asset');
   });
 
-  it('sets correct back URL', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config.backUrl).toBe('/admin/assetTracking/Assets');
+  it('should pass correct apiEndpoint', () => {
+    expect(getConfig().apiEndpoint).toBe('/api/assets');
   });
 
-  it('configures all required form fields', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config.formFields).toHaveLength(8);
-    
-    const fieldKeys = config.formFields.map((f: any) => f.key);
-    expect(fieldKeys).toContain('asset_id');
-    expect(fieldKeys).toContain('name');
-    expect(fieldKeys).toContain('model');
-    expect(fieldKeys).toContain('description');
-    expect(fieldKeys).toContain('category');
-    expect(fieldKeys).toContain('condition');
-    expect(fieldKeys).toContain('location_id');
-    expect(fieldKeys).toContain('department_id');
+  it('should pass correct primaryKey', () => {
+    expect(getConfig().primaryKey).toBe('asset_id');
   });
 
-  it('marks required fields correctly', () => {
+  it('should pass correct backUrl — lowercase assets', () => {
+    // Important: lowercase 'assets' not 'Assets'
+    expect(getConfig().backUrl).toBe('/admin/assetTracking/assets');
+  });
+});
+ 
+// SUITE 3: Form Fields (WC)
+describe('AddAssetPage — Form Fields', () => {
+
+  beforeEach(() => {
+    mockUseAdminAccess.mockReturnValue({ isLoading: false, isAdmin: true });
     render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const assetIdField = config.formFields.find((f: any) => f.key === 'asset_id');
-    const nameField = config.formFields.find((f: any) => f.key === 'name');
-    const modelField = config.formFields.find((f: any) => f.key === 'model');
-    const categoryField = config.formFields.find((f: any) => f.key === 'category');
-    
-    expect(assetIdField.required).toBe(true);
-    expect(nameField.required).toBe(true);
-    expect(modelField.required).toBe(true);
-    expect(categoryField.required).toBe(true);
   });
 
-  it('makes location and department optional', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const locationField = config.formFields.find((f: any) => f.key === 'location_id');
-    const departmentField = config.formFields.find((f: any) => f.key === 'department_id');
-    
-    expect(locationField.required).toBeUndefined();
-    expect(departmentField.required).toBeUndefined();
+  it('should have exactly 8 form fields', () => {
+    expect(getConfig().formFields).toHaveLength(8);
   });
 
-  it('configures asset_id field with placeholder', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const assetIdField = config.formFields.find((f: any) => f.key === 'asset_id');
-    
-    expect(assetIdField.placeholder).toBe('Enter asset barcode (e.g., from barcode scanner)');
-    expect(assetIdField.type).toBe('text');
-  });
-
-  it('configures description as textarea', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const descriptionField = config.formFields.find((f: any) => f.key === 'description');
-    
-    expect(descriptionField.type).toBe('textarea');
-  });
-
-  it('configures condition field as select with options', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const conditionField = config.formFields.find((f: any) => f.key === 'condition');
-    
-    expect(conditionField.type).toBe('select');
-    expect(conditionField.options).toHaveLength(3);
-    expect(conditionField.options).toEqual([
-      { value: 'In-use', label: 'In-use' },
-      { value: 'In-store', label: 'In-store' },
-      { value: 'Spoiled', label: 'Spoiled' }
+  it('should contain all expected field keys', () => {
+    const keys = getConfig().formFields.map((f: any) => f.key);
+    expect(keys).toEqual([
+      'asset_id', 'name', 'model', 'description',
+      'category', 'condition', 'location_id', 'department_id'
     ]);
   });
 
-  it('configures location_id as select field', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const locationField = config.formFields.find((f: any) => f.key === 'location_id');
-    
-    expect(locationField.type).toBe('select');
-    expect(locationField.label).toBe('Location (Optional)');
+  it('should mark asset_id as required text field with correct placeholder', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'asset_id');
+    expect(field.required).toBe(true);
+    expect(field.type).toBe('text');
+    expect(field.placeholder).toBe('e.g. SN12345678 (max 30 chars)');
   });
 
-  it('configures department_id as select field', () => {
-    render(<AddAssetPage />);
-    
-    const configElement = screen.getByTestId('config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    const departmentField = config.formFields.find((f: any) => f.key === 'department_id');
-    
-    expect(departmentField.type).toBe('select');
-    expect(departmentField.label).toBe('Department (Optional)');
+  it('should mark name as required text field', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'name');
+    expect(field.required).toBe(true);
+    expect(field.type).toBe('text');
+  });
+
+  it('should mark model as required text field', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'model');
+    expect(field.required).toBe(true);
+    expect(field.type).toBe('text');
+  });
+
+  it('should mark category as required text field', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'category');
+    expect(field.required).toBe(true);
+    expect(field.type).toBe('text');
+  });
+
+  it('should configure description as optional textarea', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'description');
+    expect(field.type).toBe('textarea');
+    expect(field.required).toBeFalsy(); 
+  });
+
+  it('should configure condition as select with 3 options', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'condition');
+    expect(field.type).toBe('select');
+    expect(field.options).toHaveLength(3);
+    expect(field.options).toEqual([
+      { value: 'In-use', label: 'In-use' },
+      { value: 'In-store', label: 'In-store' },
+      { value: 'Spoiled', label: 'Spoiled' },
+    ]);
+  });
+
+  it('should configure location_id as optional select', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'location_id');
+    expect(field.type).toBe('select');
+    expect(field.label).toBe('Location (Optional)');
+    expect(field.required).toBeUndefined(); 
+  });
+
+  it('should configure department_id as optional select', () => {
+    const field = getConfig().formFields.find((f: any) => f.key === 'department_id');
+    expect(field.type).toBe('select');
+    expect(field.label).toBe('Department (Optional)');
+    expect(field.required).toBeUndefined();
   });
 });

@@ -16,7 +16,10 @@ const putSchema = z.object({
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await validateSession();
-  if (!authResult.authorized) return authResult.response;
+
+  if (!authResult.authorized) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;
@@ -28,9 +31,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       .eq('department_id', validatedId)
       .single();
 
-    if (error) throw error;
-    
-    return NextResponse.json({ success: true, data });
+    if (error) { 
+      throw error;
+    }
+
+    return NextResponse.json(
+      { success: true, data }
+    );
   } catch (error: any) {
     console.error('GET /api/department/[id] error:', { message: error?.message });
     if (error instanceof z.ZodError) {
@@ -42,7 +49,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await validateSession('admin'); 
-  if (!authResult.authorized) return authResult.response;
+
+  if (!authResult.authorized) {
+    return authResult.response;
+  }
 
   try {
     const { id } = await params;

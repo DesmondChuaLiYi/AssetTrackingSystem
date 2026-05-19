@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ScannerPage from '@/app/(app)/user/scanner/page'; // Import the page component
 import '@testing-library/jest-dom';
