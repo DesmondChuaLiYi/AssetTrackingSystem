@@ -4,13 +4,14 @@
 import { useAdminAccess } from '@/hooks/useAdminAccess'
 import DynamicPage from '@/components/dynamicPage'
 import type { dynamicPageConfig } from '@/components/dynamicPage'
+import AssetImageModal from '@/components/ui/assetImageModal'
 import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
   ArrowPathIcon,
-  CheckIcon,   
-  XMarkIcon, 
+  CheckIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 
 // Helper function to format date in "dd MMM yyyy, HH:mm" format (e.g. "25 Sep 2024, 14:30") - WC
@@ -141,34 +142,24 @@ const maintenanceConfig: dynamicPageConfig = {
     },
   ],
 
-  // Custom modal for viewing asset image and details (triggered by "View" action) - WC
+  // Custom modal for viewing asset photo — uses AssetImageModal which shares
+  // the same layout and UX as IdCodeModal but loads images directly from a URL. - WC
   modalConfig: {
     renderModal: (row, onClose) => {
       const assetId  = row.asset_id  as string | undefined
       const imageUrl = row.image_url as string | undefined
       return (
-      <div className="bg-white rounded-lg p-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-base font-semibold text-gray-800">
-            Asset Image — {assetId}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
-        </div>
-        {imageUrl ? (
-          <div className="border rounded-lg overflow-hidden bg-gray-100">
-            <img src={imageUrl} alt="Asset" className="w-full max-h-[50vh] object-contain" />
-          </div>
-        ) : (
-          <div className="border rounded-lg bg-gray-100 h-48 flex items-center justify-center text-gray-400 text-sm">
-            No image available
-          </div>
-        )}
-      </div>
+        <AssetImageModal
+          isOpen={true}
+          onClose={onClose}
+          assetId={assetId ?? ''}
+          imageUrl={imageUrl}
+        />
       )
     },
   },
 
-  // Columns config — defines table columns and how to render them. 
+  // Columns config — defines table columns and how to render them.
   // Actions column is auto-appended by DynamicPage when customActions are defined (see above) - WC
   columns: [
     {
