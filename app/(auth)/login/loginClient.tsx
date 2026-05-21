@@ -37,20 +37,20 @@ export default function LoginClient() {
       }
 
       // Store login success in sessionStorage so that toast can display
-      sessionStorage.setItem('loginSuccess', 'true');
-      console.log("Set loginsuccess in sessionstorage");
+      sessionStorage.setItem('loginSuccess', 'true')
+      console.log("Set loginsuccess in sessionstorage")
 
       // Redirect based on role after a short delay
       if (role == 'admin') {
-        router.replace("/admin/dashboard");
+        router.replace("/admin/dashboard")
       } else {
-        router.replace("/user/dashboard");
+        router.replace("/user/dashboard")
       }
     }
   }, [status, session, router, showToast]);
 
   if (status === 'loading') {
-    return <LoadingState />;
+    return <LoadingState />
   }
 
   return (

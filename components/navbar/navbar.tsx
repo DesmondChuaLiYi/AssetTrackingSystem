@@ -14,22 +14,21 @@
  *   sidebarOpen - whether the sidebar is currently open
  *   setSidebarOpen - function to open or close the sidebar
  */
-'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';
+'use client'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import {
   UserCircleIcon,
-  CogIcon,
   Bars3Icon,
-} from '@heroicons/react/24/outline';
-import LogoutButton from '../logoutButton';
-import { useSession } from "next-auth/react";
+} from '@heroicons/react/24/outline'
+import LogoutButton from '../logoutButton'
+import { useSession } from "next-auth/react"
 
 // Dynamically import Sidebar with SSR disabled
-const Sidebar = dynamic(() => import('./sidebar'));
+const Sidebar = dynamic(() => import('./sidebar'))
 
 // Commented by Desmond @ 21-April-26
 // Props for the navbar component
@@ -37,9 +36,9 @@ const Sidebar = dynamic(() => import('./sidebar'));
 // between the navbar (which has the hamburger icon) and the sidebar itself.
 interface navbarProps {
   // Whether the sidebar is currently open
-  sidebarOpen: boolean;
+  sidebarOpen: boolean
   // Callback to open or close the sidebar
-  setSidebarOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void
 }
 
 /** Commented by Desmond @ 23-Mar-26
@@ -59,7 +58,7 @@ function getInitialsAvatar(name: string): string {
   .split(' ') // Split the full name to a list of words - ["Li", "Yi". "CHUA"]
   .map((part) => part[0]?.toUpperCase() || '') // Takes the first letter of each word and makes it uppercase
   .slice(0, 2) // If a user has more than 2 words in their name, only take the first two initials
-  .join(''); // Join the initials together to form a string
+  .join('') // Join the initials together to form a string
 
   const svg = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"> ${/* Standard namespace declaration for XML and SVG files */ ''}
@@ -68,10 +67,10 @@ function getInitialsAvatar(name: string): string {
       font-size="14" font-weight="600" fill="white">${initials} ${/* Place the initials in the center of the circle */ ''}
     </text>
     </svg>
-    `.trim();
+    `.trim()
 
   // Encode the SVG as a data URI so it can be used as an img src without a file
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 
 // ----------------- Navbar component ----------------------
@@ -82,42 +81,42 @@ function getInitialsAvatar(name: string): string {
  */
 export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
   // Whether the profile dropdown menu is currently visible
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   // The current URL path - used to highlight the active sidebar menu item
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   // Replaces window.location.href for navigation which doesn't cause a full page reload
-  const router = useRouter();
+  const router = useRouter()
   // Next-auth session - contains user name, email, image and role
-  const { data: session } = useSession();
+  const { data: session } = useSession()
   // dashboardPath - where the Swinburne logo links to
   // User is redirected to different dashboard pages depending on their role
-  const dashboardPath = session?.user?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'; // Determine dashboard path based on user role
+  const dashboardPath = session?.user?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard' // Determine dashboard path based on user role
   // Whether the viewport is currently mobile (<768px)
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false)
   // Stores the last known URL path
-  const prevPathname = useRef(pathname);
+  const prevPathname = useRef(pathname)
   // A ref attached to te profile dropdown container div
   // The click-outside handler uses this to check whether a click landed
   // inside or outside the dropdown menu
-  const profileDropdownRef = useRef<HTMLDivElement>(null); // Clicking outside the handler closes the profile dropdown menu
+  const profileDropdownRef = useRef<HTMLDivElement>(null) // Clicking outside the handler closes the profile dropdown menu
 
   // Derived session values
   // These fall back to safe defaults when the session is null (loading)
   // or when the OAuth provider didn't supply an optional field
-  const userName = session?.user?.name ?? 'User';
-  const userEmail = session?.user?.email ?? 'No email available';
-  const userAvatar = session?.user?.image || getInitialsAvatar(userName); // Use profile picture if available, otherwise generate an avatar with initials
+  const userName = session?.user?.name ?? 'User'
+  const userEmail = session?.user?.email ?? 'No email available'
+  const userAvatar = session?.user?.image || getInitialsAvatar(userName) // Use profile picture if available, otherwise generate an avatar with initials
 
 
   // ---------- Detect when the viewport changes to mobile ----------
   useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
-    checkIsMobile(); // Run once on mount
-    window.addEventListener('resize', checkIsMobile);
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768)
+    checkIsMobile() // Run once on mount
+    window.addEventListener('resize', checkIsMobile)
     // Remove the event listener on unmount to prevent memory leaks
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []); // Only run on mount and unmount
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, []) // Only run on mount and unmount
 
 
   // ---------- Closes sidebar and dropdown items when route (page) changed ----------
@@ -126,14 +125,14 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
     if (pathname !== prevPathname.current) {
       if (isMobile) {
         // Close the sidebar if it's on mobile
-         setSidebarOpen(false);
+         setSidebarOpen(false)
       }
       // Close the profile dropdown menu when navigating to a new page
-      setIsProfileOpen(false);
+      setIsProfileOpen(false)
       // Update last visited page to the current page
-      prevPathname.current = pathname;
+      prevPathname.current = pathname
     }
-  }, [pathname, isMobile, setSidebarOpen]); // Whenever these three attributes change, the function runs
+  }, [pathname, isMobile, setSidebarOpen]) // Whenever these three attributes change, the function runs
 
 
   // ---------- Close profile dropdown if sidebar opens (only on mobile) ----------
@@ -141,15 +140,15 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
     // If the viewport is on mobile and the sidebar opens
     if (isMobile && sidebarOpen) {
       // Close the profile dropdown menu
-      setIsProfileOpen(false);
+      setIsProfileOpen(false)
     }
-  }, [sidebarOpen, isMobile]); // Only run when the sidebar is open, or the viewport is mobile
+  }, [sidebarOpen, isMobile]) // Only run when the sidebar is open, or the viewport is mobile
 
 
   // -------- Click-outside handler for profile dropdown ----------
   // useCallback ensures the function is not recreated on a new render
   const handleClickOutside = useCallback((event: MouseEvent) => {
-    const target = event.target as Node;
+    const target = event.target as Node
 
     // Check if the mouse target is inside the profile dropdown menu
     const isInsideDropdown = profileDropdownRef.current?.contains(target)
@@ -160,9 +159,9 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
     // When mouse down is NOT in the profile dropdown menu OR inside the logout confirmation modal
     if (!isInsideDropdown && !isInsidePortal) {
       // Close the profile dropdown menu
-      setIsProfileOpen(false);
+      setIsProfileOpen(false)
     }
-  }, []); // Run this on mount and unmount
+  }, []) // Run this on mount and unmount
 
   useEffect(() => {
     // If profile dropdown is closed, don't do anything
@@ -172,12 +171,12 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
 
     // If profile dropdown menu is active
     // Add the event listener for mousedown
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside)
     // Remove the event listener to prevent memory leaks
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isProfileOpen, handleClickOutside]); // Run this when profile dropdown menu is open and clicking outside
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isProfileOpen, handleClickOutside]) // Run this when profile dropdown menu is open and clicking outside
 
 
   // ---------- Use ESCAPE key to close profile dropdown ----------
@@ -190,37 +189,37 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
       // If the key pressed is ESCAPE
       if (event.key === 'Escape') {
         // Close the profile dropdown menu
-        setIsProfileOpen(false);
-      };
-    };
+        setIsProfileOpen(false)
+      }
+    }
     // Add the event listener
-      document.addEventListener('keydown', handleEscape);
+      document.addEventListener('keydown', handleEscape)
       // Remove the event listener to prevent memory leaks
       return () => {
-        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener('keydown', handleEscape)
       }
-  }, []); // Run this on mount and unmount
+  }, []) // Run this on mount and unmount
 
   // --------------- Event handlers ---------------
   // Toggle the sidebar open or close
   const handleToggleSidebar = () => {
     // ALlow sidebar to be opened when it is closed
-    setSidebarOpen(!sidebarOpen);
+    setSidebarOpen(!sidebarOpen)
     // On mobile, opening the sidebar will close the profile dropdown menu
     if (isMobile) { 
-      setIsProfileOpen(false);
+      setIsProfileOpen(false)
     }
-  };
+  }
 
   // Toggle the profile dropdown menu
   const handleToggleProfile = () => {
     // Allow it to be opened when it is closed
-    setIsProfileOpen(!isProfileOpen);
+    setIsProfileOpen(!isProfileOpen)
     // On mobile, opening the profile dropdown menu will close the sidebar
     if (isMobile) {
-      setSidebarOpen(false);
+      setSidebarOpen(false)
     }
-  };
+  }
 
   // ------------ Render the navbar component ------------
   return (
@@ -299,9 +298,9 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
                         {/* Button to route to the profile page */}
                         <button
                           onClick={() => {
-                            router.push('/profile');
+                            router.push('/profile')
                             // Close the profile dropdown menu
-                            setIsProfileOpen(false);
+                            setIsProfileOpen(false)
                           }}
                           role="menuitem"
                           className={`flex items-center w-full p-3 rounded-lg ${pathname === '/profile'
@@ -314,23 +313,6 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
                           Profile
                         </button>
 
-                        {/* Button to go to the settings page */}
-                        {/* TODO: Settings page has not been implemented */}
-                        <button
-                          onClick={() => {
-                            router.push('/settings');
-                            // Close the profile dropdown menu
-                            setIsProfileOpen(false);
-                          }}
-                          className={`flex items-center w-full p-3 rounded-lg ${pathname === '/settings'
-                            ? 'bg-red-600 text-white shadow-md'
-                            : 'text-gray-800 hover:bg-red-50 hover:text-red-600'
-                            }`}
-                        >
-                          {/* Icon */}
-                          <CogIcon className="h-6 w-6 mr-3 flex-shrink-0" />
-                          Settings
-                        </button>
 
                         {/* Logout button which signs out the user */}
                         <LogoutButton
@@ -365,5 +347,5 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }: navbarProps) {
         />
       )}
     </>
-  );
+  )
 }
