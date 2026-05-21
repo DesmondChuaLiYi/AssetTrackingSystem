@@ -65,42 +65,81 @@ interface relatedData {
  */
 type duplicateCheckResult = 'idle' | 'checking' | 'available' | 'taken' | 'error'
 
+
+/** Commented by Desmond @ 18-May-26 ----------------------------------------------
+ *                            Zod validation schema
+ * ----------------------------------------------------------------------------- */
 // Zod validation schema for form data, which mirrors the database structure
 const ASSET_CONDITIONS = ['In-use', 'In-store', 'Spoiled'] as const
 
-// Client-side validation schema for the add asset form
-// TODO: Fix this schema
+// Client-side validation schema for the 'add asset' form
 const assetFormSchema = z.object({
-  asset_id: z.string().trim().min(1, 'Asset ID is required').max(30, 'Asset ID must be 30 characters or less'),
-  name: z.string().trim().min(1, 'Name is required').max(50, 'Name must be 50 characters or less',),
-  model: z.string().trim().min(1, 'Model is required').max(30, 'Model must be 30 characters or less'),
-  description: z.string().trim().max(200, 'Description must be 200 characters or less').optional(),
-  category: z.string().trim().min(1, 'Category is required').max(50, 'Category must be 50 characters or less'),
+  asset_id: z.string().trim()
+             .min(1, 'Asset ID is required')
+             .max(30, 'Asset ID must be 30 characters or less'),
+
+  name: z.string().trim()
+         .min(1, 'Name is required')
+         .max(50, 'Name must be 50 characters or less',),
+
+  model: z.string().trim()
+          .min(1, 'Model is required')
+          .max(30, 'Model must be 30 characters or less'),
+
+  description: z.string().trim()
+                .max(200, 'Description must be 200 characters or less')
+                .optional(),
+
+  category: z.string().trim()
+             .min(1, 'Category is required')
+             .max(50, 'Category must be 50 characters or less'),
+
   condition: z.enum(ASSET_CONDITIONS, {
     message: 'Condition must be In-use, In-store or Spoiled'
   }),
-  location_id: z.string().trim().max(30).nullable().optional(),
-  department_id: z.string().trim().max(30).nullable().optional()
+
+  location_id: z.string().trim()
+                .max(30)
+                .nullable()
+                .optional(),
+
+  department_id: z.string().trim()
+                  .max(30)
+                  .nullable()
+                  .optional()
 })
 
-/** ---------------------------------------------------------------------------
- * Add more zod schemas here for location and department here in the future...
- * ----------------------------------------------------------------------------/
 /**
  * Client-side validation for the Add Location form.
  * Mirrors the server-side Zod schema in app/api/location/route.ts.
  */
 const locationFormSchema = z.object({
-  location_id: z.string().trim().min(1, 'Location ID is required').max(30, 'Must be 30 characters or less')
-                .regex(/^[A-Za-z0-9\-_]+$/, 'ID may only contain letters, numbers, hyphens and underscores'),
-  name: z.string().trim().min(1, 'Name is required').max(30, 'Name must be 30 characters or less')
+  location_id: z.string().trim()
+                .min(1, 'Location ID is required')
+                .max(30, 'Must be 30 characters or less')
+                .regex(/^[A-Za-z0-9\-_]+$/, 'ID may only contain letters, ' +
+                       'numbers, hyphens and underscores'),
+
+  name: z.string().trim()
+         .min(1, 'Name is required')
+         .max(30, 'Name must be 30 characters or less')
          .regex(/^[^<>'"%;]*$/, 'Name contains invalid characters'),
-  description: z.string().trim().max(200, 'Description must be 200 characters or less')
-                .regex(/^[^<>'"%;]*$/, 'Description contains invalid characters').optional(),
-  block: z.string().trim().max(10, 'Block must be 10 characters or less')
-          .regex(/^[A-Za-z0-9\-]*$/, 'Block contains invalid characters').optional(),
-  level: z.coerce.number().int('Level must be a whole number').min(0, 'Level cannot be negative')
-          .max(999, 'Level value is unreasonably large').optional().nullable(),
+
+  description: z.string().trim()
+                .max(200, 'Description must be 200 characters or less')
+                .regex(/^[^<>'"%;]*$/, 'Description contains invalid characters')
+                .optional(),
+
+  block: z.string().trim()
+          .max(10, 'Block must be 10 characters or less')
+          .regex(/^[A-Za-z0-9\-]*$/, 'Block contains invalid characters')
+          .optional(),
+
+  level: z.coerce.number().int('Level must be a whole number')
+          .min(0, 'Level cannot be negative')
+          .max(20, 'Level value is unreasonably large')
+          .optional()
+          .nullable(),
 })
 
 /**
@@ -108,15 +147,29 @@ const locationFormSchema = z.object({
  * Mirrors the server-side Zod schema in app/api/department/route.ts.
  */
 const departmentFormSchema = z.object({
-  department_id:z.string().trim().min(1, 'Department ID is required').max(30, 'Must be 30 characters or less')
-                 .regex(/^[A-Za-z0-9\-_]+$/, 'ID may only contain letters, numbers, hyphens and underscores'),
-  name: z.string().trim().min(1, 'Name is required').max(60, 'Name must be 60 characters or less')
-         .regex(/^[^<>'"%;]*$/, 'Name contains invalid characters'),
-  block: z.string().trim().max(10, 'Block must be 10 characters or less')
-          .regex(/^[A-Za-z0-9\-]*$/, 'Block contains invalid characters').optional(),
-  level: z.coerce.number().int('Level must be a whole number').min(0, 'Level cannot be negative')
-          .max(999, 'Level value is unreasonably large').optional().nullable(),
+  department_id:z.string().trim()
+                 .min(1, 'Department ID is required')
+                 .max(30, 'Must be 30 characters or less')
+                 .regex(/^[A-Za-z0-9\-_]+$/, 'ID may only contain letters, numbers, ' +
+                        'hyphens and underscores'),
+
+  name: z.string().trim()
+        .min(1, 'Name is required')
+        .max(60, 'Name must be 60 characters or less')
+        .regex(/^[^<>'"%;]*$/, 'Name contains invalid characters'),
+
+  block: z.string().trim()
+          .max(10, 'Block must be 10 characters or less')
+          .regex(/^[A-Za-z0-9\-]*$/, 'Block contains invalid characters')
+          .optional(),
+
+  level: z.coerce.number().int('Level must be a whole number')
+          .min(0, 'Level cannot be negative')
+          .max(20, 'Level value is unreasonably large').optional().nullable(),
 })
+
+/* --- Add more zod schemas here for location and department here in the future...
+
 
 /** ---------------------------------------------------------------------------
  *                     Helper to detect entity / form type
@@ -388,54 +441,49 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
 
     // 1. Level Logic
     if (fieldConfig.key.toLowerCase() === 'level') {
-      const LEVEL_REGEX = /^[a-zA-Z0-9]+$/ // Only allows letters and positive numbers. Bans hyphens completely.
+      const LEVEL_REGEX = /^[0-9]+$/ // Only positive integers. Bans hyphens completely.
       
       if (!LEVEL_REGEX.test(strVal)) {
-        return 'Invalid: Level can only contain letters and positive numbers (e.g., G, 1).'
+        return 'Invalid: Level can only be numbers (e.g., 0, 1, 2).'
       }
 
-      // Check if they typed just "0"
-      if (strVal === '0') {
-        return 'Invalid: Level cannot be 0.'
-      }
-    }
     // 2. Number Input Logic (Excluding Level)
-    else if (fieldConfig.type === 'number') {
+    } else if (fieldConfig.type === 'number') {
       const num = Number(value)
       
       if (isNaN(num)) {
         return 'Invalid: Must be a number.'
       }
 
-      if (num <= 0) {
-        return 'Invalid: Value must be greater than 0.'
+      if (num < 0) {
+        return 'Invalid: Value must be less than 0.'
       }
 
-      if (num > 9999999) {
+      if (num > 20) {
         return 'Invalid: Value is too large.'
       }
-    } 
+
     // 3. Email Logic
-    else if (fieldConfig.key.toLowerCase().includes('email')) {
+    } else if (fieldConfig.key.toLowerCase().includes('email')) {
       if (!EMAIL_FORMAT_REGEX.test(strVal)) {
         return 'Invalid: Please enter a valid email address.'
       }
-    }
+
     // 4. Mobile/Phone Logic
-    else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
+    } else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
       if (!MOBILE_FORMAT_REGEX.test(strVal)) {
         return 'Invalid: Mobile number must contain only numbers.'
       }
-    }
+
     // 5. Description/Textarea Logic (Lenient)
-    else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
+    } else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
       // We manually check for hyphen here since it's tricky in the main regex
       if (DESC_INVALID_CHARS_REGEX.test(strVal) || strVal.includes('-')) {
         return 'Invalid: Contains sensitive special characters or hyphens.'
       }
-    }
+    
     // 6. Standard Text Input Logic (Strict)
-    else if (fieldConfig.type === 'text') {
+    } else if (fieldConfig.type === 'text') {
       if (STRICT_INVALID_CHARS_REGEX.test(strVal)) {
         return 'Invalid: Contains sensitive special characters. Symbols like @, ., and - are not allowed here.'
       }
@@ -449,6 +497,7 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
     return null
   }
   
+  
   // -------------------------- Handle the input changes -----------------------------
   const handleInputChange = (key: string, value: string | number | null) => {
     setFormDataState((prev) => ({ ...prev, [key]: value })) // Copy everything from previous object, then update the changed field
@@ -457,10 +506,16 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
     const fieldConfig = config.formFields.find(f => f.key === key)
     if (fieldConfig) {
       const error = validateField(value, fieldConfig)
+
       setValidationErrors(prev => {
         const newErrors = { ...prev }
-        if (error) newErrors[key] = error
-        else delete newErrors[key]
+        
+        if (error) {
+          newErrors[key] = error
+        } else {
+          delete newErrors[key]
+        }
+
         return newErrors
       })
     }
@@ -636,7 +691,7 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
           onChange={(e) => handleInputChange(field.key, e.target.value)} 
           placeholder={field.placeholder} 
           className={baseClass} 
-          rows={3} 
+          rows={10} 
           required={field.required} 
           maxLength={field.maxLength} 
         />

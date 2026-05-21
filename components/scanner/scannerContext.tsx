@@ -19,6 +19,7 @@ export default function ScannerContent({
   autoStart = false,
   shouldStartScanning = false,
   onScanningStarted,
+  onCancel,
   children
 }: {
   title: string
@@ -30,6 +31,7 @@ export default function ScannerContent({
   autoStart?: boolean
   shouldStartScanning?: boolean
   onScanningStarted?: () => void
+  onCancel: () => void
 
   children?: React.ReactNode
 }) {
@@ -203,7 +205,17 @@ export default function ScannerContent({
               </div>
               {parentScan && (
                 <button 
-                  onClick={() => window.location.reload()}
+                  // onClick={() => window.location.reload()}
+                  // Commented by Desmond @ 19-May-25: Replaced the logic so that it uses
+                  // the onCancel() function for the Cancel button
+                  onClick={() => {
+                    // Stop the camera first
+                    stopScanning()
+
+                    // Run the cancel logic
+                    onCancel()
+                  }}
+
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-lg text-sm hover:bg-white/40"
                 >
                   <XCircle className="w-4 h-4" />

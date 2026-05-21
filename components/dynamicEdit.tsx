@@ -190,52 +190,79 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     }
   }
 
+
+  /** Commented by Desmond @ 18-May-26 --------------------------------------------------------
+   *                        Form validation (Regex - regular expression)
+   * ---------------------------------------------------------------------------------------- */
   // BUGFIX 29-April Daryl: Strict Regex for IDs, Names, Models, etc. (Bans @, ., -, etc.)
   // BUGFIX 25-April: Strict Regex (Bans @, ., -, \, etc.) Hyphen is at the very end to work properly.
-  const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}=+|~/?;:'"\\.,]/;
+  const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}=+|~/?;:'"\\.,]/
+
   // BUGFIX 07-May: Daryl: Lenient Regex for Descriptions (Allows uppercase letters)
   // BUGFIX 29-April Daryl: Lenient Regex for Descriptions (Allows spaces, periods, and commas)
   // BUGFIX 25-April: Lenient Regex for Descriptions (Allows spaces, periods, commas, and hyphens)
-  const DESC_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|=+~/?;:'"\\]/;
+  const DESC_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}|=+~/?;:'"\\]/
+
   // BUGFIX 29-April Daryl: Standard Email Format Validation
   // BUGFIX 25-April: Standard Email Format Validation
-  const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   // BUGFIX 29-April Daryl: Standard Mobile Format (Allows optional + at start, then digits)
   // BUGFIX 25-April: Standard Mobile Format (Allows optional + at start, then digits)
-  const MOBILE_FORMAT_REGEX = /^\+?[0-9]{8,15}$/;
+  const MOBILE_FORMAT_REGEX = /^\+?[0-9]{8,15}$/
 
   const validateField = (value: string | number | null, fieldConfig: formFieldConfig) => {
     if (value === null || value === '') return null;
     
     const strVal = String(value);
 
-    // 1. Level Logic (Allows letters like 'G', 'LG', and hyphens like '-1')
+    // 1. Level Logic (Must be integers and cannot be less than 0)
     if (fieldConfig.key.toLowerCase() === 'level') {
-      const LEVEL_REGEX = /^[-a-zA-Z0-9]+$/;
-      if (!LEVEL_REGEX.test(strVal)) return 'Invalid: Level can only contain letters, numbers, and hyphens (e.g., G, -1).';
-    }
-    // 2. Number Input Logic (Excluding Level)
-    else if (fieldConfig.type === 'number') {
-      const num = Number(value);
-      if (isNaN(num)) return 'Invalid: Must be a number.';
-      if (num <= 0) return 'Invalid: Value must be greater than 0.';
-      if (num > 9999999) return 'Invalid: Value is too large.';
-    } 
+      const LEVEL_REGEX = /^[0-9]+$/
+      if (!LEVEL_REGEX.test(strVal)) {
+        return 'Invalid: Level can only be numbers (e.g., 0, 1, 2).'
+      }
+
+    // 2. Number Input Logic (Primarily used for Level in Locations)
+    } else if (fieldConfig.type === 'number') {
+      const num = Number(value)
+
+      if (isNaN(num)) {
+        return 'Invalid: Must be a number.'
+      }
+
+      if (num < 0) {
+        return 'Invalid: Value must be less than 0.'
+      }
+
+      if (num > 20) {
+        return 'Invalid: Value is too large.'
+      }
+
     // 3. Email Logic
-    else if (fieldConfig.key.toLowerCase().includes('email')) {
-      if (!EMAIL_FORMAT_REGEX.test(strVal)) return 'Invalid: Please enter a valid email address.';
-    }
+    } else if (fieldConfig.key.toLowerCase().includes('email')) {
+      if (!EMAIL_FORMAT_REGEX.test(strVal)) {
+        return 'Invalid: Please enter a valid email address.'
+      }
+
     // 4. Mobile/Phone Logic
-    else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
-      if (!MOBILE_FORMAT_REGEX.test(strVal)) return 'Invalid: Mobile number must contain only numbers.';
-    }
+    } else if (fieldConfig.key.toLowerCase().includes('mobile') || fieldConfig.key.toLowerCase().includes('phone')) {
+      if (!MOBILE_FORMAT_REGEX.test(strVal)) {
+        return 'Invalid: Mobile number must contain only numbers.'
+      }
+
     // 5. Description/Textarea Logic (Lenient)
-    else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
-      if (DESC_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters.';
-    }
+    } else if (fieldConfig.type === 'textarea' || fieldConfig.key.toLowerCase().includes('desc')) {
+      if (DESC_INVALID_CHARS_REGEX.test(strVal)) {
+        return 'Invalid: Contains sensitive special characters.'
+      }
+
     // 6. Standard Text Input Logic (Strict)
-    else if (fieldConfig.type === 'text') {
-      if (STRICT_INVALID_CHARS_REGEX.test(strVal)) return 'Invalid: Contains sensitive special characters. Symbols like @, ., and - are not allowed here.';
+    } else if (fieldConfig.type === 'text') {
+      if (STRICT_INVALID_CHARS_REGEX.test(strVal)) {
+        return 'Invalid: Contains sensitive special characters. Symbols like ' +
+               '@, ., and - are not allowed here.'
+      }
     }
     
     // Character Limit Check
@@ -243,7 +270,7 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
       return `Exceeds database maximum length of ${fieldConfig.maxLength} characters.`;
     }
 
-    return null;
+    return null
   }
 
   // ------------ renderField : Render the correct input element for each field type -------------------
@@ -331,7 +358,7 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
           disabled={isDisabled} // Disabled if explicitly mentioned, or this is a primary key
           placeholder={field.placeholder} 
           className={baseClass} // Style follows the baseClass, refer above
-          rows={3} 
+          rows={10} 
           required={field.required} 
           maxLength={field.maxLength} 
         />
@@ -363,15 +390,21 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
     setFormData((prev) => ({ ...prev, [key]: value}))
 
     // Run client-side validation on the changed field
-    const fieldConfig = config.formFields.find(f => f.key === key);
+    const fieldConfig = config.formFields.find(f => f.key === key)
     if (fieldConfig) {
-      const error = validateField(value, fieldConfig);
+      const error = validateField(value, fieldConfig)
+
       setValidationErrors(prev => {
-        const newErrors = { ...prev };
-        if (error) newErrors[key] = error;
-        else delete newErrors[key];
-        return newErrors;
-      });
+        const newErrors = { ...prev }
+
+        if (error) {
+          newErrors[key] = error
+        } else {
+          delete newErrors[key]
+        } 
+
+        return newErrors
+      })
     }
   }
 
