@@ -95,7 +95,7 @@ const assetFormSchema = z.object({
              .max(50, 'Category must be 50 characters or less'),
 
   condition: z.enum(ASSET_CONDITIONS, {
-    message: 'Condition must be In-use, In-store or Spoiled'
+    message: 'Condition must be In-use or In-store'
   }),
 
   location_id: z.string().trim()
@@ -165,7 +165,9 @@ const departmentFormSchema = z.object({
 
   level: z.coerce.number().int('Level must be a whole number')
           .min(0, 'Level cannot be negative')
-          .max(20, 'Level value is unreasonably large').optional().nullable(),
+          .max(20, 'Level value is unreasonably large')
+          .optional()
+          .nullable(),
 })
 
 /* --- Add more zod schemas here for location and department here in the future...
@@ -218,7 +220,8 @@ function DuplicateCheckBadge({ status, primaryId, label }: { status: duplicateCh
     return (
       <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600" role="alert" aria-live="assertive">
           <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-          {label} <code className="mx-1 font-mono">{primaryId}</code> already exists. Please choose a different ID.
+          {label} 
+            <code className="mx-1 font-mono">{primaryId}</code> already exists. Please choose a different ID.
       </p>
     )
   }
@@ -376,7 +379,7 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
     previewTimerRef.current = setTimeout(() => setPreviewValue(raw), 400)
 
     // Wait for at least three characters to be typed in before checking for duplicate asset_id
-    if (raw.trim().length < 3) {
+    if (raw.trim().length < 2) {
       setDuplicateStatus('idle')
       return
     }
@@ -422,7 +425,7 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
     }
     // Run this effect when formData changes (when user is typing), 
     // or when form changed to another type (asset, location or department)
-  }, [formDataState, pk])
+  }, [formDataState[pk], pk])
   
   // BUGFIX 25-April Daryl: Strict Regex (Bans @, ., -, \, etc.) Hyphen MUST be at the very end to work properly.
   const STRICT_INVALID_CHARS_REGEX = /[@!#%^&*()<>_{}+=|~/?:'"\\.,]/
@@ -668,7 +671,13 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
       
       // For location_id field, use locations from relatedData
       if (field.key === 'location_id' && relatedData.locations.length > 0) {
-        options = [{ value: '', label: 'Select Location' }, ...relatedData.locations.map((loc) => ({ value: loc['location_id'], label: loc['name'] }))]
+        options = [
+          { value: '', label: 'Select Location' }, 
+          ...relatedData.locations.map((location) => ({ 
+            value: location['location_id'], 
+            label: `${location.location_id} - ${location.name}`
+          }))
+        ]
       }
       // For department_id field, use departments from relatedData
       if (field.key === 'department_id' && relatedData.departments.length > 0) {
@@ -808,15 +817,15 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
                       )}
                     </div>
                     
+                    {/* Render the input element for the field type */}
+                    {renderField(field)}
+
                     {/* Client-side validation error - shown below the field if validation fails */}
                     {validationErrors[field.key] && (
-                      <p className="mb-1 text-sm font-semibold text-red-600" role="alert">
+                      <p className="mb-1 text-xs font-medium text-red-600" role="alert">
                         {validationErrors[field.key]}
                       </p>
                     )}
-                    
-                    {/* Render the input element for the field type */}
-                    {renderField(field)}
                     
                     {/* Duplicate check status badge only on the primaryKey field */}
                     {field.key === pk && (
@@ -840,7 +849,7 @@ export default function DynamicAdd({ config }: dynamicAddProps) {
                         <BarcodePreview 
                           value={previewValue} 
                           label={String(formDataState.name || '')}
-                          showCopyButton={true}
+                          showControls={true}
                           isDuplicate={duplicateStatus === 'taken'}
                         />
                       </div>

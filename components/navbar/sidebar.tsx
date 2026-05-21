@@ -1,26 +1,25 @@
 // components/navbar/sidebar.tsx
-'use client';
+'use client'
 
 /** Commented by Desmond @ 20-April-26
  * @file sidebar.tsx
  * @description Sidebar component for the application.
  * This component renders a sidebar with different modules and dropdowns based on the user's role.
  */
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
-  CogIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
   MapPinIcon,
   BuildingOfficeIcon,
   UsersIcon,
   ComputerDesktopIcon,
-} from '@heroicons/react/24/outline';
-import LogoutButton from '../logoutButton';
-import { HomeIcon } from 'lucide-react';
-import { useSession } from "next-auth/react";
+} from '@heroicons/react/24/outline'
+import LogoutButton from '../logoutButton'
+import { HomeIcon } from 'lucide-react'
+import { useSession } from "next-auth/react"
 
 // Commented by Desmond @ 20-April-26
 // These arrays define what appears in the sidebar for each role.
@@ -80,18 +79,18 @@ const adminModules = [
       // { label: 'Roles', path: 'roles' },
     ],
   },
-];
+]
 
 // ----------- Navigation options available for staff users ----------
 // *currently only main menu, but can be expanded in the future
-const userModules = [
+const staffModules = [
   // Dashboard for staffs
   { 
     name: 'Main Menu', 
     icon: HomeIcon, 
     href: '/user/dashboard' 
   },
-];
+]
 
 // -------------- Sidebar component ---------------
 /** Commented by Desmond @ 20-April-26
@@ -100,32 +99,32 @@ const userModules = [
  */
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (value: boolean) => void }) {
   // Next-auth session - used to determine the user role
-  const { data: session } = useSession();
+  const { data: session } = useSession()
   // The current URL path - to highlight the active menu item
-  const pathname = usePathname();
+  const pathname = usePathname()
   // The user role from the session, and fallback to 'staff'
-  const userRole = session?.user.role ?? 'staff';
+  const userRole = session?.user.role ?? 'staff'
 
   // activeItem - currently expanded dropdown section
   // null - no dropdown is open
-  const [activeItem, setActiveItem] = useState<string | null>(null);
+  const [activeItem, setActiveItem] = useState<string | null>(null)
 
   // hoveredItem - name of item currently hovered by mouse
   // null - no item is being hovered
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   
   // isMobile -whether the viewport is in mobile width (<768px)
   // Initialized immediately from window.innerWidth to avoid flash of wrong layout, or hydration mismatch
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
   // ------ Restore the last-open dropdown state from localStorage on mount -----
   useEffect(() => {
-    const savedActiveItem = localStorage.getItem('sidebarActiveItem');
+    const savedActiveItem = localStorage.getItem('sidebarActiveItem')
     // Set active item to saved value, null if there is none
     if (savedActiveItem) {
-      setActiveItem(savedActiveItem);
+      setActiveItem(savedActiveItem)
     }
-  }, []); // Only run once on mount
+  }, []) // Only run once on mount
 
   // ------------- Handle responsive resize behavior -------------
   // When transition from mobile to desktop, open sidebar
@@ -133,35 +132,35 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
   useEffect(() => {
     const handleResize = () => {
       // If window width is less than 768px, then it is mobile
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 768)
 
       // Check if the screen size changed from mobile to desktop or other way around
       // window.innerWidth < 768 is the new state, isMobile is the new state
       // so if they are different, then screen size changed
       if (window.innerWidth < 768 !== isMobile) {
         // If less than 768px, then close sidebar, otherwise open
-        setIsOpen(!(window.innerWidth < 768));
+        setIsOpen(!(window.innerWidth < 768))
       }
-    };
+    }
 
     // Run on mount to sync state with the current window size 
-    handleResize();
+    handleResize()
     // Add event listener for window resizing
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize)
     // When unmount, remove the event listener to prevent memory leaks
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize)
 
-  }, [setIsOpen, isMobile]); // Re-run this if 'setIsOpen' or 'isMobile' changes
+  }, [setIsOpen, isMobile]) // Re-run this if 'setIsOpen' or 'isMobile' changes
 
 
   // Toggle dropdown open or closed when clicking on dropdown section
   const toggleDropdown = (href: string) => {
     // If clicking an already active dropdown, close it. Otherwise, open the new one.
-    const newActive = activeItem === href ? null : href;
+    const newActive = activeItem === href ? null : href
     // Save the new active dropdown state
-    setActiveItem(newActive);
-    localStorage.setItem('sidebarActiveItem', newActive || '');
-  };
+    setActiveItem(newActive)
+    localStorage.setItem('sidebarActiveItem', newActive || '')
+  }
 
 
   // ---------- Handle clicking outside the sidebar ----------
@@ -170,19 +169,19 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
     // Checks if this is mobile view, sidebar is open, and if the tap target is not sidebar, close sidebar
     // '!(e.target as HTMLElement).closest('.sidebar')' - Not sidebar
     if (isMobile && isOpen && !(e.target as HTMLElement).closest('.sidebar')) {
-      setIsOpen(false); // Close sidebar
+      setIsOpen(false) // Close sidebar
     }
-  };
+  }
 
   useEffect(() => {
     // On mobile and sidebar is open
     if (isMobile && isOpen) {
       // Add the event listener to handle clicking outside the sidebar
-      document.addEventListener('click', handleOutsideClick);
+      document.addEventListener('click', handleOutsideClick)
     }
     // Remove the event listener on unmount to prevent memory leaks
-    return () => document.removeEventListener('click', handleOutsideClick);
-  }, [isMobile, isOpen]); // Only change if on mobile, and sidebar is open
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [isMobile, isOpen]) // Only change if on mobile, and sidebar is open
 
 
   // ------------ Render a group of navigation items ------------
@@ -277,7 +276,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
         </nav>
       </div>
     </div>
-  );
+  )
 
   // ------------- Rendering the main component ------------
   return (
@@ -337,12 +336,12 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
             {userRole === 'admin' && (
               <>
                 {renderGroup('Admin', adminModules)}
-                {renderGroup('User', userModules)}
+                {/* {renderGroup('Staff', staffModules)} */}
               </>
             )}
 
             {/* Regular users see only the User module */}
-            {userRole !== 'admin' && renderGroup('User', userModules)}
+            {userRole !== 'admin' && renderGroup('Staff', staffModules)}
             {/* Desmond, 1 Nov 25 : End */}
           </div>
 
@@ -351,23 +350,6 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
 
           {/* ----------- Settings ---------- */}
           <div className="border-t border-gray-200 pt-4 space-y-2">
-            <Link
-              // href="/settings"
-              href="#" // This is a placeholder for the settings page
-              // TODO: Implement the settings page to do things like changing theme
-              onMouseEnter={() => setHoveredItem('Settings')}
-              onMouseLeave={() => setHoveredItem(null)}
-              className={`flex items-center p-3 rounded-lg ${pathname === '/settings'
-                ? 'bg-red-600 text-white shadow-md'
-                : hoveredItem === 'Settings'
-                  ? 'bg-red-50 text-red-600'
-                  : 'text-black-700 hover:bg-red-50 hover:text-red-600'
-                }`}
-            >
-              {/* Icon and label */}
-              <CogIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-              Settings
-            </Link>
 
             {/* ---------- Logout button component ---------- */}
             <LogoutButton
@@ -384,5 +366,5 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
         </div>
       )}
     </>
-  );
+  )
 }

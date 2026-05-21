@@ -91,7 +91,8 @@ const addAssetConfig: dynamicAddConfig = {
       options: [
         { value: 'In-use', label: 'In-use' },
         { value: 'In-store', label: 'In-store' },
-        { value: 'Spoiled', label: 'Spoiled' }
+        // Spoiled option removed because new assets are not spoiled
+        // { value: 'Spoiled', label: 'Spoiled' }
       ]
     },
 

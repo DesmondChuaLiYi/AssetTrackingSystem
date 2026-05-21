@@ -309,7 +309,7 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
             // location_id
             value: location.location_id, 
             // location name
-            label: location.name 
+            label: `${location.location_id} - ${location.name}`
           })) 
         ]
       }
@@ -524,17 +524,17 @@ export default function dynamicEdit({ config, recordId }: dynamicEditProps) {
                       )}
                     </div>
 
-                    {/* Validation error message */}
-                    {validationErrors[field.key] && (
-                      <p className="mb-1 text-sm font-semibold text-red-600" role="alert">
-                        {validationErrors[field.key]}
-                      </p>
-                    )}
-
                     {/* Form fields */}
                     <div className="mt-1">
                       {renderField(field)}
                     </div>
+
+                    {/* Validation error message */}
+                    {validationErrors[field.key] && (
+                      <p className="mb-1 text-xs font-medium text-red-600" role="alert">
+                        {validationErrors[field.key]}
+                      </p>
+                    )}
 
                   </div>
                 ))}

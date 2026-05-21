@@ -125,7 +125,8 @@ export default function DepartmentPage() {
     primaryKey: 'department_id',
     pageTitle: 'Departments',
     pageDescription: 'Manage departments in Swinburne',
-    defaultSortBy: 'created_dt',
+    defaultSortBy: 'department_id',
+    defaultSortOrder: 'asc',
     showAddButton: true,
     // This file do not have a condition field, unlike asset
     showConditionFilter: false,
