@@ -4,12 +4,10 @@
  * @file components/ui/barcodePreview.tsx
  * @description This component shows the live preview for the barcode based
  * on the asset_id entered by the user in the Add Asset form.
- * It also has a copy button to copy the asset_id to clipboard, and shows
- * a warning if the asset_id is already taken.
  * 
  * LATEST CHANGES:
  * ---------------
- *  - Now uses buildBarcodeDataUrl from lib/idCode/idCodeImaeg.ts - the same function path as the server's
+ *  - Now uses buildBarcodeDataUrl from lib/idCode/idCodeImage.ts - the same function path as the server's
  *    buildBarcodeBuffer, so the preview would be the same as the stored PNG
  *  - Swinburne header is now embedded into the PNG and not rendered as a HTML around the image. This
  *    makes Save and Print consistent
@@ -30,11 +28,8 @@
 // useCallback cache function so it doesn't recreate; memo prevents unnecessary re-render
 import { useState, useEffect, memo, useMemo, useCallback, useRef } from 'react'
 // import Barcode from 'react-barcode' // Draws the barcode
-import { 
-    ClipboardDocumentIcon, 
-    CheckIcon, 
-    ExclamationTriangleIcon, 
-    ExclamationCircleIcon,
+import {
+    ExclamationTriangleIcon,
     PrinterIcon,
     ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
@@ -44,7 +39,7 @@ import { buildBarcodeDataUrl } from '@/lib/idCode/idCodeImage'
 interface barcodePreviewProps {
     value: string   // Barcode value
     label?: string  // Optional name
-    showCopyButton?: boolean    // Show the copy button
+    showControls?: boolean    // Show the copy button
     className?: string  // Extra styling
     isDuplicate?: boolean   // Show warning if it's duplicate
 }
@@ -55,13 +50,12 @@ interface barcodePreviewProps {
 const barcodePreview = ({
     value,
     label,
-    showCopyButton = true,
+    showControls = true,
     className = '',
     isDuplicate = false
 }: barcodePreviewProps) => {
     const [barcodeDataUrl, setBarcodeDataUrl] = useState<string | null>(null)
     const [generating, setGenerating] = useState(false)
-    const [copied, setCopied] = useState(false) // Tracks if the user clicked 'copy'
     const abortRef = useRef(false)
 
     const isValid = useMemo(() => value.trim().length > 0, [value]) // Value cannot be empty, empty spaces are trimmed and don't recompute unless value changed
@@ -101,46 +95,6 @@ const barcodePreview = ({
             }
 
     }, [value, label, isValid])
-
-    // -------------------------------------------------------------
-    //              Copy asset ID to clipboard
-    // -------------------------------------------------------------
-    const handleCopy = useCallback(async () => {
-        if (!isValid) { // Don't copy empty values
-            return
-        }
-        
-        try {
-            await navigator.clipboard.writeText(value) // Copies the barcode value to clipboard
-            setCopied(true) 
-            setTimeout(() => setCopied(false), 2000) // Show "Copied" for 2 seconds
-        } catch (err) { // If clipboard fails
-            console.error('[BarcodePreview] Failed to copy:', err)
-
-            // Fallback for older browsers
-            try {
-                const textArea = document.createElement('textarea') // Create a hidden box
-                textArea.value = value  // Put the barcode value inside
-                // Ensure the textarea is hidden but part of the document
-                textArea.style.position = 'fixed'
-                textArea.style.left = '-9999px'
-                textArea.style.top = '0'    // These ensure the user cannot see the box but browser still sees it
-                document.body.appendChild(textArea) // Add the text area to the page
-                textArea.focus() // Focus it like clicking inside the box
-                textArea.select() // Highlight the text
-                const successful = document.execCommand('copy') // Simulates CTRL + C
-                document.body.removeChild(textArea) // Removes the hidden element
-
-                if (successful) { // If copy worked
-                    setCopied(true)
-                    setTimeout(() => setCopied(false), 2000) // Show "Copied" then reset after 2 seconds
-                }
-            } catch (_err) {
-                // When everything above failedS
-                alert('Failed to copy to clipboard. Please try copying manually.')
-            }
-        }
-    }, [value, isValid])
 
 
     // -------------------------------------------------------------
@@ -272,16 +226,6 @@ const barcodePreview = ({
              role="region" aria-label={`Barcode preview for ${value}`}
         >
 
-            {/* Duplicate warning banner - check if asset ID is already taken */}
-            {isDuplicate && (
-                <div className="mb-3 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-                    <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0 text-red-500" aria-hidden="true" />
-                    <p className="text-xs font-medium text-red-700">
-                        Asset ID already exists - choose a different ID before saving
-                    </p>
-                </div>
-            )}
-
             {/* Utility headers */}
             <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
@@ -293,29 +237,15 @@ const barcodePreview = ({
                     <span className="text-sm font-medium text-gray-400">Preview</span>
                 </div>
 
-                {showCopyButton && (
+                {showControls && (
                     <div className="flex items-center gap-1.5">
-                        {/* The copy button */}
-                        <button type="button" onClick={handleCopy} title="Copy asset ID"
-                                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
-                                            transition-all focus:outline-none focus:ring-2 focus:ring-red-500
-                            ${copied ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
-                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200'
-                            }`}>
-                            {copied ? (
-                                // Will display as "Copied" after the user clicks the copy button
-                                <><CheckIcon className="h-3.5 w-3.5" /> Copied</>
-                            ) : (
-                                // Display the copy ID button
-                                <><ClipboardDocumentIcon className="h-3.5 w-3.5" /> Copy ID</>
-                            )}
-                        </button>
-
 
                         {/* Save barcode PNG button */}
                         <button type="button" onClick={handleSave} disabled={!barcodeDataUrl}
-                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
-                                           transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                                title="Save barcode as PNG"
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-gray-50 text-gray-600
+                                       hover:bg-gray-100 ring-1 ring-gray-200 transition-all focus:outline-none focus:ring-2 focus:ring-red-500
+                                       disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Save
                         </button>
@@ -324,8 +254,9 @@ const barcodePreview = ({
                         {/* Print barcode button */}
                         <button type="button" onClick={handlePrint} disabled={!barcodeDataUrl}
                                 title="Print barcode"
-                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold 
-                                           transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-gray-50 text-gray-600
+                                       hover:bg-gray-100 ring-1 ring-gray-200 transition-all focus:outline-none focus:ring-2 focus:ring-red-500
+                                       disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <PrinterIcon className="h-3.5 w-3.5" /> Print
                         </button>

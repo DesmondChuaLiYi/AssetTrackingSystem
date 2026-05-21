@@ -40,14 +40,11 @@
 
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import {
-    ClipboardDocumentIcon,
-    CheckIcon,
-    ExclamationCircleIcon,
     ExclamationTriangleIcon,
     PrinterIcon,
     ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
-import { buildQrDataUrl, buildScanUrl } from '@/lib/idCode/idCodeImage'
+import { buildQrDataUrl } from '@/lib/idCode/idCodeImage'
 import type { qrFolder } from '@/lib/idCode/idCodeImage'
 
 // -------------------------------------------------------------
@@ -147,9 +144,6 @@ const QrPreview =({ value, entityType, label, isDuplicate = false, showControls 
     // Whether the QR is currently being generated
     const [generating, setGenerating] = useState(false)
 
-    // Copy-to-clipboard feedback
-    const [copied, setCopied] = useState(false)
-
     // Used to cancel stale async updates when value changes quickly
     const abortRef = useRef(false)
 
@@ -172,7 +166,6 @@ const QrPreview =({ value, entityType, label, isDuplicate = false, showControls 
     // e.g. URL = https://.../scan/location/G001
     // .trim() removes whitespaces or blanks
     const folder = entityToFolder(entityType)
-    const scanUrl = isValid ? buildScanUrl(folder, value.trim()) : ''
     const entityLabel = entityType === 'location' ? 'Location' : 'Department'
 
     // -------------------------------------------------------------
@@ -252,51 +245,6 @@ const QrPreview =({ value, entityType, label, isDuplicate = false, showControls 
 
     }, [value, folder, label, isValid]) // Generate QR code every time input value changes
 
-    // -------------------------------------------------------------
-    //              Copy scan URL to clipboard
-    // -------------------------------------------------------------
-    // useCallback to memorize function to prevent re-creation
-    const handleCopy = useCallback(async () => {
-        // Prevent execution when no valid URL exists
-        if (!scanUrl) {
-            // Exit early
-            return
-        }
-
-        try {
-            // Copy the scan URL to clipboard
-            await navigator.clipboard.writeText(scanUrl)
-            // Set copied to true
-            setCopied(true)
-            // Reset copied to false after 2 seconds
-            setTimeout(() => setCopied(false), 2000)
-            // Catch errors
-        } catch {
-            // Fallback for browsers that block clipboard API
-            try {
-                // Create textarea to hold text
-                const ta = document.createElement('textarea')
-                // Assign the value
-                ta.value = scanUrl
-                // Move the element off-screen
-                ta.style.cssText = 'position:fixed; left: -9999px; top: 0'
-                // Add to DOM
-                document.body.appendChild(ta)
-                // Select the content
-                ta.focus()
-                ta.select()
-                // Execute the copy command
-                document.execCommand('copy')
-                // Cleanup and prevent DOM clutter
-                document.body.removeChild(ta)
-                // Copied is true
-                setCopied(true)
-                // Handle errors
-            } catch (_err) {
-                alert('Could not copy to clipboard. Please copy manually.')
-            }
-        }
-    }, [scanUrl]) // Function only recreated when this changes
 
     // -------------------------------------------------------------
     //          Draw QR onto canvas (for print/save)
@@ -543,21 +491,6 @@ const QrPreview =({ value, entityType, label, isDuplicate = false, showControls 
             aria-label={`QR code preview for ${entityLabel} ${value}`}
         >
 
-            {/* Warning about duplicate ID */}
-            {isDuplicate && (
-                <div className="mx-4 mt-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-                    {/* Exclamation icon stating duplicate ID is not allowed */}
-                    <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0 text-red-500"
-                        aria-hidden="true"
-                    />
-
-                    <p className="text-xs font-medium text-red-700">
-                        {entityLabel} ID already exists! Choose a different ID before saving.
-                    </p>
-                </div>
-            )}
-
-
             {/* -------------------- Utility toolbar --------------------------- */}
             <div className="flex items-center justify-between px-4 pt-3 pb-1">
                 <div className="flex items-center gap-2">
@@ -573,27 +506,6 @@ const QrPreview =({ value, entityType, label, isDuplicate = false, showControls 
             {/* ----------------------- Show controls -------------------------- */}
             {showControls && (
                 <div className="flex items-center gap-1.5">
-                    {/* Copy the scan URL */}
-                    <button type="button" onClick={handleCopy} title="Copy scan URL"
-                            className={`flex items-center gap-1.5 rounded-lg px-2.5 py1.5 text-xs font-semibold transition-all focus:outline-none
-                                        focus:ring-2 focus:ring-red-500 ${
-                                            copied ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
-                                                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200'
-                                        }`}
-                    >
-                        {copied ? (
-                            <>
-                                <CheckIcon className="h-3.5 w-3.5" />
-                                Copied
-                            </>
-                        ) : (
-                            <>
-                                <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-                                Copy URL
-                            </>
-                        )}
-                    </button>
-
 
                     {/* Save the PNG */}
                     <button type="button" onClick={handleSave} disabled={!qrDataUrl} title="Save QR code as PNG"

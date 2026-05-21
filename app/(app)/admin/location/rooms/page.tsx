@@ -127,7 +127,8 @@ const config: dynamicPageConfig = {
   primaryKey: 'location_id',
   pageTitle: 'Locations',
   pageDescription: 'Manage places, rooms and locations in Swinburne',
-  defaultSortBy: 'created_dt',
+  defaultSortBy: 'location_id',
+  defaultSortOrder: 'asc',
   // Display the add button
   showAddButton: true,
   // Do not display the condition filter meant for asset page

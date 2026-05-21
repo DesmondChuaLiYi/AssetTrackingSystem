@@ -116,6 +116,8 @@ export interface dynamicPageConfig {
   searchFields: { key: string; label: string }[]
   /** Default column to sort by */
   defaultSortBy: string
+  /** Default sort order */
+  defaultSortOrder?: 'asc' | 'desc' 
   /** Page heading */
   pageTitle: string
   /** Subheading / description */
@@ -231,7 +233,7 @@ export default function DynamicPage({ config }: DynamicPageProps) {
 
   // Sort
   const [sortBy, setSortBy] = useState(config.defaultSortBy)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [sortOrder, setSortOrder] = useState(config.defaultSortOrder ?? 'desc')
 
   // Tab state — only meaningful when tabsConfig is provided
   const [activeTab, setActiveTab] = useState(config.tabsConfig?.[0]?.key ?? '')
