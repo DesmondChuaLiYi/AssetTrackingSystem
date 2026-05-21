@@ -32,7 +32,7 @@
 
 // useAuth - ensures only logged-in users can access this page, redirects others to /login
 import { useAuth } from '@/hooks/useAuth'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import ScannerContent from '@/components/scanner/scannerContext'
@@ -58,6 +58,64 @@ const ALLOWED_TABLES = ['Asset', 'Staff', 'Location', 'Department'] as const
 
 // Define the shape and structure for the allowed tables
 type table = typeof ALLOWED_TABLES[number]
+
+
+// ----------------------------------------------------------------------
+//       Function to extract entity ID from the URL in a QR code
+//                (either location or department id)
+// ----------------------------------------------------------------------
+/** Commented by Desmond @ 19-May-26
+ * Extract the id from the URL of either a location or department QR code
+ * 
+ * QR codes now encode the full /scan/ URL:
+ *    https://swinburne-assets.vercel.app/scan/location/E404
+ *    https://swinburne-assets.vercel.app/scan/department/IT
+ * 
+ * Without this function, the full URL was passed and location or department_id
+ * value to the DB lookup matched nothing.
+ * 
+ * @param raw - The raw string decoded from the QR code scanner
+ * @returns The ID segment only (last path segment of the URL)
+ */
+function extractIdFromQrUrl(raw: string): string {
+  // Remove the whitespaces from the end or beginning of the string
+  const trimmed = raw.trim() 
+
+  // If the scanned value looks like a URL, extract the last path segment
+  // e.g https://swinburne-assets.vercel.app/scan/location/E404, returns "E404"
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      // Parse the trimmed string into a dedicated URL object that breaks the web
+      // address down into readable components
+      // pathname = /scan/location/E404 - segmented to become ['', 'scan', 'location',
+      //                                                       'E404']
+      const url = new URL(trimmed)
+
+      const segments = url.pathname.split('/').filter(Boolean)
+
+      // To get the last segment, use the segments entire length - 1 to get the 
+      // correct index number
+      const lastSegment = segments[segments.length-1]
+
+      // Protection: The last segment must look like a valid entity ID
+      // It should contain letters, digits, hyphens, underscores (max 30 characters)
+      if (lastSegment && /^[A-Za-z0-9\-_]{1,30}$/.test(lastSegment)) {
+        // Return the location or department_id
+        return lastSegment
+      }
+
+    // Catch any errors
+    } catch {
+      // If the URL parsing failed, fall through and return the raw string since
+      // it is not a URL
+    }
+  }
+  // Return the trimmed value as a normal string (this could be a plain ID, or old QR
+  // that only resembled a simple ID like E404 and not the newer URLs like
+  // https://swinburne-assets/..... )
+  return trimmed
+}
+
 
 // ----------------------------------------------------------------------
 //                        Scanner fetch helpers
@@ -125,8 +183,8 @@ const scannerFetch = {
 // Define the fields or primary keys required for the key components to function
 const configs = {
   asset: { 
-    title: "Asset Scanner", 
-    description: "Scan asset QR codes or barcodes", 
+    title: "Scan asset barcode", 
+    description: "View and update asset's information", 
     icon: Package, 
     // idColumn and tableName
     idColumn: "asset_id", 
@@ -134,24 +192,24 @@ const configs = {
   },
 
   staff: { 
-    title: "Staff ID Scanner", 
-    description: "Scan staff identification codes", 
+    title: "Scan staff ID", 
+    description: "Assign/unassign ownership of asset(s) to staff", 
     icon: Users, 
     idColumn: "staff_id", 
     tableName: "Staff" 
   },
 
   location: { 
-    title: "Location Scanner", 
-    description: "Scan location QR codes or barcodes", 
+    title: "Scan location QR code", 
+    description: "Access a location, then continue scanning asset barcode to tag asset(s) to location", 
     icon: MapPin, 
     idColumn: "location_id", 
     tableName: "Location" 
   },
 
   department: { 
-    title: "Department Scanner", 
-    description: "Scan department codes", 
+    title: "Scan department QR code", 
+    description: "Access a department, then continue scanning asset barcode to tag asset(s) to department", 
     icon: Building2, 
     idColumn: "department_id", 
     tableName: "Department" 
@@ -357,6 +415,13 @@ export default function ScannerPage() {
   // Controls the visibility of the StaffConfirmedModal
   const [showStaffModal, setShowStaffModal] = useState(false)
 
+  // Commented by Desmond @ 19-May-26: Fix the issue where scanning a staff ID
+  // successfully would directly led to it being checked if it's an asset ID and 
+  // failing
+  // Here, track the staff ID that was just scanned so we can skip it on the very next
+  // scan event.
+  const staffIdScannedRef = useRef<string | null>(null)
+
   // Error handling - use a centralized error handling UI
   const [showErrorModal, setShowErrorModal] = useState(false)
   // Error message and setting the error message
@@ -435,6 +500,7 @@ export default function ScannerPage() {
 
  }, []) // Run once on mount and the search params don't change after initial render
 
+
  // Reset the page state when the scan type changes, such as user scanning a location QR, then going back and scanning a staff QR
  // We should reset the page state and all contexts
   useEffect(() => {
@@ -466,6 +532,7 @@ export default function ScannerPage() {
     return null
   }
 
+
   // ----------------------------------------------------------------------
   //                            Cart type
   // ----------------------------------------------------------------------
@@ -486,6 +553,37 @@ export default function ScannerPage() {
     // which can cause issues when an asset is reassigned to another staff before we submit the cart
     assignmentId: string
   }
+
+
+  // ----------------------------------------------------------------------
+  //               Cancel handler (Active-context header strip)
+  // ----------------------------------------------------------------------
+  /**
+   * Called when the user taps Cancel in the active-context header strip while scanning
+   * a QR code.
+   * To do this, setShouldStartScanning(false) must be called before the key increment
+   * and before router.replace(). If it is called after, the newly mounted scannerContext
+   * receives shouldStartScanning = true, in its first render and auto-starts the camera
+   * , making Cancel appear to do nothing when user presses it.
+   */
+  const handleCancelParentScan = () => {
+    // Firstly, disable auto-start before remounting scannerContext
+    setShouldStartScanning(false)
+
+    // Secondly, clear the parent scan state to hide the header strip
+    setParentScan(null)
+
+    // Thirdly, clear the cart accumulated items during the tagging session
+    setCart([])
+
+    // Fourth, remount scannerContext in a clean idle state by incrementing the key
+    setScannerKey(prev => prev + 1)
+
+    // Fifth, remove the query params from the URL so applyQrContext() cannot
+    // retrigger. router.replace() does not add a history entry.
+    router.replace('/user/scanner')
+  }
+
 
   // ----------------------------------------------------------------------
   //                          Scan handlers
@@ -537,6 +635,10 @@ export default function ScannerPage() {
             currentAssetCount: countResult.count ?? 0 
           })
 
+          // Commented by Desmond @ 19-May-26: Remember the scanned staff ID code
+          // so that it is skipped before scanning for asset ID
+          staffIdScannedRef.current = scannedCode
+
           // Opens the confirmation modal
           setShowStaffModal(true)
         
@@ -546,8 +648,17 @@ export default function ScannerPage() {
           setErrorMessage('Error validating staff. Please try again.')
           // Show the error modal
           setShowErrorModal(true)
-        return
+          return
         }
+      }
+
+      // Commented by Desmond @ 19-May-26: Skip the staff ID that was just scanned
+      // to prevent it from being checked as an asset
+      if (staffIdScannedRef.current === scannedCode) {
+        // Resets the staff ID scanned ref back to null
+        staffIdScannedRef.current = null
+        // Exit early
+        return
       }
 
       // Add Asset to Staff Cart
@@ -731,7 +842,14 @@ export default function ScannerPage() {
     // ----------------------------------------------------------------------
     //        Path 3 - Normal asset / location / department scan
     // ----------------------------------------------------------------------
+    // Commented by Desmond @ 19-May-26: First, extract the entity ID from the QR code
+    // URL before querying the DB. This is because the QR codes now embed the full
+    // /scan/ URL, and not just the plain ID string.
+
     if (type === 'location' || type === 'department') {
+      // Firstly, parse the ID out of the full scan URL
+      const entityId = extractIdFromQrUrl(scannedCode)
+
       // User is scanning a location or department without QR code context, 
       // which means they want to set the parentScan context by scanning the 
       // location/department QR in-app
@@ -739,21 +857,22 @@ export default function ScannerPage() {
         // Ensure the table name is correct based on the scan type, either Location or Department
         config.tableName, 
         config.idColumn, 
-        scannedCode
+        // Fetch the location or department_id using the entityId parsed from the URL
+        entityId
       )
 
       // If the lookup failed or the location/department cannot be found, show an error message
       if (!result.success || !result.data) { 
-        alert(`Error: ${type} ID "${scannedCode}" not found.`) 
+        alert(`Error: ${type} ID "${entityId}" not found.`) 
         return
       }
 
       // If the lookup is successful, set the parentScan context to enable tagging mode
       setParentScan({ 
         type: type, 
-        id: scannedCode,
+        id: entityId,
         // If name cannot be found, fallback to use scannedCode
-        name: result.data.name ?? scannedCode 
+        name: result.data.name ?? entityId 
       })
 
     } else {
@@ -1162,6 +1281,9 @@ export default function ScannerPage() {
         onItemScanned={handleItemScanned}
         // When user clicks the back button in the scanner UI, route them back to the dashboard
         onBack={() => router.push('/user/dashboard')}
+        // Whenever the user clicks the Cancel button in the header strip of the 
+        // scanner page
+        onCancel={handleCancelParentScan}
         // Pass down the parentScan context to the ScannerContent component so that it can be used
         //  to determine the scanning mode and show relevant information in the UI
         parentScan={parentScan}
