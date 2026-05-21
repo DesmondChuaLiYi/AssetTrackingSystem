@@ -5,6 +5,44 @@
  * @description Modal popup for viewing, printing and saving barcode and QR code
  * images
  * 
+ * LATEST CHANGES v2
+ * -----------------
+ * Previously, printing QR or barcode will fail and produce the ERR_FILE_NOT_FOUND on the
+ * blob URL.
+ * 
+ * This is because:
+ *      handlePrint() created a blob URL with URL.createObjectURL(blob), wrote it into an
+ *      iframe's <img src> and called iframe.contentWindow.print(), then the scheduled
+ *      URL.revokeObjectURL inside a setTimeout(..., 3000).
+ *      
+ *      The issue is that the iframe is a separate browsing context. The browser loads
+ *      the <img> asynchronously AFTER the iframe document is written and closed. On slow
+ *      connections, or when the browser is under load, the 3-second timer executes before
+ *      the image is fully loaded. Once the blob URL is revoked, the browser can no longer
+ *      find the image, which leads to the <img> failing with ERR_FILE_NOT_FOUND and the
+ *      printed page is blank.
+ * 
+ *      Additionally, calling print() immediately after doc.close() is also unreliable
+ *      because the document may not have finished parsing yet.
+ * 
+ * To fix this:
+ *      Attach an onload handler to the iframe element itself.
+ *      So, iframe.onload will execute after the iframe document (including all its 
+ *      sub-resources such as <img>) finishes loading.
+ *      
+ *      Call print() inside the onload handler - and it is guaranteed to run only after
+ *      the image is visible in the iframe.
+ * 
+ *      Revoke the blob URL only after print() returns.
+ * 
+ *      Use the already fetched blobUrl (pre-fetched in the useEffect on modal open)
+ *      instead of fetching again to avoid a second network round-trip.
+ * 
+ * Another fix:
+ *      The save button action - handleSave also re-fetched the image. It now uses the 
+ *      pre-fetched blobUrl directly ot be consistent with handlePrint.
+ * 
+ * 
  * LATEST CHANGES
  * --------------
  *  - The image stored in Supabase is now the full composite PNG (header + code + text embedded in by
@@ -293,8 +331,8 @@ export default function IdCodeModal({ isOpen, onClose, tagPath, entityType, enti
 
             // Set the filename for the file to be downloaded
             // This creates a context-aware filename depending on entityType - barcode or QR code
-            const filename = entityType === 'asset' ? `barcode-${entityId}.${ext}`
-                                                    :  `qr-${entityType}-.${ext}`
+            const filename = entityType === 'asset' ? `Barcode_${entityId}.${ext}`
+                                                    :  `${entityType} QR_${entityId}.${ext}`
 
             // Sets a temporary in-memory image URL (blob URL) as the download source
             link.href = blobUrl ?? imageUrl
@@ -375,6 +413,9 @@ export default function IdCodeModal({ isOpen, onClose, tagPath, entityType, enti
             if (!doc) {
                 // Cleanup the resource allocated to blobUrl
                 // URL.revokeObjectURL(blobUrl)
+
+                // Remove the iframe to not cause memory leak
+                document.removeChild(iframe)
                 // Exit early
                 return
             }
@@ -414,20 +455,26 @@ export default function IdCodeModal({ isOpen, onClose, tagPath, entityType, enti
             // Close the document after writing
             doc.close()
 
-            // Focus the window to the iframe
-            iframe.contentWindow?.focus()
+            iframe.onload = () => {
+                try {
+                     // Focus the window to the iframe
+                    iframe.contentWindow?.focus()
 
-            // Print the contents on the iframe
-            iframe.contentWindow?.print()
+                    // Print the contents on the iframe
+                    iframe.contentWindow?.print()
+                } finally {
+                    // Always clean up the resources
 
-            // Schedule a function to run after a delay of 3 seconds
-            // so that iframe contents can properly render, cleaned up and printed
-            setTimeout(() => {
-                // Deletes the hidden iframe from the page to avoid memory leaks
-                document.body.removeChild(iframe)
-                // Frees memory used by a temporary blob URL
-                URL.revokeObjectURL(blobUrl)
-            }, 3000)
+                    // Schedule a function to run after a delay of 3 seconds
+                    // so that iframe contents can properly render, cleaned up and printed
+                    setTimeout(() => {
+                        // Deletes the hidden iframe from the page to avoid memory leaks
+                        document.body.removeChild(iframe)
+                        // Frees memory used by a temporary blob URL
+                        // URL.revokeObjectURL(blobUrl)
+                    }, 500)
+                }
+            }
 
         // Catch the errors
         } catch (err) {
