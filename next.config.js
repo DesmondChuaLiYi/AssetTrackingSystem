@@ -42,7 +42,8 @@ const nextConfig = {
    * or dynamically require the system libraries to be listed here.
    */
   serverExternalPackages: [
-    'canvas', // Native 2D canvas for server-side PNG generation
+    // 'canvas', // Native 2D canvas for server-side PNG generation
+    '@napi-rs/canvas', 
     'bwip-js' // Barcode generator (uses native code paths on Node.js)
   ],
 
