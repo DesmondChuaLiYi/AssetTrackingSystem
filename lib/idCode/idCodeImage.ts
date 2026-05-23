@@ -2,6 +2,10 @@
  * @file lib/idCode/idCodeImage.ts
  * @description Unified image generation for barcode (assets) and QR codes (locations & departments)
  * 
+ * Commented by Desmond @ 23-May-26: LATEST FIXES v2
+ *  Migrated completely from the legacy native 'canvas' package to modern '@napi-rs/canvas'
+ *  to fix Vercel runtime server font initialization failures (tofu block characters).
+ * 
  * Commented by Desmond @ 16-May-26: LATEST FIXES
  *  Issue A - Garbled text and tofu characters in the generated PNGs
  *      This is because 'canvas' was marked as optional in package.json so that Vercel's
@@ -72,6 +76,19 @@
  *      - `bwip-js` npm package for barcode generation (Node + browser builds exist)
  */
 
+/** Commented by Desmond @ 23-May-26
+ * Import Node.js's built-in Path utility module
+ * Explanation:
+ *  Different OS running the system write paths differently
+ *      - Mac/Linux (Vercel production server): Use forward slashes (public/fonts/font.ttf)
+ *      - Windows (public\fonts\font.ttf)
+ * If a hardcoded string is written to define the path to the font, the code may not 
+ * work correctly on different operating systems. Therefore, path.join() is used to detect
+ * host operating system dynamically and automatically insert the correct backslashes
+ * or forward slashes.
+ */    
+import path from 'path'
+
 // ------------------------------------------------------------------------------
 //                              Shared Constants
 // ------------------------------------------------------------------------------
@@ -87,6 +104,11 @@ export const SWINBURNE_NAME = 'SWINBURNE UNIVERSITY OF TECHNOLOGY'
 
 // QR module printing colour - pure black for best visibility
 export const QR_DARK_COLOUR = '#000000'
+
+// Global font config (style tokens) - Fonts mapped to the Canvas dependency
+const FONT_SANS = '11px JetBrainsMono'
+const FONT_SANS_BOLD = 'bold 13px JetBrainsMonoBold'
+const FONT_MONO = '8px JetBrainsMono'
 
 
 // ------------------------------------------------------------------------------
@@ -162,13 +184,13 @@ export function drawQrCanvas(
 
     // Line 1: University name - bold, black
     ctx.fillStyle = '#000000'
-    ctx.font = 'bold 13px sans-serif'
+    ctx.font = typeof window === 'undefined' ? FONT_SANS_BOLD : 'bold 13px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(SWINBURNE_NAME, W / 2, 16)
 
     // Line 2: Entity label (e.g Location: E404) - regular, dark grey
     ctx.fillStyle = '#161719'
-    ctx.font = '11px sans-serif'
+    ctx.font = typeof window === 'undefined' ? FONT_SANS : '11px sans-serif'
     ctx.fillText(entityLabel, W / 2, 33)
 
     // ----- QR code - centered below the two header lines --------------------------
@@ -178,7 +200,7 @@ export function drawQrCanvas(
 
     // ------ Scan URL below the QR code --------------------------------------------
     ctx.fillStyle = '#3a3d44'
-    ctx.font = '8px monospace'
+    ctx.font = typeof window === 'undefined' ? FONT_MONO : '8px monospace'
     ctx.textAlign = 'center'
     const urlY = qrY + QR_SIZE + 12 
     const displayUrl = scanUrl.length > 52 ? scanUrl.slice(0, 50) + '...' : scanUrl
@@ -188,7 +210,7 @@ export function drawQrCanvas(
     // If name exists
     if (options.name) {
         ctx.fillStyle = '#111827'
-        ctx.font = 'bold 11px sans-serif'
+        ctx.font = typeof window === 'undefined' ? FONT_SANS_BOLD : 'bold 11px sans-serif'
         ctx.fillText(options.name, W / 2, urlY + 15)
     }
 
@@ -384,34 +406,93 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
  * 
  * @throws { Error } if the canvas package is not installed or createCanvas is missing
  */
+// async function requireNodeCanvas() {
+//     let mod: {
+//         createCanvas: unknown
+//         loadImage: unknown
+//     }
+
+//     try {
+//         mod = await import('canvas')
+//     } catch {
+//         throw new Error(
+//             '[idCodeImage] The "canvas" package is not installed. ' +
+//             'Run `npm install canvas` and ensure it is listed as a regular ' +
+//             'dependency (not optional) in package.json.'
+//         )
+//     }
+
+//     if (typeof mod.createCanvas !== 'function') {
+//         throw new Error(
+//             '[idCodeImage] canvas.createCanvas is not a function. ' +
+//             'The package may have loaded an empty shim. ' + 
+//             'Check that "canvas" in dependencies (not devDependencies or optionalDependencies) ' +
+//             'and that next.config.js lists it in serverExternalPackages.'
+//         )
+//     }
+
+//     return mod as {
+//         createCanvas: (w: number, h: number) => {
+//             getContext: (t: '2d') => CanvasRenderingContext2D
+//             toBuffer: (mime: 'image/png') => Buffer
+//         }
+
+//         loadImage: (src: Buffer | string) => Promise<CanvasImageSource>
+//     }
+// }
+let serverFontsRegistered = false
+
 async function requireNodeCanvas() {
-    let mod: {
-        createCanvas: unknown
-        loadImage: unknown
+    // Hide the native server module from the browser bundler
+    if (typeof window !== 'undefined') {
+        throw new Error('[idCodeImage] requireNodeCanvas cannot be invoked inside a client')
     }
+
+    let canvasModule: any
 
     try {
-        mod = await import('canvas')
-    } catch {
+        // Changes the import from a statically analyzable import to a runtime-only 
+        // dynamic operation the bundler cannot inspect
+        // Previously, the file was imported by qrPreview.tsx which is a client file,
+        // so turbopack thinks this file might run in the browser and scans all imports
+        // inside this file. It tries to include @napi-rs canvas, but fails because
+        // it is a Node-native package and internally uses 'require('fs') and require
+        // ('stream'), but browsers do not have these.
+        
+        // eval() makes it so that the import becomes a string while building and 
+        // bulders won't execute these strings.
+        canvasModule = await (eval(`import('@napi-rs/canvas')`))
+    } catch (err) {
         throw new Error(
-            '[idCodeImage] The "canvas" package is not installed. ' +
-            'Run `npm install canvas` and ensure it is listed as a regular ' +
-            'dependency (not optional) in package.json.'
+            '[idCodeImage] Failed to resolve modern native dependencies setup. ' + 
+            'Ensure `npm install @napi-rs canvas was executed: ' + err
         )
     }
 
-    if (typeof mod.createCanvas !== 'function') {
-        throw new Error(
-            '[idCodeImage] canvas.createCanvas is not a function. ' +
-            'The package may have loaded an empty shim. ' + 
-            'Check that "canvas" in dependencies (not devDependencies or optionalDependencies) ' +
-            'and that next.config.js lists it in serverExternalPackages.'
-        )
+    // Mounting the server font
+    if (!serverFontsRegistered && typeof process != 'undefined') {
+        try {
+            const { GlobalFonts } = canvasModule
+
+            // Resolve conflicting paths for the fonts directory
+            // process.cwd() grabs the exact root folder of the web application running
+            // on Vercel
+            const fontPath = path.join(process.cwd(), 'public', 'fonts', 
+                             'JetBrainsMono-Regular.ttf')
+
+            // Mount font binaries under the designated runtime tokens
+            GlobalFonts.registerFromPath(fontPath, 'JetBrainsMono')
+            GlobalFonts.registerFromPath(fontPath, 'JetBrainsMonoBold')
+
+            serverFontsRegistered = true
+        } catch (err) {
+            console.error('[idCodeImage] Core server font initialization error: ' + err)
+        }
     }
 
-    return mod as {
+    return canvasModule as {
         createCanvas: (w: number, h: number) => {
-            getContext: (t: '2d') => CanvasRenderingContext2D
+            getContext: (type: '2d') => CanvasRenderingContext2D
             toBuffer: (mime: 'image/png') => Buffer
         }
 
@@ -477,7 +558,7 @@ export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
  */
 export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<Buffer> {
     const bwipjs = (await import ('bwip-js')).default
-    const { createCanvas } = await import('canvas')
+    const { createCanvas, loadImage } = await requireNodeCanvas()
 
     // Same layout as buildBarcodeDataUrl where the header is plain text with no background strip
     const HEADER_H = 22
@@ -516,7 +597,6 @@ export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<
         textcolor: '#000000'
     })
 
-    const { loadImage } = await import('canvas')
     const barImg = await loadImage(barcodePng)
     const BAR_W = 320
     const barX = (W - BAR_W) / 2
