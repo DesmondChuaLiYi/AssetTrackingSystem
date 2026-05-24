@@ -50,7 +50,11 @@ const nextConfig = {
   // Force the AWS Lambda function instances on Vercel to capture everything in the 
   // ./public/fonts directory
   outputFileTracingIncludes: {
-    '/api/**/*': ['./public/fonts/**/*'],
+    'lib/idCode/idCodeImage': [
+      './public/fonts/JetBrainsMono-Regular.ttf',
+      './node_modules/@napi-rs/canvas/**/*',
+      './node_modules/bwip-js/**/*' 
+    ],
   },
 
 
