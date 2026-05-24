@@ -47,6 +47,12 @@ const nextConfig = {
     'bwip-js' // Barcode generator (uses native code paths on Node.js)
   ],
 
+  // Force the AWS Lambda function instances on Vercel to capture everything in the 
+  // ./public/fonts directory
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./public/fonts/**/*'],
+  },
+
 
   // ------------------------------------------------------------------------------
   //                              Image optimization
