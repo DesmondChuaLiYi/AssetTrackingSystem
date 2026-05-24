@@ -50,10 +50,26 @@ const nextConfig = {
   // Force the AWS Lambda function instances on Vercel to capture everything in the 
   // ./public/fonts directory
   outputFileTracingIncludes: {
-    'lib/idCode/idCodeImage': [
+    // '/*': [
+    //   './public/fonts/JetBrainsMono-Regular.ttf',
+    //   './node_modules/@napi-rs/canvas/**/*',
+    //   './node_modules/bwip-js/**/*' 
+    // ],
+    // Target your exact App Router execution paths cleanly
+    '/api/location': [
       './public/fonts/JetBrainsMono-Regular.ttf',
       './node_modules/@napi-rs/canvas/**/*',
-      './node_modules/bwip-js/**/*' 
+      './node_modules/bwip-js/**/*'
+    ],
+    '/api/department': [
+      './public/fonts/JetBrainsMono-Regular.ttf',
+      './node_modules/@napi-rs/canvas/**/*',
+      './node_modules/bwip-js/**/*'
+    ],
+    '/api/assets': [
+      './public/fonts/JetBrainsMono-Regular.ttf',
+      './node_modules/@napi-rs/canvas/**/*',
+      './node_modules/bwip-js/**/*'
     ],
   },
 
