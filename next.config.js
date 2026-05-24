@@ -59,16 +59,22 @@ const nextConfig = {
     '/api/location': [
       './public/fonts/JetBrainsMono-Regular.ttf',
       './node_modules/@napi-rs/canvas/**/*',
+      // Force map the Linux binary package
+      './node_modules/@napi-rs/canvas-linux-x64-gnu/**/*',
       './node_modules/bwip-js/**/*'
     ],
     '/api/department': [
       './public/fonts/JetBrainsMono-Regular.ttf',
       './node_modules/@napi-rs/canvas/**/*',
+      // Force map the Linux binary package
+      './node_modules/@napi-rs/canvas-linux-x64-gnu/**/*',
       './node_modules/bwip-js/**/*'
     ],
     '/api/assets': [
       './public/fonts/JetBrainsMono-Regular.ttf',
       './node_modules/@napi-rs/canvas/**/*',
+      // Force map the Linux binary package
+      './node_modules/@napi-rs/canvas-linux-x64-gnu/**/*',
       './node_modules/bwip-js/**/*'
     ],
   },

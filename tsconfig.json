@@ -43,8 +43,8 @@
       "@/*": ["./*"]
     },
     "types": [
-      "jest",
-      "@testing-library/jest-dom"
+      // "jest",
+      // "@testing-library/jest-dom"
     ],
     "target": "esnext"
   },
