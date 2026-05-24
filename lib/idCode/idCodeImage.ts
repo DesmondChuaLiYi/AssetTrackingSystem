@@ -316,7 +316,7 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
     }
 
     // Dynamically import bwip-js
-    const bwipjs = (await import ('bwip-js')).default
+    const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
 
     /**
      * Header is plain text with no background fill
@@ -461,7 +461,12 @@ async function requireNodeCanvas() {
         
         // eval() makes it so that the import becomes a string while building and 
         // bulders won't execute these strings.
-        canvasModule = await (eval(`import('@napi-rs/canvas')`))
+        // canvasModule = await (eval(`import('@napi-rs/canvas')`))
+
+        // Commented by Desmond @ 24-May-26
+        // Inline comment commands Turbopack to stop scanning this dependency branch
+        // for browser bundle paths
+        canvasModule = await import(/* webpackIgnore: true */ '@napi-rs/canvas')
     } catch (err) {
         throw new Error(
             '[idCodeImage] Failed to resolve modern native dependencies setup. ' + 
@@ -470,7 +475,7 @@ async function requireNodeCanvas() {
     }
 
     // Mounting the server font
-    if (!serverFontsRegistered && typeof process != 'undefined') {
+    if (!serverFontsRegistered) {
         try {
             const { GlobalFonts } = canvasModule
 
@@ -480,6 +485,14 @@ async function requireNodeCanvas() {
             const fontPath = path.join(process.cwd(), 'public', 'fonts', 
                              'JetBrainsMono-Regular.ttf')
 
+            // Defensive check here: Force an error if the deployment engine stripped the
+            // font path
+            const fs = await import(/* webpackIgnore: true */ 'fs')
+            if (!fs.existsSync(fontPath)) {
+                throw new Error(`Font binary missing from serverless deployment bundle path: 
+                                 ${fontPath}`)
+            }
+            
             // Mount font binaries under the designated runtime tokens
             GlobalFonts.registerFromPath(fontPath, 'JetBrainsMono')
             GlobalFonts.registerFromPath(fontPath, 'JetBrainsMonoBold')
@@ -487,6 +500,8 @@ async function requireNodeCanvas() {
             serverFontsRegistered = true
         } catch (err) {
             console.error('[idCodeImage] Core server font initialization error: ' + err)
+            // When err is thrown, it stops the execution of this function
+            throw err
         }
     }
 
@@ -557,7 +572,7 @@ export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
  * @returns - PNG buffer ready for Supabase storage upload
  */
 export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<Buffer> {
-    const bwipjs = (await import ('bwip-js')).default
+    const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
     const { createCanvas, loadImage } = await requireNodeCanvas()
 
     // Same layout as buildBarcodeDataUrl where the header is plain text with no background strip
