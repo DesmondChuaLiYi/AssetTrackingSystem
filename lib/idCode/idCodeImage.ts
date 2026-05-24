@@ -440,6 +440,15 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
 //         loadImage: (src: Buffer | string) => Promise<CanvasImageSource>
 //     }
 // }
+
+function extractDebugMessage(err: unknown): string {
+    if (err instanceof Error) {
+        return `${err.name}: ${err.message}\n${err.stack ?? ''}`
+    }
+
+    return String(err)
+}
+
 let serverFontsRegistered = false
 
 async function requireNodeCanvas() {
@@ -470,7 +479,9 @@ async function requireNodeCanvas() {
     } catch (err) {
         throw new Error(
             '[idCodeImage] Failed to resolve modern native dependencies setup. ' + 
-            'Ensure `npm install @napi-rs canvas was executed: ' + err
+            'Ensure `npm install @napi-rs canvas` was executed: ' +
+
+            extractDebugMessage(err)
         )
     }
 
@@ -501,7 +512,9 @@ async function requireNodeCanvas() {
         } catch (err) {
             console.error('[idCodeImage] Core server font initialization error: ' + err)
             // When err is thrown, it stops the execution of this function
-            throw err
+            throw new Error(
+                extractDebugMessage(err)
+            )
         }
     }
 
@@ -533,34 +546,42 @@ async function requireNodeCanvas() {
  * @returns - PNG buffer ready for Supabase storage upload
  */
 export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
-    // Dynamically import the modules and keep server-only modules out of the client bunndle
-    const qrCode = (await import('qrcode')).default
-    const { createCanvas, loadImage } = await requireNodeCanvas()
+    try {
+        // Dynamically import the modules and keep server-only modules out of the client bunndle
+        const qrCode = (await import('qrcode')).default
+        const { createCanvas, loadImage } = await requireNodeCanvas()
 
-    const scanUrl = buildScanUrl(options.folder, options.id)
+        const scanUrl = buildScanUrl(options.folder, options.id)
 
-    // Generate the bare QR as PNG buffer
-    const qrPngBuffer = await qrCode.toBuffer(scanUrl, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 240,
-        color: {
-            dark: QR_DARK_COLOUR,
-            light: '#ffffff'
-        }
-    })
+        // Generate the bare QR as PNG buffer
+        const qrPngBuffer = await qrCode.toBuffer(scanUrl, {
+            errorCorrectionLevel: 'M',
+            margin: 2,
+            width: 240,
+            color: {
+                dark: QR_DARK_COLOUR,
+                light: '#ffffff'
+            }
+        })
 
-    const { W, H } = qrCanvasDimensions()
-    const canvas = createCanvas(W, H)
-    const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D
+        const { W, H } = qrCanvasDimensions()
+        const canvas = createCanvas(W, H)
+        const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D
 
-    const entity = options.folder === 'locations' ? 'Location' : 'Department'
-    const entityLabel = `${entity}: ${options.id}`
+        const entity = options.folder === 'locations' ? 'Location' : 'Department'
+        const entityLabel = `${entity}: ${options.id}`
 
-    const qrImage = await loadImage(qrPngBuffer)
-    drawQrCanvas(ctx, W, H, qrImage as unknown as CanvasImageSource, options, scanUrl, entityLabel)
+        const qrImage = await loadImage(qrPngBuffer)
+        drawQrCanvas(ctx, W, H, qrImage as unknown as CanvasImageSource, options, scanUrl, entityLabel)
 
-    return canvas.toBuffer('image/png')
+        return canvas.toBuffer('image/png')
+
+    } catch (err) {
+        console.error('[buildQrBuffer] QR generation failed: ' + err)
+        throw new Error(
+            '[buildQrBuffer] QR generation failed.\n\n' + extractDebugMessage(err)
+        )
+    }
 }
 
 
@@ -572,65 +593,73 @@ export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
  * @returns - PNG buffer ready for Supabase storage upload
  */
 export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<Buffer> {
-    const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
-    const { createCanvas, loadImage } = await requireNodeCanvas()
+    try {
+        const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
+        const { createCanvas, loadImage } = await requireNodeCanvas()
 
-    // Same layout as buildBarcodeDataUrl where the header is plain text with no background strip
-    const HEADER_H = 22
-    const BAR_H = 80
-    const PADDING = 6
-    const NAME_H = options.name ? 16 : 0
-    const W = 360
-    const H = HEADER_H + PADDING + BAR_H + NAME_H + PADDING
-    
-    const canvas = createCanvas(W, H)
-    const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D
+        // Same layout as buildBarcodeDataUrl where the header is plain text with no background strip
+        const HEADER_H = 22
+        const BAR_H = 80
+        const PADDING = 6
+        const NAME_H = options.name ? 16 : 0
+        const W = 360
+        const H = HEADER_H + PADDING + BAR_H + NAME_H + PADDING
+        
+        const canvas = createCanvas(W, H)
+        const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D
 
-    // White background 
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, W, H)
+        // White background 
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, W, H)
 
-    // University name
-    ctx.fillStyle = '#000000'
-    ctx.font = 'bold 12px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText(SWINBURNE_NAME, W / 2, 15)
+        // University name
+        ctx.fillStyle = '#000000'
+        ctx.font = 'bold 12px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(SWINBURNE_NAME, W / 2, 15)
 
-    // Generate barcode PNG via bwip-js (returns a Buffer in Node)
-    const barcodePng = await bwipjs.toBuffer({
-        bcid: 'code128',
-        text: options.id,
-        scale: 3,
-        height: 20,
-        includetext: true,
-        textxalign: 'center',
-        textsize: 11,
-        paddingwidth: 6,
-        paddingheight: 4,
-        backgroundcolor: '#ffffff',
-        barcolor: '#000000',
-        textcolor: '#000000'
-    })
+        // Generate barcode PNG via bwip-js (returns a Buffer in Node)
+        const barcodePng = await bwipjs.toBuffer({
+            bcid: 'code128',
+            text: options.id,
+            scale: 3,
+            height: 20,
+            includetext: true,
+            textxalign: 'center',
+            textsize: 11,
+            paddingwidth: 6,
+            paddingheight: 4,
+            backgroundcolor: '#ffffff',
+            barcolor: '#000000',
+            textcolor: '#000000'
+        })
 
-    const barImg = await loadImage(barcodePng)
-    const BAR_W = 320
-    const barX = (W - BAR_W) / 2
-    const barY = HEADER_H + PADDING
+        const barImg = await loadImage(barcodePng)
+        const BAR_W = 320
+        const barX = (W - BAR_W) / 2
+        const barY = HEADER_H + PADDING
 
-    ctx.drawImage(barImg as unknown as CanvasImageSource, barX, barY, BAR_W, BAR_H)
+        ctx.drawImage(barImg as unknown as CanvasImageSource, barX, barY, BAR_W, BAR_H)
 
-    // Asset name below the barcode if provided
-    // if (options.name) {
-    //     ctx.fillStyle = '#111827'
-    //     ctx.font = '10px sans-serif'
-    //     ctx.textAlign = 'center'
-    //     ctx.fillText(options.name, W / 2, barY + BAR_H + 12)
-    // }
+        // Asset name below the barcode if provided
+        // if (options.name) {
+        //     ctx.fillStyle = '#111827'
+        //     ctx.font = '10px sans-serif'
+        //     ctx.textAlign = 'center'
+        //     ctx.fillText(options.name, W / 2, barY + BAR_H + 12)
+        // }
 
-    // Thin light border - act as a paper cutout cutting guide
-    ctx.strokeStyle = '#d1d5db'
-    ctx.lineWidth = 0.5
-    ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
+        // Thin light border - act as a paper cutout cutting guide
+        ctx.strokeStyle = '#d1d5db'
+        ctx.lineWidth = 0.5
+        ctx.strokeRect(0.5, 0.5, W - 1, H - 1)
 
-    return canvas.toBuffer('image/png')
+        return canvas.toBuffer('image/png')
+
+    } catch (err) {
+        console.error('[buildBarcodeBuffer] Barcode generation failed: ' + err)
+        throw new Error(
+            '[buildBarcodeBuffer] Barcode generation failed.\n\n' + extractDebugMessage(err)
+        )
+    }
 }

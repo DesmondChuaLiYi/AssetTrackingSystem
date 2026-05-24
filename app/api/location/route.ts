@@ -172,7 +172,27 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation failed', details: error.flatten() }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to create location' }, { status: 500 })
+
+    // Commented by Desmond @ 24-May-26: Test out why QR generation is failing
+    // on Vercel
+    const debug =
+    error instanceof Error
+      ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        }
+      : { raw: String(error) }
+
+    return NextResponse.json(
+      {
+        error: 'Failed to create location',
+        debug,
+      },
+      { status: 500 }
+    )
+
+    // return NextResponse.json({ error: 'Failed to create location' }, { status: 500 })
   }
 }
 
