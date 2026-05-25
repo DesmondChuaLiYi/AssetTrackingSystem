@@ -44,7 +44,7 @@ const nextConfig = {
   serverExternalPackages: [
     // 'canvas', // Native 2D canvas for server-side PNG generation
     '@napi-rs/canvas', 
-    'bwip-js' // Barcode generator (uses native code paths on Node.js)
+    // 'bwip-js' // Barcode generator (uses native code paths on Node.js)
   ],
 
   // Force the AWS Lambda function instances on Vercel to capture everything in the 

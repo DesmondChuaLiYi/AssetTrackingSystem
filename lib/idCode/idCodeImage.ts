@@ -316,7 +316,23 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
     }
 
     // Dynamically import bwip-js
-    const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
+    if (!(window as any).bwipjs) {
+        try {
+            const cdnUrl = 'https://cdnjs.cloudflare.com/ajax/libs/bwip-js/3.4.4/bwip-js.min.js'
+            await new Promise<void>((resolve, reject) => {
+                const script = document.createElement('script')
+                script.src = cdnUrl
+                script.onload = () => resolve()
+                script.onerror = () => reject(new Error('Failed to download barcode script package.'))
+                document.head.appendChild(script)
+            })
+        } catch (scriptErr) {
+            console.error('[buildBarcodeDataUrl] Global window script injection failed: ', scriptErr)
+            throw new Error('Barcode drawing framework could not be loaded into the browser context.')
+        }
+    }
+
+    const bwipjs = (window as any).bwipjs
 
     /**
      * Header is plain text with no background fill
@@ -326,9 +342,9 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
     const BAR_W = 320
     const BAR_H = 80
     const PADDING = 6
-    const NAME_H = options.name ? 16 : 0
+    // const NAME_H = options.name ? 16 : 0
     const W = 360
-    const H = HEADER_H + PADDING + BAR_H + NAME_H + PADDING + 12
+    const H = HEADER_H + PADDING + BAR_H + PADDING + 12
 
     const canvas = document.createElement('canvas')
     canvas.width = W
@@ -351,20 +367,36 @@ export async function buildBarcodeDataUrl(options: barcodeImageOptions): Promise
 
     // Render barcode to a temporary canvas via bwip-js
     const barcodeCanvas = document.createElement('canvas')
-    bwipjs.toCanvas(barcodeCanvas, {
-        bcid: 'code128',
-        text: options.id,
-        scale: 3,
-        height: 20,
-        includetext: true, // asset_id number below the bars (industry standard)
-        textxalign: 'center',
-        textsize: 11,
-        paddingwidth: 6,
-        paddingheight: 4,
-        backgroundcolor: '#ffffff',
-        barcolor: '#000000',
-        textcolor: '#000000'
-    })
+
+    try {
+        // Settle the canvas font allocation completely before we draw onto the canvas
+        await new Promise<void>((resolve, reject) => {
+            try {
+                bwipjs.toCanvas(barcodeCanvas, {
+                    bcid: 'code128',
+                    text: options.id,
+                    scale: 3,
+                    height: 20,
+                    includetext: true, // asset_id number below the bars (industry standard)
+                    textxalign: 'center',
+                    textsize: 11,
+                    paddingwidth: 6,
+                    paddingheight: 4,
+                    backgroundcolor: '#ffffff',
+                    barcolor: '#000000',
+                    textcolor: '#000000'
+                })
+                resolve()
+
+            } catch (renderError) {
+                reject(renderError)
+            }
+        })
+
+    } catch (err) {
+        console.error('[buildBarcodeDataUrl] Inner barcode drawing failed: ', err)
+        throw new Error('Failed to paint vector barcode.')
+    }
 
     // Draw the barcode centered on the main canvas
     const barX = (W - BAR_W) / 2
@@ -592,18 +624,27 @@ export async function buildQrBuffer(options: qrImageOptions): Promise<Buffer> {
  * @param options - barcodeImageOptions (id, name)
  * @returns - PNG buffer ready for Supabase storage upload
  */
-export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<Buffer> {
+export async function buildBarcodeBuffer(
+    options: barcodeImageOptions,
+    // Inject the generator function here as a dependency
+    generatorFn: (options: { id: string }) => Promise<Buffer>
+): Promise<Buffer> {
     try {
-        const bwipjs = (await import(/* webpackIgnore: true */ 'bwip-js')).default
+        if (typeof window !== 'undefined') {
+            throw new Error('This function must only be called on the server.')
+        }
+
+        const barcodePng = await generatorFn({ id: options.id })
+
         const { createCanvas, loadImage } = await requireNodeCanvas()
 
         // Same layout as buildBarcodeDataUrl where the header is plain text with no background strip
         const HEADER_H = 22
         const BAR_H = 80
         const PADDING = 6
-        const NAME_H = options.name ? 16 : 0
+        // const NAME_H = options.name ? 16 : 0
         const W = 360
-        const H = HEADER_H + PADDING + BAR_H + NAME_H + PADDING
+        const H = HEADER_H + PADDING + BAR_H + PADDING + 12
         
         const canvas = createCanvas(W, H)
         const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D
@@ -619,20 +660,20 @@ export async function buildBarcodeBuffer(options: barcodeImageOptions): Promise<
         ctx.fillText(SWINBURNE_NAME, W / 2, 15)
 
         // Generate barcode PNG via bwip-js (returns a Buffer in Node)
-        const barcodePng = await bwipjs.toBuffer({
-            bcid: 'code128',
-            text: options.id,
-            scale: 3,
-            height: 20,
-            includetext: true,
-            textxalign: 'center',
-            textsize: 11,
-            paddingwidth: 6,
-            paddingheight: 4,
-            backgroundcolor: '#ffffff',
-            barcolor: '#000000',
-            textcolor: '#000000'
-        })
+        // const barcodePng = await bwipjs.toBuffer({
+        //     bcid: 'code128',
+        //     text: options.id,
+        //     scale: 3,
+        //     height: 20,
+        //     includetext: true,
+        //     textxalign: 'center',
+        //     textsize: 11,
+        //     paddingwidth: 6,
+        //     paddingheight: 4,
+        //     backgroundcolor: '#ffffff',
+        //     barcolor: '#000000',
+        //     textcolor: '#000000'
+        // })
 
         const barImg = await loadImage(barcodePng)
         const BAR_W = 320

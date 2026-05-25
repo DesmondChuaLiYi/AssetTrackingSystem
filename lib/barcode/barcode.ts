@@ -22,6 +22,7 @@
 // import bwipjs from 'bwip-js' // Library that draws the barcode images
 import { supabaseAdmin } from '../supabase/server' // Admin access to Supabase
 import { buildBarcodeBuffer } from '../idCode/idCodeImage'
+import { generateBarcodeBuffer } from '../idCode/barcode.server'
 
 // Types - only these folders are allowed
 export type barcodeFolder = 'assets' // Folders storing barcode in bucket 'IdCodes'
@@ -112,7 +113,7 @@ export async function generateAndUploadBarcode (id: string, folder: barcodeFolde
         // Validate and ensure asset id meets the requirements
         validateAssetId(id)
         
-        const pngBuffer = await buildBarcodeBuffer({ id, name }) // Generate the barcode
+        const pngBuffer = await buildBarcodeBuffer({ id, name }, generateBarcodeBuffer) // Generate the barcode
         const tagPath = `${folder}/${id}.png` // Create the file path by using folder name and asset_id
 
         // Upload the barcode to Supabase bucket
